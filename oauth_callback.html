@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Google Drive Prisijungimas</title>
+<style>
+  body { background: #111; color: #fff; font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; text-align: center; }
+  .spinner { border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid #4CAF50; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px auto; }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  .msg { font-size: 18px; font-weight: bold; color: #4CAF50; }
+</style>
+</head>
+<body>
+<div>
+  <div class="spinner" id="spin"></div>
+  <div id="msg" class="msg">Apdorojama...</div>
+</div>
+
+<script>
+(function() {
+  var hash = window.location.hash.substring(1);
+  var params = {};
+  if (hash) {
+    hash.split('&').forEach(function(p) {
+      var kv = p.split('=');
+      params[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1]);
+    });
+  }
+
+  if (params.access_token) {
+    document.getElementById('msg').innerText = "Grąžinamas raktas. Prašome palaukti...";
+    
+    if (window.opener) {
+      window.opener.postMessage({
+        type: 'gdrive_token',
+        token: params.access_token,
+        expires_in: params.expires_in
+      }, "*");
+      setTimeout(function() { window.close(); }, 1000);
+    } else {
+      var state = params.state ? params.state : '';
+      if (state.startsWith('http')) {
+        window.location.href = state + '#access_token=' + params.access_token + '&expires_in=' + params.expires_in;
+      } else {
+        document.getElementById('spin').style.display = 'none';
+        document.getElementById('msg').innerHTML = "Klaida: Nepavyko rasti ESP32 adreso.";
+      }
+    }
+  } else {
+    document.getElementById('spin').style.display = 'none';
+    document.getElementById('msg').innerHTML = "<span style='color:#E91E63'>Klaida: Raktas negautas.</span>";
+  }
+})();
+</script>
+</body>
+</html>
