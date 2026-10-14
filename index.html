@@ -82,15 +82,38 @@
   .close-x-icon:hover { background: rgba(233, 30, 99, 0.4); transform: scale(1.1); }
   .close-x-icon svg { width: 20px; height: 20px; display: block; }
 
+  /* ============================================================
+     ŽALIAS A4 RĖMELIS - VISADA VERTIKALUS IR A4 PROPORCIJOS
+     ============================================================ */
   .image-frame {
-    width: 100%; max-height: 55vh; flex: 1;
-    border: 4px solid #4CAF50; border-radius: 8px; 
-    position: relative; background-color: white; overflow: hidden; display: none;
-    justify-content: center; align-items: center; flex-direction: column;
+    /* A4 portretinis formatas - VISADA 21:29.7 */
+    width: 100%;
+    max-width: 500px;
+    aspect-ratio: 1 / 1.4142;  /* A4 portretinis */
+    max-height: 70vh;
+    
+    border: 4px solid #4CAF50; 
+    border-radius: 8px; 
+    position: relative; 
+    background-color: white; 
+    overflow: hidden; 
+    display: none;
+    justify-content: center; 
+    align-items: center; 
+    flex-direction: column;
     box-shadow: 0 5px 25px rgba(76, 175, 80, 0.3);
+    margin: 0 auto;
   }
+  
+  /* Būtinai vertikali orientacija */
+  #translationModal .image-frame {
+    aspect-ratio: 1 / 1.4142;
+  }
+  
   .image-frame canvas {
-    width: 100%; height: 100%; object-fit: contain; 
+    width: 100%; 
+    height: 100%; 
+    object-fit: contain; 
     touch-action: none;
   }
   
@@ -503,8 +526,8 @@
     let focusRingObj = {x: 0, y: 0, alpha: 0}; 
 
     function applyCameraAspectRatio() {
-        let isPort = window.innerHeight > window.innerWidth;
-        document.querySelector('#cameraModal .image-frame').style.aspectRatio = isPort ? "1 / 1.4142" : "1.4142 / 1";
+        // Kamera VISADA rodo A4 portretinį formatą
+        document.querySelector('#cameraModal .image-frame').style.aspectRatio = "1 / 1.4142";
     }
 
     cameraBtnMain.addEventListener('click', async () => {
@@ -752,11 +775,8 @@
     let isAlignMode = false;
     let activeDragPoint = -1;
     
-    // ============================================================
-    // PAPILDOMI KINTAMIEJI PAVEIKSLĖLIAMS IR PUSLAPIŲ NUMERIAMS
-    // ============================================================
-    let detectedImages = [];     // Rasti paveikslėliai (spalvoti regionai)
-    let detectedPageNumbers = []; // Rasti puslapių numeriai
+    let detectedImages = [];
+    let detectedPageNumbers = [];
 
     const languagesMap = {
      "EN-US": "Anglų (Amerikiečių)", "EN-GB": "Anglų (Britų)", "DE": "Vokiečių", "FR": "Prancūzų",
@@ -981,14 +1001,11 @@
 
         if(textW < 50 || textH < 50) { textW = 800; textH = 1100; }
 
-        // Išsaugome originalų (spalvotą) vaizdą be filtravimo
         let colorCanvas = document.createElement('canvas');
-        colorCanvas.width = textW; 
-        colorCanvas.height = textH;
+        colorCanvas.width = textW; colorCanvas.height = textH;
         let cCtx = colorCanvas.getContext('2d');
         let cData = cCtx.createImageData(textW, textH);
 
-        // Juodai baltas vaizdas tekstui
         let tempCanvas = document.createElement('canvas');
         tempCanvas.width = textW; tempCanvas.height = textH;
         let tCtx = tempCanvas.getContext('2d');
@@ -1009,13 +1026,11 @@
                     let srcIdx = (srcY * oW + srcX) * 4;
                     let r = origData.data[srcIdx]; let g = origData.data[srcIdx+1]; let b = origData.data[srcIdx+2];
 
-                    // Spalvotas vaizdas
                     cData.data[destIdx] = r; 
                     cData.data[destIdx+1] = g; 
                     cData.data[destIdx+2] = b; 
                     cData.data[destIdx+3] = 255;
 
-                    // Juodai baltas
                     let gray = 0.299 * r + 0.587 * g + 0.114 * b;
                     let c;
                     if (gray > 160) { c = 255; } else if (gray < 100) { c = 0; } else { c = Math.floor((gray - 100) * (255 / 60)); }
@@ -1030,20 +1045,27 @@
         cCtx.putImageData(cData, 0, 0);
         tCtx.putImageData(tData, 0, 0);
 
-        // Išsaugome spalvotą versiją vėlesniam naudojimui
         window.colorWarpedCanvas = colorCanvas;
         window.bwWarpedCanvas = tempCanvas;
 
-        let isLandscape = textW > textH;
+        // ============================================================
+        // A4 FORMATAS - VISADA PORTRAITINIS (21 × 29.7)
+        // ============================================================
+        // VISADA naudojame A4 portretinį formatą (net jei tekstas horizontalus)
         let canvasW = 1200;
-        let canvasH = isLandscape ? Math.floor(1200 / 1.4142) : Math.floor(1200 * 1.4142);
+        let canvasH = Math.floor(1200 * 1.4142); // 1697 px
         
-        resultCanvas.width = canvasW; resultCanvas.height = canvasH;
-        modalFrame.style.aspectRatio = isLandscape ? "1.4142 / 1" : "1 / 1.4142";
+        resultCanvas.width = canvasW; 
+        resultCanvas.height = canvasH;
         
-        ctx.fillStyle = 'white'; ctx.fillRect(0, 0, canvasW, canvasH);
+        // Nustatome modalFrame A4 portretinį
+        modalFrame.style.aspectRatio = "1 / 1.4142";
         
-        let pxPerCm = isLandscape ? (canvasW / 29.7) : (canvasW / 21.0);
+        ctx.fillStyle = 'white'; 
+        ctx.fillRect(0, 0, canvasW, canvasH);
+        
+        // A4 portretinės paraštės
+        let pxPerCm = canvasW / 21.0;  // 1200 px / 21 cm
         let marginLeft = 3.0 * pxPerCm;
         let marginRight = 2.0 * pxPerCm;
         let marginTop = 2.0 * pxPerCm;
@@ -1052,29 +1074,35 @@
         let drawW = canvasW - marginLeft - marginRight;
         let drawH = canvasH - marginTop - marginBottom;
         
+        // Įterpiame vaizdą proporcingai
         let scale = Math.min(drawW / textW, drawH / textH);
         let finalW = textW * scale;
         let finalH = textH * scale;
         
+        // Centruojame horizontaliai, viršuje pagal viršutinę paraštę
         let drawX = marginLeft + (drawW - finalW) / 2;
-        let drawY = marginTop + (drawH - finalH) / 2;
+        let drawY = marginTop;
         
         ctx.drawImage(tempCanvas, 0, 0, textW, textH, drawX, drawY, finalW, finalH);
         scannedImageData = ctx.getImageData(0, 0, canvasW, canvasH);
         
-        // ============================================================
-        // ATPAŽĮSTAME PAVEIKSLĖLIUS (spalvotus regionus)
-        // ============================================================
+        // Išsaugome vaizdo poziciją vėlesniam naudojimui
+        window.imageDrawInfo = {
+            drawX: drawX,
+            drawY: drawY,
+            finalW: finalW,
+            finalH: finalH,
+            textW: textW,
+            textH: textH,
+            scale: scale
+        };
+        
         detectedImages = detectColoredImages(colorCanvas, textW, textH, drawX, drawY, finalW, finalH);
     }
     
-    // ============================================================
-    // PAVEIKSLĖLIŲ (SPALVOTŲ REGIONŲ) ATPAŽINIMAS
-    // ============================================================
     function detectColoredImages(colorCanvas, textW, textH, drawX, drawY, finalW, finalH) {
         let images = [];
         
-        // Sumažiname vaizdą, kad būtų greičiau analizuoti
         let smallCanvas = document.createElement('canvas');
         let smallW = Math.min(200, textW);
         let smallH = Math.floor(smallW * (textH / textW));
@@ -1086,8 +1114,6 @@
         let imgData = sCtx.getImageData(0, 0, smallW, smallH);
         let data = imgData.data;
         
-        // Kiekvienam pikseliui nustatome, ar jis spalvotas
-        // Spalvotas = spalvų skirtumas tarp R, G, B yra didelis
         let colorMask = new Uint8Array(smallW * smallH);
         for (let i = 0; i < data.length; i += 4) {
             let r = data[i];
@@ -1097,20 +1123,17 @@
             let minRGB = Math.min(r, g, b);
             let saturation = maxRGB - minRGB;
             
-            // Jei spalvų skirtumas > 40 ir nėra per tamsu/šviesu
             if (saturation > 40 && maxRGB > 60) {
                 colorMask[i / 4] = 1;
             }
         }
         
-        // Randame sujungtas spalvotų pikselių grupes (BFS)
         let visited = new Uint8Array(smallW * smallH);
         
         for (let y = 0; y < smallH; y++) {
             for (let x = 0; x < smallW; x++) {
                 let idx = y * smallW + x;
                 if (colorMask[idx] === 1 && visited[idx] === 0) {
-                    // BFS - randame visą grupę
                     let queue = [{x, y}];
                     let minX = x, maxX = x, minY = y, maxY = y;
                     let pixelCount = 0;
@@ -1125,7 +1148,6 @@
                         if (p.y < minY) minY = p.y;
                         if (p.y > maxY) maxY = p.y;
                         
-                        // Kaimynai (4 kryptys)
                         let neighbors = [
                             {x: p.x+1, y: p.y}, {x: p.x-1, y: p.y},
                             {x: p.x, y: p.y+1}, {x: p.x, y: p.y-1}
@@ -1142,10 +1164,8 @@
                         }
                     }
                     
-                    // Jei grupė pakankamai didelė (bent 100 pikselių mažame paveikslėlyje)
                     let area = (maxX - minX + 1) * (maxY - minY + 1);
                     if (pixelCount > 100 && area > 200) {
-                        // Konvertuojame koordinates į didelio canvas
                         let scaleX = textW / smallW;
                         let scaleY = textH / smallH;
                         
@@ -1173,9 +1193,9 @@
     }
     
     // ============================================================
-    // PUSLAPIŲ NUMERIŲ ATPAŽINIMAS
+    // PUSLAPIŲ NUMERIŲ ATPAŽINIMAS (SU PRIEVARTU 1-3 SKAITMENŲ)
     // ============================================================
-    function detectPageNumbers(visionData, textH) {
+    function detectPageNumbers(visionData) {
         let pageNumbers = [];
         
         if (!visionData.responses || !visionData.responses[0].textAnnotations) {
@@ -1183,13 +1203,15 @@
         }
         
         let annotations = visionData.responses[0].textAnnotations;
+        let pageHeight = originalUnblurredCanvas.height;
         
         for (let i = 1; i < annotations.length; i++) {
             let ann = annotations[i];
             let text = ann.description.trim();
             
-            // Tikriname, ar tai tik skaičius (1, 2, 3, ...)
-            if (/^\d{1,3}$/.test(text)) {
+            // Tikriname, ar tai tik skaičius (1-3 skaitmenys)
+            // GALI BŪTI: "5", "12", "123", "1 2" (du skaičiai atskirti tarpu)
+            if (/^\d{1,3}(\s+\d{1,3})?$/.test(text)) {
                 let vertices = ann.boundingPoly.vertices;
                 if (vertices && vertices.length > 0) {
                     let minY = Math.min(...vertices.map(v => v.y || 0));
@@ -1197,12 +1219,8 @@
                     let minX = Math.min(...vertices.map(v => v.x || 0));
                     let maxX = Math.max(...vertices.map(v => v.x || 0));
                     
-                    // Jei skaičius yra apatinėje puslapio dalyje
-                    // (originalaus dokumento aukštis - šis skaičius yra apatinėje 20%)
-                    let pageHeight = originalUnblurredCanvas.height;
-                    
-                    // Apatinė 15% lapo
-                    if (minY > pageHeight * 0.85) {
+                    // Jei skaičius yra apatinėje 25% lapo dalyje
+                    if (minY > pageHeight * 0.75) {
                         pageNumbers.push({
                             text: text,
                             x: minX,
@@ -1217,6 +1235,50 @@
             }
         }
         
+        // Surikiuojame pagal Y poziciją (kad būtų tvarka)
+        pageNumbers.sort((a, b) => a.originalY - b.originalY);
+        
+        // Jei radome kelis skaičius - sujungiame juos su tarpu
+        if (pageNumbers.length > 1) {
+            // Jei skaičiai yra arti vienas kito (horizontaliai) - sujungiame
+            let combined = [];
+            let used = new Set();
+            
+            for (let i = 0; i < pageNumbers.length; i++) {
+                if (used.has(i)) continue;
+                
+                let pn = pageNumbers[i];
+                let text = pn.text;
+                used.add(i);
+                
+                // Tikriname, ar yra kitas skaičius šalia (toje pačioje eilutėje)
+                for (let j = i + 1; j < pageNumbers.length; j++) {
+                    if (used.has(j)) continue;
+                    
+                    let other = pageNumbers[j];
+                    let yDiff = Math.abs(other.y - pn.y);
+                    
+                    // Jei Y skirtumas mažas (toje pačioje eilutėje)
+                    if (yDiff < pn.height * 1.5) {
+                        // Sujungiame su tarpu
+                        text += ' ' + other.text;
+                        used.add(j);
+                    }
+                }
+                
+                combined.push({
+                    text: text,
+                    x: pn.x,
+                    y: pn.y,
+                    width: pn.width,
+                    height: pn.height,
+                    originalY: pn.originalY
+                });
+            }
+            
+            return combined;
+        }
+        
         return pageNumbers;
     }
 
@@ -1229,7 +1291,10 @@
             
             resultCanvas.width = originalUnblurredCanvas.width;
             resultCanvas.height = originalUnblurredCanvas.height;
-            modalFrame.style.aspectRatio = `${resultCanvas.width} / ${resultCanvas.height}`;
+            
+            // A4 portretinis formatas
+            modalFrame.style.aspectRatio = "1 / 1.4142";
+            
             drawAlignUI();
         } else {
             isAlignMode = false;
@@ -1308,9 +1373,7 @@
             if (visionData.responses && visionData.responses[0].fullTextAnnotation) {
                 extractedTextGlobal = visionData.responses[0].fullTextAnnotation.text;
                 
-                // ============================================================
-                // ATPAŽĮSTAME PUSLAPIŲ NUMERIUS
-                // ============================================================
+                // Atpažįstame puslapių numerius
                 detectedPageNumbers = detectPageNumbers(visionData);
                 
                 if (visionData.responses[0].textAnnotations && visionData.responses[0].textAnnotations.length > 0) {
@@ -1373,18 +1436,12 @@
         context.fillText(line, x, currentY);
     }
     
-    // ============================================================
-    // TEKSTO FORMATAVIMO FUNKCIJOS
-    // ============================================================
-    
-    // Skaido tekstą į pastraipas (pagal tuščias eilutes)
     function splitIntoParagraphs(text) {
         let paragraphs = text.split(/\n\s*\n/);
         paragraphs = paragraphs.filter(p => p.trim().length > 0);
         return paragraphs;
     }
     
-    // Apdoroja pastraipos formatavimą
     function getParagraphFormat(paragraph) {
         let trimmed = paragraph.trim();
         let format = {
@@ -1408,7 +1465,6 @@
         return format;
     }
     
-    // Suskaido pastraipą į eilutes
     function wrapParagraph(ctx, paragraph, maxWidth) {
         let words = paragraph.split(/\s+/);
         let lines = [];
@@ -1433,7 +1489,6 @@
         return lines;
     }
     
-    // Lygiuoja eilutę pagal abi puses (justify)
     function drawJustifiedLine(ctx, line, x, y, maxWidth, isLastLine) {
         if (isLastLine) {
             ctx.fillText(line, x, y);
@@ -1469,9 +1524,7 @@
         try {
             if(!navigator.onLine) throw new Error("Nėra interneto ryšio!");
             
-            // ============================================================
-            // PAŠALINAME PUSLAPIŲ NUMERIUS IŠ TEKSTO
-            // ============================================================
+            // Pašaliname puslapių numerius iš teksto
             let textToTranslate = extractedTextGlobal;
             
             // Pašaliname eilutes, kurios yra tik skaičiai (puslapių numeriai)
@@ -1479,9 +1532,9 @@
             let cleanLines = [];
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i].trim();
-                // Jei eilutė yra tik skaičius (1-3 skaitmenys) ir yra paskutinėse 3 eilutėse
-                if (/^\d{1,3}$/.test(line) && i >= lines.length - 3) {
-                    continue; // Praleidžiame - tai puslapio numeris
+                // Pašaliname skaičius, kurie yra paskutinėse 5 eilutėse
+                if (/^\d{1,3}(\s+\d{1,3})?$/.test(line) && i >= lines.length - 5) {
+                    continue;
                 }
                 cleanLines.push(lines[i]);
             }
@@ -1509,34 +1562,59 @@
             const ctx = resultCanvas.getContext('2d');
             
             // ============================================================
-            // A4 LAPO PARAMETRAI
+            // A4 PORTRAITINIS FORMATAS (VISADA)
             // ============================================================
-            let isLandscape = resultCanvas.width > resultCanvas.height;
-            let a4WidthCm = isLandscape ? 29.7 : 21.0;
-            let marginLeftCm = 3.0;
-            let marginRightCm = 2.0;
-            let marginTopCm = 2.0;
-            let marginBottomCm = 2.0;
+            let canvasW = 1200;
+            let canvasH = Math.floor(1200 * 1.4142); // 1697 px
             
-            let pxPerCm = resultCanvas.width / a4WidthCm;
-            let marginLeftPx = marginLeftCm * pxPerCm;
-            let marginRightPx = marginRightCm * pxPerCm;
-            let marginTopPx = marginTopCm * pxPerCm;
-            let marginBottomPx = marginBottomCm * pxPerCm;
+            resultCanvas.width = canvasW; 
+            resultCanvas.height = canvasH;
+            
+            modalFrame.style.aspectRatio = "1 / 1.4142";
+            
+            let pxPerCm = canvasW / 21.0;
+            let marginLeftPx = 3.0 * pxPerCm;
+            let marginRightPx = 2.0 * pxPerCm;
+            let marginTopPx = 2.0 * pxPerCm;
+            let marginBottomPx = 2.0 * pxPerCm;
             
             let pageNumberHeight = 25;
-            let usableHeight = resultCanvas.height - marginTopPx - marginBottomPx - pageNumberHeight;
-            let usableWidth = resultCanvas.width - marginLeftPx - marginRightPx;
+            let usableHeight = canvasH - marginTopPx - marginBottomPx - pageNumberHeight;
+            let usableWidth = canvasW - marginLeftPx - marginRightPx;
+            
+            // Nupiešiame baltą lapą
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvasW, canvasH);
             
             // ============================================================
-            // SKAIDOME TEKSTĄ Į PASTRAIPAS
+            // NUPIEŠIAME PAVEIKSLĖLIUS
+            // ============================================================
+            if (detectedImages.length > 0 && window.colorWarpedCanvas) {
+                for (let img of detectedImages) {
+                    let imgCanvas = document.createElement('canvas');
+                    imgCanvas.width = Math.max(1, Math.floor(img.srcW));
+                    imgCanvas.height = Math.max(1, Math.floor(img.srcH));
+                    let iCtx = imgCanvas.getContext('2d');
+                    
+                    iCtx.drawImage(
+                        window.colorWarpedCanvas,
+                        img.srcX, img.srcY, img.srcW, img.srcH,
+                        0, 0, imgCanvas.width, imgCanvas.height
+                    );
+                    
+                    ctx.drawImage(
+                        imgCanvas,
+                        img.x, img.y, img.width, img.height
+                    );
+                }
+            }
+            
+            // ============================================================
+            // TEKSTO PIEŠIMAS
             // ============================================================
             let paragraphs = splitIntoParagraphs(finalOutputText);
             
-            // ============================================================
-            // AUTOMATINIS ŠRIFTO MAŽINIMAS
-            // ============================================================
-            let baseFontSize = Math.max(14, Math.floor(resultCanvas.width / 30));
+            let baseFontSize = Math.max(14, Math.floor(canvasW / 30));
             let minFontSize = 8;
             let fontSize = baseFontSize;
             let lineHeight = 0;
@@ -1583,41 +1661,6 @@
                 fontSize -= 1;
             }
             
-            // ============================================================
-            // PIEŠIAME TEKSTĄ ANT LAPO
-            // ============================================================
-            
-            // Nupiešiame baltą lapą (be nuskaityto fono - nes jis turi spalvotus paveikslėlius)
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, resultCanvas.width, resultCanvas.height);
-            
-            // ============================================================
-            // NUPIEŠIAME PAVEIKSLĖLIUS (jei yra)
-            // ============================================================
-            if (detectedImages.length > 0 && window.colorWarpedCanvas) {
-                for (let img of detectedImages) {
-                    // Ištraukiame spalvotą regioną
-                    let imgCanvas = document.createElement('canvas');
-                    imgCanvas.width = Math.max(1, Math.floor(img.srcW));
-                    imgCanvas.height = Math.max(1, Math.floor(img.srcH));
-                    let iCtx = imgCanvas.getContext('2d');
-                    
-                    // Nupiešiame spalvotą regioną
-                    iCtx.drawImage(
-                        window.colorWarpedCanvas,
-                        img.srcX, img.srcY, img.srcW, img.srcH,
-                        0, 0, imgCanvas.width, imgCanvas.height
-                    );
-                    
-                    // Nupiešiame ant A4 lapo
-                    ctx.drawImage(
-                        imgCanvas,
-                        img.x, img.y, img.width, img.height
-                    );
-                }
-            }
-            
-            // Nupiešiame tekstą
             let y = marginTopPx;
             
             for (let i = 0; i < paragraphData.length; i++) {
@@ -1645,17 +1688,23 @@
             }
             
             // ============================================================
-            // PUSLAPIO NUMERIS - ORIGINALIOJE VIETOJE
+            // PUSLAPIO NUMERIS APAČIOJE - TIKSLIAI KAIP ORIGINALE
             // ============================================================
-            ctx.font = `${Math.max(10, fontSize - 2)}px Arial`;
-            ctx.fillStyle = '#666';
+            let pageNumberText = '1'; // Numatytasis
+            
+            if (detectedPageNumbers.length > 0) {
+                // Jei radome skaičių - naudojame jį
+                pageNumberText = detectedPageNumbers.map(pn => pn.text).join(' ');
+            }
+            
+            ctx.font = `bold ${Math.max(12, fontSize)}px Arial`;
+            ctx.fillStyle = '#000';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'bottom';
-            ctx.fillText('1', resultCanvas.width / 2, resultCanvas.height - marginBottomPx / 2);
+            ctx.fillText(pageNumberText, canvasW / 2, canvasH - marginBottomPx / 2);
             
-            // Pranešame apie paveikslėlių aptikimą
             if (detectedImages.length > 0) {
-                showToast(`Aptikta ${detectedImages.length} paveikslėlių (spalvotų).`);
+                showToast(`Aptikta ${detectedImages.length} paveikslėlių.`);
             }
 
         } catch (err) { 
