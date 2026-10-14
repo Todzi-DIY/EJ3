@@ -163,11 +163,46 @@
     box-shadow: 0 5px 15px rgba(0,0,0,0.6); display: none; text-align: center;
     width: 90%; max-width: 400px; border: 2px solid #ff4081; word-wrap: break-word;
   }
+
+  /* === DIAGNOSTIKOS MODALAS === */
+  #diagnosticModal {
+    display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: rgba(0, 0, 0, 0.98); z-index: 500;
+    padding: 20px; overflow-y: auto;
+  }
+  #diagnosticModal .diag-box {
+    max-width: 700px; margin: 0 auto; background: #1a1a1a;
+    border: 2px solid #E91E63; border-radius: 12px; padding: 20px;
+    color: #fff; font-family: monospace; font-size: 13px;
+  }
+  #diagnosticModal h3 {
+    color: #E91E63; margin-top: 0; font-family: Arial, sans-serif;
+  }
+  #diagnosticModal .diag-content {
+    background: #0a0a0a; padding: 15px; border-radius: 8px;
+    border: 1px solid #333; white-space: pre-wrap; word-break: break-word;
+    max-height: 60vh; overflow-y: auto; color: #4CAF50;
+  }
+  #diagnosticModal .diag-btn {
+    width: 100%; padding: 15px; margin-top: 15px; font-size: 14px;
+    font-weight: bold; border: none; border-radius: 8px; cursor: pointer;
+    background: #4CAF50; color: white;
+  }
 </style>
 </head>
 <body>
 
   <div id="toastMsg"></div>
+
+  <!-- === DIAGNOSTIKOS MODALAS === -->
+  <div id="diagnosticModal">
+    <div class="diag-box">
+      <h3>🔍 DIAGNOSTIKOS REŽIMAS</h3>
+      <p style="color: #ccc; font-family: Arial;">Tiksli klaida iš Google Vision API:</p>
+      <div class="diag-content" id="diagContent">Kraunama...</div>
+      <button class="diag-btn" onclick="document.getElementById('diagnosticModal').style.display='none'; document.getElementById('mainContainer').style.display='flex'; document.getElementById('translationModal').style.display='none';">UŽDARYTI</button>
+    </div>
+  </div>
   
   <div id="telemetryBox">
     <div class="wifi-icon" title="Wi-Fi ryšys">
@@ -302,11 +337,9 @@
 
   <script>
     // ============================================================
-    // KONFIGŪRACIJA - JOKIŲ RAKTŲ PRIEKINĖJE DALYJE!
+    // KONFIGŪRACIJA
     // ============================================================
     const WORKER_URL = 'https://deepl-proxy.t-jasukaitis.workers.dev';
-    
-    // ESP32 URL (jei norite valdyti ESP32 per šį puslapį)
     let ESP32_BASE = localStorage.getItem('esp32_url') || '';
 
     let toastTimer = null;
@@ -325,9 +358,6 @@
     }
     ['touchstart', 'click'].forEach(evt => { document.addEventListener(evt, activateFullscreen, {capture: true}); });
 
-    // ============================================================
-    // TELEMETRIJOS POLLING
-    // ============================================================
     function pollTrigger() {
       if (!ESP32_BASE) { 
         setTimeout(pollTrigger, 3000); 
@@ -373,9 +403,6 @@
     }
     setTimeout(pollTrigger, 500);
 
-    // ============================================================
-    // NUSTATYMAI
-    // ============================================================
     document.getElementById('settingsIcon').addEventListener('click', () => {
       document.getElementById('mainContainer').style.display = 'none';
       document.getElementById('telemetryBox').style.display = 'none';
@@ -435,9 +462,6 @@
       });
     };
 
-    // ============================================================
-    // OTA
-    // ============================================================
     let selectedOtaFile = null;
     document.getElementById('otaUpdateBtn').addEventListener('click', () => {
         if (!ESP32_BASE) { showToast("Nustatykite ESP32 IP"); return; }
@@ -802,10 +826,8 @@
 
     function calculateInitialPoly(visionData) {
         let allPoints = [];
-        // DOCUMENT_TEXT_DETECTION grąžina fullTextAnnotation ir textAnnotations
         let annotations = visionData.responses[0].textAnnotations;
         if (!annotations || annotations.length === 0) {
-            // Bandom naudoti fullTextAnnotation
             if (visionData.responses[0].fullTextAnnotation) {
                 annotations = [{ description: visionData.responses[0].fullTextAnnotation.text, boundingPoly: visionData.responses[0].fullTextAnnotation.pages[0].blocks[0].boundingPoly }];
             }
@@ -1127,27 +1149,71 @@
 
             let base64ImageToScan = tempC.toDataURL("image/jpeg", 0.85).split(',')[1];
             
-            // ⚡ DOCUMENT_TEXT_DETECTION - geriau tinka dokumentams!
-            let visionRes = await fetch(WORKER_URL + '/vision', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({"requests": [{ 
-                    "image": { "content": base64ImageToScan }, 
-                    "features": [{ "type": "DOCUMENT_TEXT_DETECTION" }] 
-                }]}) 
-            });
-            if(!visionRes.ok) throw new Error("Google Vision klaida: " + visionRes.status);
-            let visionData = await visionRes.json();
+            // ============================================================
+            // DIAGNOSTIKA: Siunčiame užklausą ir TIKRINAME atsakymą
+            // ============================================================
+            let visionRes;
+            let visionRawText = "";
+            
+            try {
+                visionRes = await fetch(WORKER_URL + '/vision', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({"requests": [{ 
+                        "image": { "content": base64ImageToScan }, 
+                        "features": [{ "type": "DOCUMENT_TEXT_DETECTION" }] 
+                    }]}) 
+                });
+                visionRawText = await visionRes.text();
+            } catch (fetchErr) {
+                // Tinklo klaida
+                document.getElementById('diagContent').innerText = 
+                    "TINKLO KLAIDA:\n\n" + 
+                    "URL: " + WORKER_URL + "/vision\n" +
+                    "Klaida: " + fetchErr.message + "\n" +
+                    "Tipas: " + fetchErr.name;
+                document.getElementById('diagnosticModal').style.display = 'block';
+                return;
+            }
+            
+            // Jei atsakymas nėra OK (500, 403, 429 ir t.t.) - rodome diagnostiką
+            if (!visionRes.ok) {
+                let formattedDiag = "🔍 GOOGLE VISION KLAIDA\n";
+                formattedDiag += "═══════════════════════════════\n\n";
+                formattedDiag += "HTTP Status: " + visionRes.status + " " + visionRes.statusText + "\n\n";
+                formattedDiag += "Atsakymas iš Worker'io:\n";
+                formattedDiag += "─────────────────────────────\n";
+                
+                try {
+                    let parsed = JSON.parse(visionRawText);
+                    formattedDiag += JSON.stringify(parsed, null, 2);
+                } catch (e) {
+                    formattedDiag += visionRawText.substring(0, 2000);
+                }
+                
+                document.getElementById('diagContent').innerText = formattedDiag;
+                document.getElementById('diagnosticModal').style.display = 'block';
+                return;
+            }
+            
+            // Bandome parsinti JSON
+            let visionData;
+            try {
+                visionData = JSON.parse(visionRawText);
+            } catch (parseErr) {
+                document.getElementById('diagContent').innerText = 
+                    "JSON PARSINIMO KLAIDA:\n\n" + 
+                    "Atsakymas:\n" + visionRawText.substring(0, 2000);
+                document.getElementById('diagnosticModal').style.display = 'block';
+                return;
+            }
 
-            // DOCUMENT_TEXT_DETECTION grąžina fullTextAnnotation - naudojame jį
             if (visionData.responses && visionData.responses[0].fullTextAnnotation) {
                 extractedTextGlobal = visionData.responses[0].fullTextAnnotation.text;
                 
-                // Bandome gauti poly iš textAnnotations (turi detalesnes koordinates)
                 if (visionData.responses[0].textAnnotations && visionData.responses[0].textAnnotations.length > 0) {
                     currentDocPoly = calculateInitialPoly(visionData);
                 } else {
-                    // Fallback - naudokime viso dokumento ribas
                     let page = visionData.responses[0].fullTextAnnotation.pages[0];
                     let vertices = page.blocks[0].boundingPoly.vertices;
                     let xs = vertices.map(v => v.x || 0);
@@ -1162,7 +1228,6 @@
                 executeWarpAndFilter(currentDocPoly);
                 alignBtn.style.display = 'block'; 
             } else if (visionData.responses && visionData.responses[0].textAnnotations && visionData.responses[0].textAnnotations.length > 0) {
-                // Fallback į seną TEXT_DETECTION logiką
                 extractedTextGlobal = visionData.responses[0].textAnnotations[0].description;
                 currentDocPoly = calculateInitialPoly(visionData);
                 executeWarpAndFilter(currentDocPoly);
@@ -1175,10 +1240,13 @@
             langSelect.style.display = 'block';
 
         } catch(err) {
-            console.error(err); showToast(err.message);
-            translationModal.style.display = 'none'; 
-            document.getElementById('mainContainer').style.display = 'flex';
-            modalFileInput.value = '';
+            console.error(err);
+            document.getElementById('diagContent').innerText = 
+                "BENDRA KLAIDA:\n\n" + 
+                "Klaida: " + err.message + "\n" +
+                "Tipas: " + err.name + "\n" +
+                "Stack:\n" + (err.stack || "N/A").substring(0, 1000);
+            document.getElementById('diagnosticModal').style.display = 'block';
         }
     }
 
@@ -1225,7 +1293,8 @@
             if(res.ok) {
                 transData = await res.json();
             } else {
-                throw new Error(`Worker klaida: ${res.status}`);
+                let errText = await res.text();
+                throw new Error(`Worker klaida: ${res.status} - ${errText.substring(0, 300)}`);
             }
             
             if(!transData) throw new Error("Nepavyko susisiekti su vertimo serveriu.");
