@@ -2,1328 +2,145 @@
 <html lang="lt">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>VERTĖJAS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VERTĖJAS - DIAGNOSTIKA</title>
 <style>
-  * { box-sizing: border-box; }
-  html, body { min-height: 100vh; width: 100vw; background-color: black; color: white; margin: 0; padding: 0; font-family: Arial, sans-serif; overflow-x: hidden; overflow-y: auto; }
-  
-  .container { margin-top: 150px; display: flex; flex-direction: column; align-items: center; width: 100%; padding-bottom: 50px; }
-  
-  .settings-icon {
-    position: absolute; top: 20px; left: 20px; cursor: pointer; background-color: #1a1a1a;
-    width: 44px; height: 44px; border-radius: 10px; border: 2px solid #333; box-shadow: 0 4px 6px rgba(0,0,0,0.5);
-    display: flex; justify-content: center; align-items: center; transition: all 0.3s ease; z-index: 10;
-  }
-  .settings-icon:hover { background-color: #252525; border-color: #4CAF50; transform: scale(1.05); }
-  .settings-icon svg { width: 22px; height: 22px; display: block; }
-
-  #telemetryBox { 
-    position: absolute; top: 20px; left: 50%; transform: translateX(-50%); 
-    display: flex; gap: 15px; align-items: center; z-index: 10; 
-    background: #1a1a1a; padding: 6px 15px; min-height: 44px;
-    border-radius: 10px; border: 2px solid #333; box-shadow: 0 4px 6px rgba(0,0,0,0.5);
-  }
-  .wifi-icon { display: flex; align-items: flex-end; gap: 3px; height: 16px; }
-  .wifi-bar { width: 4px; background: #555; border-radius: 2px; transition: background 0.3s; }
-  
-  .bat-container { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 15px; }
-  .bat-icon { position: relative; display: inline-block; width: 40px; height: 18px; border: 2px solid #fff; border-radius: 3px; padding: 1px; background: #222; }
-  .bat-fill { width: 0%; height: 100%; background-color: #4CAF50; border-radius: 1px; transition: width 0.5s ease, background-color 0.5s ease; }
-  .bat-tip { position: absolute; right: -5px; top: 3px; width: 3px; height: 8px; background-color: #fff; border-radius: 0 2px 2px 0; }
-  .charging-icon { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 3px #000; z-index: 2; }
-  
-  .bat-info { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; min-width: 40px; }
-  .bat-pct { font-size: 14px; color: #fff; font-weight: bold; text-align: center; margin-bottom: 2px; }
-  .bat-volt { font-size: 11px; color: #aaa; font-weight: normal; text-align: center; }
-
-  @keyframes chargeAnim { 0% { width: 10%; background-color: #E91E63; } 50% { background-color: #ffeb3b; } 100% { width: 100%; background-color: #4CAF50; } }
-  .charging-active { animation: chargeAnim 1.5s infinite ease-in-out; }
-  
-  .title { font-size: 28px; margin-bottom: 40px; letter-spacing: 3px; font-weight: bold; color: #4CAF50; text-transform: uppercase; }
-  
-  .action-btn { 
-    background-color: #2196F3; color: white; width: 90%; max-width: 320px; padding: 18px 15px; 
-    font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; 
-    text-align: center; transition: all 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-  }
-  .action-btn:active { transform: scale(0.98); }
-
-  .modal-overlay { 
-    display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-    background-color: rgba(0, 0, 0, 0.95); z-index: 200; flex-direction: column; align-items: center; 
-    padding: 30px 15px; overflow-y: auto;
-  }
-  
-  #translationModal .modal-box {
-    width: 100%; max-width: 650px; display: flex; flex-direction: column; align-items: center; gap: 15px;
-    border: 2px solid #333; border-radius: 12px; padding: 60px 20px 20px 20px; background-color: #1a1a1a;
-    min-height: 85vh; position: relative;
-  }
-
-  #cameraModal .modal-box {
-    width: 100%; max-width: 650px; display: flex; flex-direction: column; align-items: center; gap: 15px;
-    border: 2px solid #333; border-radius: 12px; padding: 60px 12px 20px 12px; background-color: #1a1a1a;
-    height: auto; max-height: 95vh; position: relative;
-  }
-  
-  #cameraModal .image-frame {
-    width: 100%; max-height: 75vh;
-    aspect-ratio: 1 / 1.4142;
-    margin: 0 auto; flex: none;
-  }
-
-  .close-x-icon {
-    position: absolute; top: 13px; right: 15px; cursor: pointer; color: #E91E63;
-    width: 34px; height: 34px; display: flex; justify-content: center; align-items: center;
-    background: rgba(233, 30, 99, 0.15); border-radius: 50%; transition: all 0.3s ease;
-    z-index: 50;
-  }
-  .close-x-icon:hover { background: rgba(233, 30, 99, 0.4); transform: scale(1.1); }
-  .close-x-icon svg { width: 20px; height: 20px; display: block; }
-
-  .image-frame {
-    width: 100%; max-height: 55vh; flex: 1;
-    border: 4px solid #4CAF50; border-radius: 8px; 
-    position: relative; background-color: white; overflow: hidden; display: none;
-    justify-content: center; align-items: center; flex-direction: column;
-    box-shadow: 0 5px 25px rgba(76, 175, 80, 0.3);
-  }
-  .image-frame canvas {
-    width: 100%; height: 100%; object-fit: contain; 
-    touch-action: none;
-  }
-  
-  #liveVideo { width: 100%; height: 100%; object-fit: cover; }
-  #liveOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair; }
-
-  #magnifier {
-    display: none; position: absolute; left: 50%; transform: translateX(-50%);
-    width: 170px; height: 170px; 
-    border: 3px solid #FF9800; border-radius: 8px; 
-    z-index: 100; pointer-events: none; box-shadow: 0 4px 15px rgba(0,0,0,0.8); background-color: #111;
-  }
-
-  .align-btn {
-    background-color: #FF9800; color: white; padding: 12px 20px; 
-    font-size: 14px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; 
-    display: none; box-shadow: 0 4px 10px rgba(255, 152, 0, 0.4); transition: transform 0.2s;
-    width: 100%; max-width: 250px; text-transform: uppercase; margin-top: 5px;
-  }
-  .align-btn:active { transform: scale(0.98); }
-
-  .overlay-layer {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-    background: rgba(0,0,0,0.85); display: flex; flex-direction: column; 
-    justify-content: center; align-items: center; z-index: 10;
-  }
-
-  .spinner { border: 4px solid rgba(255, 255, 255, 0.2); border-top: 4px solid #4CAF50; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
-  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-  
-  .overlay-text { font-size: 16px; font-weight: bold; color: white; text-align: center; padding: 0 10px; }
-
-  .lang-select {
-    width: 100%; padding: 15px; font-size: 16px; text-align: center; font-weight: bold;
-    background-color: #2c2c2c; color: white; border: 2px solid #555; border-radius: 8px; outline: none; cursor: pointer;
-    flex-shrink: 0; margin-top: 5px;
-  }
-  
-  .translate-action-btn {
-    background-color: #E91E63; color: white; width: 100%; padding: 18px; 
-    font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; 
-    display: none; box-shadow: 0 4px 10px rgba(233, 30, 99, 0.4); transition: transform 0.2s;
-    flex-shrink: 0;
-  }
-  .translate-action-btn:active { transform: scale(0.98); }
-
-  #settingsModal { display:none; position:fixed; top:0; left:0; width:100vw; min-height:100vh; background-color:black; z-index:100; flex-direction:column; align-items:center; padding-top:40px; }
-  #wifiModal { display:none; position:fixed; top:0; left:0; width:100vw; min-height:100vh; background-color:rgba(0,0,0,0.95); z-index:150; flex-direction:column; align-items:center; padding:40px 20px; overflow-y: auto; }
-  .modal-btn { border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; color: white; }
-  .wifi-list { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-  .wifi-item { background: #2c2c2c; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444; }
-  .wifi-info { display: flex; flex-direction: column; gap: 5px; text-align: left; }
-  .wifi-ssid { font-weight: bold; font-size: 16px; color: white; }
-  .wifi-ip { font-size: 12px; color: #aaa; }
-  .wifi-online { color: #4CAF50; font-size: 10px; font-weight: bold; animation: fast-blinker 1s infinite; border: 1px solid #4CAF50; padding: 2px 6px; border-radius: 4px; display: inline-block; width: fit-content; }
-  .wifi-del-btn { background: #E91E63; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-  .wifi-add-box { background: #1a1a1a; border: 2px dashed #555; padding: 20px; border-radius: 8px; max-width: 400px; width: 100%; display: flex; flex-direction: column; gap: 10px; }
-  .wifi-input { padding: 10px; border-radius: 6px; border: 1px solid #444; background: #222; color: white; outline: none; font-size: 14px; }
-  .wifi-save-btn { background: #4CAF50; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;}
-  
-  .close-modal-btn { background-color: transparent; color: #888; border: 1px solid #444; width: 100%; padding: 15px; border-radius: 8px; font-size: 14px; cursor: pointer; margin-top: auto; flex-shrink: 0;}
-
-  #otaOverlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.95); z-index: 350; flex-direction: column; align-items: center; justify-content: center; }
-  .upload-modal-box { background: #1a1a1a; border: 2px solid #00796B; padding: 30px; border-radius: 10px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.8); }
-
-  #toastMsg {
-    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-    background-color: rgba(233, 30, 99, 0.95); color: white; padding: 15px 25px;
-    border-radius: 8px; font-weight: bold; z-index: 1000; font-size: 14px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.6); display: none; text-align: center;
-    width: 90%; max-width: 400px; border: 2px solid #ff4081; word-wrap: break-word;
-  }
-
-  /* === DIAGNOSTIKOS MODALAS === */
-  #diagnosticModal {
-    display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    background-color: rgba(0, 0, 0, 0.98); z-index: 500;
-    padding: 20px; overflow-y: auto;
-  }
-  #diagnosticModal .diag-box {
-    max-width: 700px; margin: 0 auto; background: #1a1a1a;
-    border: 2px solid #E91E63; border-radius: 12px; padding: 20px;
-    color: #fff; font-family: monospace; font-size: 13px;
-  }
-  #diagnosticModal h3 {
-    color: #E91E63; margin-top: 0; font-family: Arial, sans-serif;
-  }
-  #diagnosticModal .diag-content {
-    background: #0a0a0a; padding: 15px; border-radius: 8px;
-    border: 1px solid #333; white-space: pre-wrap; word-break: break-word;
-    max-height: 60vh; overflow-y: auto; color: #4CAF50;
-  }
-  #diagnosticModal .diag-btn {
-    width: 100%; padding: 15px; margin-top: 15px; font-size: 14px;
-    font-weight: bold; border: none; border-radius: 8px; cursor: pointer;
-    background: #4CAF50; color: white;
-  }
+  body { background: #111; color: #fff; font-family: Arial, sans-serif; padding: 20px; margin: 0; }
+  h1 { color: #4CAF50; text-align: center; }
+  .btn { display: block; width: 100%; max-width: 320px; margin: 20px auto; padding: 20px;
+         font-size: 18px; font-weight: bold; color: white; background: #4CAF50;
+         border: none; border-radius: 8px; cursor: pointer; }
+  .btn:active { background: #388E3C; }
+  #result { margin-top: 20px; padding: 15px; background: #1a1a1a; border: 1px solid #333;
+            border-radius: 8px; white-space: pre-wrap; word-break: break-word;
+            font-family: monospace; font-size: 12px; min-height: 100px; }
+  .info { color: #FFC107; text-align: center; font-size: 14px; margin-top: 10px; }
 </style>
 </head>
 <body>
 
-  <div id="toastMsg"></div>
+<h1>🔍 DIAGNOSTIKA</h1>
 
-  <!-- === DIAGNOSTIKOS MODALAS === -->
-  <div id="diagnosticModal">
-    <div class="diag-box">
-      <h3>🔍 DIAGNOSTIKOS REŽIMAS</h3>
-      <p style="color: #ccc; font-family: Arial;">Tiksli klaida iš Google Vision API:</p>
-      <div class="diag-content" id="diagContent">Kraunama...</div>
-      <button class="diag-btn" onclick="document.getElementById('diagnosticModal').style.display='none'; document.getElementById('mainContainer').style.display='flex'; document.getElementById('translationModal').style.display='none';">UŽDARYTI</button>
-    </div>
-  </div>
-  
-  <div id="telemetryBox">
-    <div class="wifi-icon" title="Wi-Fi ryšys">
-      <div class="wifi-bar" style="height: 4px;"></div>
-      <div class="wifi-bar" style="height: 8px;"></div>
-      <div class="wifi-bar" style="height: 12px;"></div>
-      <div class="wifi-bar" style="height: 16px;"></div>
-    </div>
-    <div style="width: 2px; height: 30px; background: #333; margin: 0 5px;"></div>
-    <div class="bat-container" title="Baterijos lygis">
-      <div class="bat-icon">
-        <div id="batFill" class="bat-fill"></div>
-        <div class="bat-tip"></div>
-        <div id="charging-icon" class="charging-icon">⚡</div>
-      </div>
-      <div class="bat-info">
-        <span id="batText" class="bat-pct">--%</span>
-        <span id="batVolt" class="bat-volt">--V</span>
-      </div>
-    </div>
-  </div>
+<div class="info">Pasirinkite nuotrauką – klaida bus parodyta iššokančiame lange</div>
 
-  <div id="settingsIcon" class="settings-icon">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-  </div>
-  
-  <div class="container" id="mainContainer">
-    <div class="title">V E R T Ė J A S</div>
-    <button id="addFileBtnMain" class="action-btn">Pridėkite failą</button>
-    <div style="margin-top: 80px;"></div>
-    <button id="cameraBtnMain" class="action-btn" style="background-color: #4CAF50;">FOTOGRAFUOTI</button>
-    <input type="file" id="modalFileInput" accept="image/*" style="display:none;">
-  </div>
+<input type="file" id="fileInput" accept="image/*" style="display:none;">
 
-  <div id="cameraModal" class="modal-overlay">
-      <div class="modal-box">
-          <div id="closeCameraModalX" class="close-x-icon">
-              <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-          </div>
+<button class="btn" id="selectBtn">📁 PASIRINKTI NUOTRAUKĄ</button>
 
-          <div class="image-frame" style="display: flex; background: black;">
-              <video id="liveVideo" autoplay playsinline></video>
-              <canvas id="liveOverlay"></canvas>
-          </div>
-          
-          <button id="captureBtn" class="action-btn" style="width: 100%; max-width: 100%; background-color: #4CAF50;">FOTOGRAFUOTI</button>
-      </div>
-  </div>
+<div id="result">Rezultatas pasirodys čia...</div>
 
-  <div id="cameraBlockedModal" class="modal-overlay">
-      <div class="modal-box" style="border-color: #E91E63; max-width: 450px; align-items: flex-start; padding: 30px 20px;">
-          <h3 style="color: #E91E63; margin-top: 0; font-size: 18px; text-transform: uppercase;">DĖMESIO: KAMERA NEPASIEKIAMA!</h3>
-          <p style="color: #ccc; font-size: 14px; line-height: 1.5; margin-bottom: 15px;">
-              Naršyklė blokuoja prieigą prie kameros. Įsitikinkite, kad:<br><br>
-              1. Puslapis atidarytas per <b>https://ej3.eu</b><br>
-              2. Suteikėte leidimą naudoti kamerą<br>
-              3. Naudojate modernią naršyklę
-          </p>
-          
-          <button id="closeCameraBlockedBtn" class="action-btn" style="background-color: transparent; border: 2px solid #E91E63; color: #E91E63; width: 100%; max-width: 100%;">SUPRATAU</button>
-      </div>
-  </div>
+<script>
+  // ============================================================
+  // KONFIGŪRACIJA
+  // ============================================================
+  const WORKER_URL = 'https://deepl-proxy.t-jasukaitis.workers.dev';
 
-  <div id="translationModal" class="modal-overlay">
-      <div class="modal-box">
-          
-          <div id="closeModalX" class="close-x-icon">
-              <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-          </div>
+  // ============================================================
+  // MYGTUKO PASPAUDIMAS
+  // ============================================================
+  document.getElementById('selectBtn').addEventListener('click', () => {
+    document.getElementById('fileInput').click();
+  });
 
-          <div id="modalFrame" class="image-frame">
-              <canvas id="resultCanvas"></canvas>
-              <canvas id="magnifier" width="170" height="170"></canvas>
-              
-              <div id="translateOverlay" class="overlay-layer" style="display:none;">
-                  <div class="spinner"></div>
-                  <div id="translateOverlayText" class="overlay-text">Skenuojamas tekstas... Prašome palaukti</div>
-              </div>
-          </div>
-          
-          <button id="alignBtn" class="align-btn">LYGIUOTI</button>
+  // ============================================================
+  // FAILO PASIRINKIMAS
+  // ============================================================
+  document.getElementById('fileInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-          <select id="langSelect" class="lang-select" style="display:none;">
-              <option value="" disabled selected>Versti į...</option>
-          </select>
-          
-          <button id="translateActionBtn" class="translate-action-btn"></button>
-      </div>
-  </div>
+    document.getElementById('result').innerText = "Apdorojama...";
+    alert("1. Pradėta apdoroti\n\nFailas: " + file.name + "\nDydis: " + Math.round(file.size/1024) + " KB");
 
-  <div id="settingsModal">
-    <h2 style="color:white; letter-spacing:2px; margin-bottom: 30px;">NUSTATYMAI</h2>
-    <button id="openWifiBtn" class="modal-btn" style="background-color: #2196F3; padding: 15px 30px; margin-bottom: 20px; width: 80%; max-width: 300px;">📶 Išsaugoti WIFI tinklai</button>
-    <button id="otaUpdateBtn" class="modal-btn" style="background-color: #00796B; padding: 15px 30px; margin-bottom: 30px; width: 80%; max-width: 300px;">🛠 Sistemos atnaujinimas</button>
-    <button id="closeSettingsBtn" class="close-modal-btn" style="width: 80%; max-width: 300px;">UŽDARYTI</button>
-  </div>
-
-  <div id="wifiModal">
-    <h2 style="color: white; letter-spacing: 2px; text-align: center;">IŠSAUGOTI WIFI TINKLAI</h2>
-    <div id="wifiListContainer" class="wifi-list"></div>
-    <div class="wifi-add-box">
-       <h4 style="margin:0; color:#ddd;">Pridėti naują WIFI tinklą</h4>
-       <input type="text" id="newWifiSsid" class="wifi-input" placeholder="WIFI pavadinimas (SSID)">
-       <input type="text" id="newWifiPass" class="wifi-input" placeholder="Slaptažodis">
-       <button class="wifi-save-btn" onclick="saveNewWifi()">IŠSAUGOTI</button>
-    </div>
-    <button id="closeWifiBtn" class="close-modal-btn" style="margin-top: 30px; max-width:400px;">ATGAL</button>
-  </div>
-
-  <div id="otaOverlay">
-    <div class="upload-modal-box">
-      <h3 style="color: white; margin-top: 0; letter-spacing: 1px;">SISTEMOS ATNAUJINIMAS</h3>
-      <input type="file" id="otaFileInput" accept=".bin" style="display: none;" />
-      <button id="otaSelectFileBtn" class="modal-btn" style="margin-bottom: 15px; width: 100%; padding: 15px; background-color:#00796B;">Pasirinkti .bin failą</button>
-      <p id="otaFileName" style="color: #aaa; font-size: 14px; word-break: break-all; margin-bottom: 20px;"></p>
-      
-      <div id="otaConfirmSection" style="display: none; margin-bottom: 20px;">
-        <p style="color: white; margin-bottom: 15px;">Ar tikrai norite atnaujinti sistemą?</p>
-        <div style="display: flex; gap: 15px; justify-content: center;">
-          <button id="otaYesBtn" style="background:#4CAF50; color:white; border:none; padding:10px 30px; border-radius:5px; font-weight:bold; cursor:pointer; flex: 1;">TAIP</button>
-          <button id="otaNoBtn" style="background:#E91E63; color:white; border:none; padding:10px 30px; border-radius:5px; font-weight:bold; cursor:pointer; flex: 1;">NE</button>
-        </div>
-      </div>
-      
-      <div id="otaProgressContainer" style="display:none; width:100%; height:10px; background:#333; border-radius:5px; margin-bottom:10px; overflow:hidden;">
-          <div id="otaProgressBarFill" style="width:0%; height:100%; background:#4CAF50;"></div>
-      </div>
-      <div id="otaProgressText" style="color: white; font-weight: bold; margin-bottom: 20px; min-height: 20px;"></div>
-      <button id="otaCloseBtn" class="close-modal-btn" style="margin-top: 0; width: 100%;">UŽDARYTI</button>
-    </div>
-  </div>
-
-  <script>
-    // ============================================================
-    // KONFIGŪRACIJA
-    // ============================================================
-    const WORKER_URL = 'https://deepl-proxy.t-jasukaitis.workers.dev';
-    let ESP32_BASE = localStorage.getItem('esp32_url') || '';
-
-    let toastTimer = null;
-    function showToast(msg) {
-        const toast = document.getElementById('toastMsg');
-        toast.innerText = msg;
-        toast.style.display = 'block';
-        if(toastTimer) clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => { toast.style.display = 'none'; }, 7000);
-    }
-
-    function activateFullscreen() { 
-      if (!document.fullscreenElement && document.documentElement.requestFullscreen) { 
-        document.documentElement.requestFullscreen().catch(err => {}); 
-      } 
-    }
-    ['touchstart', 'click'].forEach(evt => { document.addEventListener(evt, activateFullscreen, {capture: true}); });
-
-    function pollTrigger() {
-      if (!ESP32_BASE) { 
-        setTimeout(pollTrigger, 3000); 
-        return; 
-      }
-      fetch(ESP32_BASE.replace(/\/$/, '') + '/check_trigger?t=' + Date.now(), { cache: 'no-store' })
-        .then(res => res.json())
-        .then(data => {
-            if (data) {
-                if (data.rssi !== undefined) {
-                    let bars = document.querySelectorAll('.wifi-bar');
-                    let r = data.rssi;
-                    let activeBars = 0;
-                    if (r > -65) activeBars = 4;
-                    else if (r > -75) activeBars = 3;
-                    else if (r > -85) activeBars = 2;
-                    else if (r > -95) activeBars = 1;
-                    bars.forEach((b, i) => { b.style.background = i < activeBars ? '#4CAF50' : '#555'; });
-                }
-                if (data.bat !== undefined) {
-                    let batLevel = document.getElementById('batFill');
-                    let batText = document.getElementById('batText');
-                    let batVolt = document.getElementById('batVolt');
-                    let chargeIcon = document.getElementById('charging-icon');
-                    batText.innerText = data.bat + '%';
-                    if(data.volt !== undefined) batVolt.innerText = data.volt + 'V';
-
-                    if (data.charging) {
-                       chargeIcon.style.display = 'block';
-                       batLevel.classList.add('charging-active');
-                       batLevel.style.width = '100%'; 
-                    } else {
-                       chargeIcon.style.display = 'none';
-                       batLevel.classList.remove('charging-active');
-                       batLevel.style.width = data.bat + '%';
-                       if (data.bat > 50) batLevel.style.backgroundColor = '#4CAF50';
-                       else if (data.bat > 20) batLevel.style.backgroundColor = '#ffeb3b';
-                       else batLevel.style.backgroundColor = '#E91E63';
-                    }
-                }
-            }
-        }).catch(e => { }).finally(() => { setTimeout(pollTrigger, 1000); });
-    }
-    setTimeout(pollTrigger, 500);
-
-    document.getElementById('settingsIcon').addEventListener('click', () => {
-      document.getElementById('mainContainer').style.display = 'none';
-      document.getElementById('telemetryBox').style.display = 'none';
-      document.getElementById('settingsModal').style.display = 'flex';
-    });
-    document.getElementById('closeSettingsBtn').addEventListener('click', () => {
-      document.getElementById('settingsModal').style.display = 'none';
-      document.getElementById('mainContainer').style.display = 'flex';
-      document.getElementById('telemetryBox').style.display = 'flex';
-    });
-    document.getElementById('openWifiBtn').addEventListener('click', () => {
-      if (!ESP32_BASE) {
-        showToast("Nustatykite ESP32 IP: eikite į nustatymus");
-        return;
-      }
-      document.getElementById('settingsModal').style.display = 'none';
-      document.getElementById('wifiModal').style.display = 'flex';
-      loadWifiList();
-    });
-    document.getElementById('closeWifiBtn').addEventListener('click', () => {
-      document.getElementById('wifiModal').style.display = 'none';
-      document.getElementById('settingsModal').style.display = 'flex';
-    });
-
-    function loadWifiList() {
-      const container = document.getElementById('wifiListContainer');
-      container.innerHTML = '<div style="color:#aaa;">Kraunama...</div>';
-      fetch(ESP32_BASE.replace(/\/$/, '') + '/get_wifi?t=' + Date.now())
-        .then(res => res.json())
-        .then(data => {
-          container.innerHTML = '';
-          if(data.length === 0) { container.innerHTML = '<div style="color:#aaa;">Nėra išsaugotų tinklų</div>'; return; }
-          data.forEach(w => {
-             let statusHtml = '';
-             if(w.connected) statusHtml = `<div class="wifi-online">ONLINE</div><div class="wifi-ip">Adresas: http://${w.ip}</div>`;
-             let item = document.createElement('div');
-             item.className = 'wifi-item';
-             item.innerHTML = `<div class="wifi-info"><div class="wifi-ssid">${w.ssid}</div>${statusHtml}</div><button class="wifi-del-btn" onclick="deleteWifi('${w.ssid}')">IŠTRINTI</button>`;
-             container.appendChild(item);
-          });
-        }).catch(err => { container.innerHTML = '<div style="color:red;">Klaida nuskaitant tinklus</div>'; });
-    }
-    window.deleteWifi = function(ssid) {
-      if(!confirm('Ar tikrai norite ištrinti tinklą ' + ssid + '?')) return;
-      let fd = new FormData(); fd.append('ssid', ssid);
-      fetch(ESP32_BASE.replace(/\/$/, '') + '/delete_wifi', { method: 'POST', body: fd }).then(() => loadWifiList());
-    };
-    window.saveNewWifi = function() {
-      let s = document.getElementById('newWifiSsid').value.trim();
-      let p = document.getElementById('newWifiPass').value.trim();
-      if(!s || !p) { showToast("Įveskite pavadinimą ir slaptažodį"); return; }
-      let fd = new FormData(); fd.append('ssid', s); fd.append('pass', p);
-      fetch(ESP32_BASE.replace(/\/$/, '') + '/add_wifi', { method: 'POST', body: fd }).then(() => {
-         document.getElementById('newWifiSsid').value = '';
-         document.getElementById('newWifiPass').value = '';
-         loadWifiList();
+    try {
+      // ============================================================
+      // 1. NUSKAITOME NUOTRAUKĄ
+      // ============================================================
+      const img = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const i = new Image();
+          i.onload = () => resolve(i);
+          i.onerror = () => reject(new Error("Nepavyko įkelti nuotraukos"));
+          i.src = ev.target.result;
+        };
+        reader.onerror = () => reject(new Error("Nepavyko perskaityti failo"));
+        reader.readAsDataURL(file);
       });
-    };
 
-    let selectedOtaFile = null;
-    document.getElementById('otaUpdateBtn').addEventListener('click', () => {
-        if (!ESP32_BASE) { showToast("Nustatykite ESP32 IP"); return; }
-        document.getElementById('settingsModal').style.display = 'none';
-        document.getElementById('otaOverlay').style.display = 'flex';
-        document.getElementById('otaSelectFileBtn').style.display = 'inline-block';
-        document.getElementById('otaConfirmSection').style.display = 'none';
-        document.getElementById('otaProgressContainer').style.display = 'none';
-        document.getElementById('otaProgressText').innerText = '';
-        document.getElementById('otaFileName').innerText = '';
-        document.getElementById('otaFileInput').value = '';
-    });
-    document.getElementById('otaCloseBtn').addEventListener('click', () => {
-        document.getElementById('otaOverlay').style.display = 'none';
-        document.getElementById('settingsModal').style.display = 'flex';
-    });
-    document.getElementById('otaSelectFileBtn').addEventListener('click', () => { document.getElementById('otaFileInput').click(); });
-    document.getElementById('otaFileInput').addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        selectedOtaFile = file;
-        document.getElementById('otaFileName').innerText = "Pasirinkta: " + file.name;
-        document.getElementById('otaSelectFileBtn').style.display = 'none';
-        document.getElementById('otaConfirmSection').style.display = 'block';
-    });
-    document.getElementById('otaNoBtn').addEventListener('click', () => {
-        document.getElementById('otaConfirmSection').style.display = 'none';
-        document.getElementById('otaSelectFileBtn').style.display = 'inline-block';
-        document.getElementById('otaFileInput').value = '';
-        document.getElementById('otaFileName').innerText = '';
-        selectedOtaFile = null;
-    });
-    document.getElementById('otaYesBtn').addEventListener('click', () => {
-        if(!selectedOtaFile) return;
-        document.getElementById('otaConfirmSection').style.display = 'none';
-        document.getElementById('otaProgressContainer').style.display = 'block';
-        document.getElementById('otaProgressText').innerText = "Siunčiama... 0%";
-        document.getElementById('otaProgressText').style.color = "white";
-        document.getElementById('otaCloseBtn').style.display = 'none';
-        let fd = new FormData(); fd.append("update", selectedOtaFile, "update.bin");
-        let xhr = new XMLHttpRequest();
-        xhr.open("POST", ESP32_BASE.replace(/\/$/, '') + '/update', true);
-        xhr.upload.onprogress = function(e) {
-            if (e.lengthComputable) {
-                let percentComplete = Math.round((e.loaded / e.total) * 100);
-                document.getElementById('otaProgressBarFill').style.width = percentComplete + '%';
-                document.getElementById('otaProgressText').innerText = "Siunčiama... " + percentComplete + '%';
-            }
-        };
-        xhr.onload = function() {
-            if (xhr.status === 200) {
-                setTimeout(() => { window.location.reload(); }, 3000);
-            } else {
-                document.getElementById('otaProgressText').innerText = "Klaida! (" + xhr.status + ")";
-                document.getElementById('otaCloseBtn').style.display = 'inline-block';
-            }
-        };
-        xhr.onerror = function() {
-            document.getElementById('otaProgressText').innerText = "Ryšio klaida!";
-            document.getElementById('otaProgressText').style.color = "#E91E63";
-            document.getElementById('otaCloseBtn').style.display = 'inline-block';
-        };
-        xhr.send(fd);
-    });
+      // ============================================================
+      // 2. SUMAŽINAME IR PARUOŠIAME BASE64
+      // ============================================================
+      const canvas = document.createElement('canvas');
+      let w = img.width;
+      let h = img.height;
+      const maxDim = 1600;
+      if (w > maxDim || h > maxDim) {
+        const ratio = Math.min(maxDim / w, maxDim / h);
+        w = Math.floor(w * ratio);
+        h = Math.floor(h * ratio);
+      }
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
 
-    // ============================================================
-    // KAMERA
-    // ============================================================
-    const cameraBtnMain = document.getElementById('cameraBtnMain');
-    const cameraModal = document.getElementById('cameraModal');
-    const closeCameraModalX = document.getElementById('closeCameraModalX');
-    const liveVideo = document.getElementById('liveVideo');
-    const liveOverlay = document.getElementById('liveOverlay');
-    const captureBtn = document.getElementById('captureBtn');
-    
-    let liveStream = null;
-    let isCameraActive = false;
-    let lastDetectTime = 0;
-    let currentCamPoly = null;
-    let focusRingObj = {x: 0, y: 0, alpha: 0}; 
+      const base64Image = canvas.toDataURL("image/jpeg", 0.85).split(',')[1];
 
-    function applyCameraAspectRatio() {
-        let isPort = window.innerHeight > window.innerWidth;
-        document.querySelector('#cameraModal .image-frame').style.aspectRatio = isPort ? "1 / 1.4142" : "1.4142 / 1";
+      // ============================================================
+      // 3. SIUNČIAME UŽKLAUSĄ Į WORKER
+      // ============================================================
+      const requestBody = JSON.stringify({
+        requests: [{
+          image: { content: base64Image },
+          features: [{ type: "DOCUMENT_TEXT_DETECTION" }]
+        }]
+      });
+
+      alert("2. Siunčiama į Worker\n\nURL: " + WORKER_URL + "/vision\nBody dydis: " + requestBody.length + " simbolių");
+
+      const res = await fetch(WORKER_URL + '/vision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: requestBody
+      });
+
+      alert("3. Worker atsakymas gautas\n\nHTTP Status: " + res.status + "\nStatus Text: " + res.statusText);
+
+      // ============================================================
+      // 4. NUSKAITOME ATSAKYMĄ
+      // ============================================================
+      const rawText = await res.text();
+      
+      alert("4. Atsakymo turinys (pirma 1500 simbolių):\n\n" + rawText.substring(0, 1500));
+
+      // ============================================================
+      // 5. RODOME REZULTATĄ PUSLAPYJE
+      // ============================================================
+      let displayText = "=== HTTP STATUS ===\n" + res.status + " " + res.statusText + "\n\n";
+      displayText += "=== ATSAKYMAS ===\n";
+      
+      try {
+        const parsed = JSON.parse(rawText);
+        displayText += JSON.stringify(parsed, null, 2);
+        
+        // Jei yra tekstas - parodykime jį
+        if (parsed.responses && parsed.responses[0] && parsed.responses[0].fullTextAnnotation) {
+          displayText += "\n\n=== NUSKAITYTAS TEKSTAS ===\n";
+          displayText += parsed.responses[0].fullTextAnnotation.text;
+        }
+      } catch (e) {
+        displayText += rawText;
+      }
+
+      document.getElementById('result').innerText = displayText;
+
+    } catch (err) {
+      alert("❌ KLAIDA:\n\n" + err.name + ": " + err.message);
+      document.getElementById('result').innerText = "❌ KLAIDA:\n\n" + err.name + ": " + err.message + "\n\n" + (err.stack || "");
     }
+  });
 
-    cameraBtnMain.addEventListener('click', async () => {
-        try {
-            applyCameraAspectRatio();
-            window.addEventListener('resize', applyCameraAspectRatio);
-
-            liveStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { 
-                    facingMode: { ideal: "environment" },
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 }
-                } 
-            });
-            liveVideo.srcObject = liveStream;
-            cameraModal.style.display = 'flex';
-            document.getElementById('mainContainer').style.display = 'none';
-            isCameraActive = true;
-            currentCamPoly = null;
-            
-            liveVideo.onloadedmetadata = () => {
-                liveOverlay.width = liveVideo.clientWidth;
-                liveOverlay.height = liveVideo.clientHeight;
-                
-                setTimeout(async () => {
-                    try {
-                        const track = liveStream.getVideoTracks()[0];
-                        const capabilities = track.getCapabilities();
-                        const advanced = {};
-                        if (capabilities.torch) advanced.torch = true;
-                        if (capabilities.zoom) advanced.zoom = Math.max(capabilities.zoom.min, Math.min(capabilities.zoom.max, 0.8));
-                        if (capabilities.focusMode) advanced.focusMode = "continuous";
-                        
-                        if (Object.keys(advanced).length > 0) {
-                            await track.applyConstraints({ advanced: [advanced] });
-                        }
-                    } catch(e) {}
-                }, 500);
-
-                requestAnimationFrame(detectLiveDocument);
-            };
-        } catch (err) {
-            document.getElementById('cameraBlockedModal').style.display = 'flex';
-        }
-    });
-
-    liveOverlay.addEventListener('click', async (e) => {
-        if(!isCameraActive || !liveStream) return;
-        let rect = liveOverlay.getBoundingClientRect();
-        let x = e.clientX - rect.left;
-        let y = e.clientY - rect.top;
-        focusRingObj = {x: x, y: y, alpha: 1.0};
-        const track = liveStream.getVideoTracks()[0];
-        const caps = track.getCapabilities();
-        if(caps.focusMode || caps.pointsOfInterest) {
-            try {
-                let advanced = {};
-                if (caps.pointsOfInterest) advanced.pointsOfInterest = [{x: x / rect.width, y: y / rect.height}];
-                if (caps.focusMode) advanced.focusMode = "continuous"; 
-                await track.applyConstraints({ advanced: [advanced] });
-            } catch(err) { console.log(err); }
-        }
-    });
-
-    document.getElementById('closeCameraBlockedBtn').addEventListener('click', () => {
-        document.getElementById('cameraBlockedModal').style.display = 'none';
-    });
-
-    closeCameraModalX.addEventListener('click', () => {
-        if(liveStream) { liveStream.getTracks().forEach(t => t.stop()); liveStream = null; }
-        isCameraActive = false;
-        cameraModal.style.display = 'none';
-        window.removeEventListener('resize', applyCameraAspectRatio);
-        document.getElementById('mainContainer').style.display = 'flex';
-    });
-
-    function clampPoly(poly, w, h) {
-        for(let i=0; i<4; i++) {
-            poly[i].x = Math.max(0, Math.min(w, poly[i].x));
-            poly[i].y = Math.max(0, Math.min(h, poly[i].y));
-        }
-    }
-
-    function detectLiveDocument(timestamp) {
-        if(!isCameraActive) return;
-        
-        if (liveVideo.videoWidth && liveVideo.videoHeight) {
-            if (liveOverlay.width !== liveVideo.clientWidth) {
-                liveOverlay.width = liveVideo.clientWidth;
-                liveOverlay.height = liveVideo.clientHeight;
-            }
-            
-            const W = liveOverlay.width; const H = liveOverlay.height;
-            const oCtx = liveOverlay.getContext('2d');
-            
-            if (timestamp - lastDetectTime > 50) {
-                lastDetectTime = timestamp;
-                const scanW = 64; const scanH = Math.floor(64 * (H / W));
-                const scanC = document.createElement('canvas');
-                scanC.width = scanW; scanC.height = scanH;
-                const sCtx = scanC.getContext('2d');
-                sCtx.drawImage(liveVideo, 0, 0, scanW, scanH);
-                let d = sCtx.getImageData(0,0,scanW,scanH).data;
-                
-                let pMinX = scanW, pMaxX = 0, pMinY = scanH, pMaxY = 0;
-                let hasPaper = false;
-                let paperPixels = new Uint8Array(scanW * scanH);
-                
-                for (let y = 0; y < scanH; y++) {
-                    for (let x = 0; x < scanW; x++) {
-                        let idx = (y * scanW + x) * 4;
-                        if (d[idx] > 100 && d[idx+1] > 100 && d[idx+2] > 100 && (d[idx]+d[idx+1]+d[idx+2]) > 350) {
-                            paperPixels[y * scanW + x] = 1;
-                            if(x < pMinX) pMinX = x; if(x > pMaxX) pMaxX = x;
-                            if(y < pMinY) pMinY = y; if(y > pMaxY) pMaxY = y;
-                            hasPaper = true;
-                        }
-                    }
-                }
-                
-                let minSum = Infinity, maxSum = -Infinity, minDiff = Infinity, maxDiff = -Infinity;
-                let TL = {x: scanW/2, y: scanH/2}, BR = {x: scanW/2, y: scanH/2};
-                let TR = {x: scanW/2, y: scanH/2}, BL = {x: scanW/2, y: scanH/2};
-                let foundText = false;
-
-                if (hasPaper && (pMaxX - pMinX > 10) && (pMaxY - pMinY > 10)) {
-                    for (let y = pMinY; y < pMaxY; y++) {
-                        for (let x = pMinX; x < pMaxX; x++) {
-                            if (!paperPixels[y * scanW + x]) continue;
-                            let idx = (y * scanW + x) * 4;
-                            let rIdx = (y * scanW + Math.min(x+1, scanW-1)) * 4;
-                            let dIdx = (Math.min(y+1, scanH-1) * scanW + x) * 4;
-                            let v = d[idx] + d[idx+1] + d[idx+2];
-                            let vR = d[rIdx] + d[rIdx+1] + d[rIdx+2];
-                            let vD = d[dIdx] + d[dIdx+1] + d[dIdx+2];
-                            if (v < 400 && (Math.abs(v - vR) > 60 || Math.abs(v - vD) > 60)) {
-                                let sum = x + y; let diff = x - y;
-                                if(sum < minSum) { minSum = sum; TL = {x, y}; }
-                                if(sum > maxSum) { maxSum = sum; BR = {x, y}; }
-                                if(diff > maxDiff) { maxDiff = diff; TR = {x, y}; }
-                                if(diff < minDiff) { minDiff = diff; BL = {x, y}; }
-                                foundText = true;
-                            }
-                        }
-                    }
-                }
-                
-                let targetPoly = [];
-                if (foundText && (BR.x - TL.x > 10 || BR.y - TL.y > 10)) {
-                    let scaleX = W / scanW; let scaleY = H / scanH;
-                    targetPoly = [
-                        {x: TL.x * scaleX, y: TL.y * scaleY},
-                        {x: TR.x * scaleX, y: TR.y * scaleY},
-                        {x: BR.x * scaleX, y: BR.y * scaleY},
-                        {x: BL.x * scaleX, y: BL.y * scaleY}
-                    ];
-                    clampPoly(targetPoly, W, H);
-                } else {
-                    targetPoly = [
-                        {x: W*0.1, y: H*0.2}, {x: W*0.9, y: H*0.2},
-                        {x: W*0.9, y: H*0.8}, {x: W*0.1, y: H*0.8}
-                    ];
-                }
-
-                if(!currentCamPoly) currentCamPoly = JSON.parse(JSON.stringify(targetPoly));
-                
-                for(let i=0; i<4; i++) {
-                    currentCamPoly[i].x += (targetPoly[i].x - currentCamPoly[i].x) * 0.45;
-                    currentCamPoly[i].y += (targetPoly[i].y - currentCamPoly[i].y) * 0.45;
-                }
-            }
-
-            oCtx.clearRect(0, 0, W, H);
-            
-            let isLandscape = W > H;
-            let pxPerCm = isLandscape ? (W / 29.7) : (W / 21.0);
-            let mLeft = 3.0 * pxPerCm;
-            let mRight = 2.0 * pxPerCm;
-            let mTop = 2.0 * pxPerCm;
-            let mBottom = 2.0 * pxPerCm;
-            
-            oCtx.strokeStyle = 'rgba(200, 200, 200, 0.5)';
-            oCtx.lineWidth = 2;
-            oCtx.setLineDash([8, 8]);
-            oCtx.strokeRect(mLeft, mTop, W - mLeft - mRight, H - mTop - mBottom);
-            oCtx.setLineDash([]);
-
-            if(currentCamPoly) {
-                oCtx.strokeStyle = 'rgba(255, 152, 0, 0.9)';
-                oCtx.lineWidth = 3;
-                oCtx.beginPath();
-                oCtx.moveTo(currentCamPoly[0].x, currentCamPoly[0].y);
-                oCtx.lineTo(currentCamPoly[1].x, currentCamPoly[1].y);
-                oCtx.lineTo(currentCamPoly[2].x, currentCamPoly[2].y);
-                oCtx.lineTo(currentCamPoly[3].x, currentCamPoly[3].y);
-                oCtx.closePath();
-                oCtx.stroke();
-            }
-            
-            if(focusRingObj.alpha > 0) {
-                oCtx.strokeStyle = `rgba(76, 175, 80, ${focusRingObj.alpha})`;
-                oCtx.lineWidth = 3;
-                oCtx.beginPath();
-                oCtx.arc(focusRingObj.x, focusRingObj.y, 25, 0, Math.PI*2);
-                oCtx.stroke();
-                focusRingObj.alpha -= 0.04; 
-            }
-        }
-        requestAnimationFrame(detectLiveDocument);
-    }
-
-    captureBtn.addEventListener('click', async () => {
-        if(!isCameraActive) return;
-        const captureCanvas = document.createElement('canvas');
-        captureCanvas.width = liveVideo.videoWidth;
-        captureCanvas.height = liveVideo.videoHeight;
-        const ctx = captureCanvas.getContext('2d');
-        ctx.drawImage(liveVideo, 0, 0, captureCanvas.width, captureCanvas.height);
-        
-        if(liveStream) { liveStream.getTracks().forEach(t => t.stop()); liveStream = null; }
-        isCameraActive = false;
-        cameraModal.style.display = 'none';
-
-        let dataUrl = captureCanvas.toDataURL('image/jpeg', 0.95);
-        let img = new Image();
-        img.onload = () => { processExtractedImage(img); };
-        img.src = dataUrl;
-    });
-
-    // ============================================================
-    // SKENERIS IR VERTIMAS
-    // ============================================================
-    const translationModal = document.getElementById('translationModal');
-    const modalFileInput = document.getElementById('modalFileInput');
-    const modalFrame = document.getElementById('modalFrame');
-    const resultCanvas = document.getElementById('resultCanvas');
-    const translateOverlay = document.getElementById('translateOverlay');
-    const translateOverlayText = document.getElementById('translateOverlayText');
-    const langSelect = document.getElementById('langSelect');
-    const translateActionBtn = document.getElementById('translateActionBtn');
-    const closeModalX = document.getElementById('closeModalX');
-    const alignBtn = document.getElementById('alignBtn');
-    
-    let extractedTextGlobal = ""; 
-    let scannedImageData = null; 
-    let originalUnblurredCanvas = null; 
-    let currentDocPoly = null; 
-    let isAlignMode = false;
-    let activeDragPoint = -1;
-
-    const languagesMap = {
-     "EN-US": "Anglų (Amerikiečių)", "EN-GB": "Anglų (Britų)", "DE": "Vokiečių", "FR": "Prancūzų",
-     "ES": "Ispanų", "IT": "Italų", "PL": "Lenkų", "RU": "Rusų", "UK": "Ukrainiečių",
-     "LV": "Latvių", "ET": "Estų", "FI": "Suomių", "SV": "Švedų", "NB": "Norvegų"
-    };
-    Object.keys(languagesMap).forEach(code => {
-        let opt = document.createElement('option'); opt.value = code; opt.innerText = languagesMap[code];
-        langSelect.appendChild(opt);
-    });
-
-    document.getElementById('addFileBtnMain').addEventListener('click', () => { modalFileInput.click(); });
-
-    closeModalX.addEventListener('click', () => {
-        translationModal.style.display = 'none';
-        document.getElementById('mainContainer').style.display = 'flex';
-        modalFileInput.value = ''; 
-    });
-
-    function loadImage(file) {
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image(); img.onload = () => resolve(img); img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        });
-    }
-
-    function calculateInitialPoly(visionData) {
-        let allPoints = [];
-        let annotations = visionData.responses[0].textAnnotations;
-        if (!annotations || annotations.length === 0) {
-            if (visionData.responses[0].fullTextAnnotation) {
-                annotations = [{ description: visionData.responses[0].fullTextAnnotation.text, boundingPoly: visionData.responses[0].fullTextAnnotation.pages[0].blocks[0].boundingPoly }];
-            }
-        }
-        for(let i=1; i < annotations.length; i++) {
-            let v = annotations[i].boundingPoly.vertices;
-            if(v) v.forEach(pt => allPoints.push({x: pt.x || 0, y: pt.y || 0}));
-        }
-
-        if (allPoints.length < 4 && annotations[0]) {
-            allPoints = annotations[0].boundingPoly.vertices.map(v => ({x: v.x||0, y: v.y||0}));
-        }
-
-        let sum = allPoints.map(p => p.x + p.y);
-        let diff = allPoints.map(p => p.x - p.y);
-        let TL = allPoints[sum.indexOf(Math.min(...sum))];
-        let BR = allPoints[sum.indexOf(Math.max(...sum))];
-        let TR = allPoints[diff.indexOf(Math.max(...diff))];
-        let BL = allPoints[diff.indexOf(Math.min(...diff))];
-
-        let cx = (TL.x + TR.x + BR.x + BL.x) / 4;
-        let cy = (TL.y + TR.y + BR.y + BL.y) / 4;
-        let exp = 1.05; 
-        
-        return [
-            { x: cx + (TL.x - cx)*exp, y: cy + (TL.y - cy)*exp },
-            { x: cx + (TR.x - cx)*exp, y: cy + (TR.y - cy)*exp },
-            { x: cx + (BR.x - cx)*exp, y: cy + (BR.y - cy)*exp },
-            { x: cx + (BL.x - cx)*exp, y: cy + (BL.y - cy)*exp }
-        ];
-    }
-
-    function drawAlignUI() {
-        const ctx = resultCanvas.getContext('2d');
-        let cw = resultCanvas.width;
-        let ch = resultCanvas.height;
-
-        ctx.clearRect(0, 0, cw, ch);
-        ctx.drawImage(originalUnblurredCanvas, 0, 0);
-
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
-        ctx.beginPath();
-        ctx.rect(0, 0, cw, ch);
-        ctx.moveTo(currentDocPoly[0].x, currentDocPoly[0].y);
-        ctx.lineTo(currentDocPoly[1].x, currentDocPoly[1].y);
-        ctx.lineTo(currentDocPoly[2].x, currentDocPoly[2].y);
-        ctx.lineTo(currentDocPoly[3].x, currentDocPoly[3].y);
-        ctx.closePath();
-        ctx.fill('evenodd'); 
-        
-        ctx.strokeStyle = '#FF9800';
-        ctx.lineWidth = Math.max(2, cw * 0.003);
-        ctx.beginPath();
-        ctx.moveTo(currentDocPoly[0].x, currentDocPoly[0].y);
-        for(let i=1; i<4; i++) ctx.lineTo(currentDocPoly[i].x, currentDocPoly[i].y);
-        ctx.closePath();
-        ctx.stroke();
-
-        let radius = Math.max(22, cw * 0.035); 
-        currentDocPoly.forEach(p => {
-            ctx.fillStyle = 'rgba(255, 152, 0, 0.25)';
-            ctx.beginPath(); ctx.arc(p.x, p.y, radius * 2.2, 0, Math.PI*2); ctx.fill();
-
-            ctx.fillStyle = '#FF9800';
-            ctx.beginPath(); ctx.arc(p.x, p.y, radius, 0, Math.PI*2); ctx.fill();
-            
-            ctx.fillStyle = 'white';
-            ctx.beginPath(); ctx.arc(p.x, p.y, radius*0.3, 0, Math.PI*2); ctx.fill();
-        });
-    }
-
-    function getPointerPos(e) {
-        let rect = resultCanvas.getBoundingClientRect();
-        let cw = resultCanvas.width; let ch = resultCanvas.height;
-        let scale = Math.min(rect.width / cw, rect.height / ch);
-        let displayW = cw * scale; let displayH = ch * scale;
-        let offX = (rect.width - displayW) / 2;
-        let offY = (rect.height - displayH) / 2;
-        
-        let clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        let clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        
-        let x = (clientX - rect.left - offX) / scale;
-        let y = (clientY - rect.top - offY) / scale;
-        return {x, y};
-    }
-
-    function updateMagnifier(x, y) {
-        const mag = document.getElementById('magnifier');
-        const mCtx = mag.getContext('2d');
-        mag.style.display = 'block';
-
-        if (activeDragPoint === 0 || activeDragPoint === 1) { 
-            mag.style.top = 'auto';
-            mag.style.bottom = '10px';
-        } else if (activeDragPoint === 2 || activeDragPoint === 3) {
-            mag.style.top = '10px';
-            mag.style.bottom = 'auto';
-        }
-
-        const magW = mag.width;
-        const magH = mag.height;
-        
-        mCtx.fillStyle = '#111';
-        mCtx.fillRect(0, 0, magW, magH);
-        
-        const zoom = 1.10; 
-        const srcW = magW / zoom;
-        const srcH = magH / zoom;
-        const srcX = x - srcW / 2;
-        const srcY = y - srcH / 2;
-        
-        mCtx.drawImage(originalUnblurredCanvas, srcX, srcY, srcW, srcH, 0, 0, magW, magH);
-        
-        let cx = magW / 2;
-        let cy = magH / 2;
-        mCtx.strokeStyle = 'rgba(255, 152, 0, 0.9)';
-        mCtx.lineWidth = 3;
-        mCtx.beginPath();
-        
-        let innerGap = 5;
-        let innerLen = 30;
-        mCtx.moveTo(cx - innerGap - innerLen, cy); mCtx.lineTo(cx - innerGap, cy);
-        mCtx.moveTo(cx + innerGap, cy); mCtx.lineTo(cx + innerGap + innerLen, cy);
-        mCtx.moveTo(cx, cy - innerGap - innerLen); mCtx.lineTo(cx, cy - innerGap);
-        mCtx.moveTo(cx, cy + innerGap); mCtx.lineTo(cx, cy + innerGap + innerLen);
-        
-        let edgeLen = 15;
-        mCtx.moveTo(0, cy); mCtx.lineTo(edgeLen, cy);
-        mCtx.moveTo(magW - edgeLen, cy); mCtx.lineTo(magW, cy);
-        mCtx.moveTo(cx, 0); mCtx.lineTo(cx, edgeLen);
-        mCtx.moveTo(cx, magH - edgeLen); mCtx.lineTo(cx, magH);
-        
-        mCtx.stroke();
-    }
-
-    resultCanvas.addEventListener('mousedown', pointerDown);
-    resultCanvas.addEventListener('touchstart', pointerDown, {passive: false});
-    resultCanvas.addEventListener('mousemove', pointerMove);
-    resultCanvas.addEventListener('touchmove', pointerMove, {passive: false});
-    window.addEventListener('mouseup', pointerUp);
-    window.addEventListener('touchend', pointerUp);
-
-    function pointerDown(e) {
-        if(!isAlignMode) return;
-        let pos = getPointerPos(e);
-        let touchRadius = resultCanvas.width * 0.15; 
-        for(let i=0; i<4; i++) {
-            let dx = pos.x - currentDocPoly[i].x; let dy = pos.y - currentDocPoly[i].y;
-            if(Math.sqrt(dx*dx + dy*dy) <= touchRadius) {
-                activeDragPoint = i; e.preventDefault(); 
-                updateMagnifier(currentDocPoly[i].x, currentDocPoly[i].y);
-                return;
-            }
-        }
-    }
-
-    function pointerMove(e) {
-        if(!isAlignMode || activeDragPoint === -1) return;
-        e.preventDefault();
-        let pos = getPointerPos(e);
-        pos.x = Math.max(0, Math.min(resultCanvas.width, pos.x));
-        pos.y = Math.max(0, Math.min(resultCanvas.height, pos.y));
-        currentDocPoly[activeDragPoint] = pos;
-        drawAlignUI();
-        updateMagnifier(pos.x, pos.y);
-    }
-    
-    function pointerUp(e) { 
-        activeDragPoint = -1; 
-        document.getElementById('magnifier').style.display = 'none';
-    }
-
-    function executeWarpAndFilter(poly) {
-        const ctx = resultCanvas.getContext('2d');
-        let oW = originalUnblurredCanvas.width;
-        let oH = originalUnblurredCanvas.height;
-        let origData = originalUnblurredCanvas.getContext('2d').getImageData(0, 0, oW, oH);
-        
-        let TL = poly[0], TR = poly[1], BR = poly[2], BL = poly[3];
-
-        let wTop = Math.hypot(TR.x - TL.x, TR.y - TL.y);
-        let wBot = Math.hypot(BR.x - BL.x, BR.y - BL.y);
-        let hLeft = Math.hypot(BL.x - TL.x, BL.y - TL.y);
-        let hRight = Math.hypot(BR.x - TR.x, BR.y - TR.y);
-
-        let textW = Math.round(Math.max(wTop, wBot));
-        let textH = Math.round(Math.max(hLeft, hRight));
-
-        if(textW < 50 || textH < 50) { textW = 800; textH = 1100; }
-
-        let tempCanvas = document.createElement('canvas');
-        tempCanvas.width = textW; tempCanvas.height = textH;
-        let tCtx = tempCanvas.getContext('2d');
-        let tData = tCtx.createImageData(textW, textH);
-
-        for (let y = 0; y < textH; y++) {
-            let ty = y / (textH - 1 || 1);
-            for (let x = 0; x < textW; x++) {
-                let tx = x / (textW - 1 || 1);
-
-                let px = (1-ty)*((1-tx)*TL.x + tx*TR.x) + ty*((1-tx)*BL.x + tx*BR.x);
-                let py = (1-ty)*((1-tx)*TL.y + tx*TR.y) + ty*((1-tx)*BL.y + tx*BR.y);
-
-                let srcX = Math.floor(px); let srcY = Math.floor(py);
-                let destIdx = (y * textW + x) * 4;
-
-                if (srcX >= 0 && srcX < oW && srcY >= 0 && srcY < oH) {
-                    let srcIdx = (srcY * oW + srcX) * 4;
-                    let r = origData.data[srcIdx]; let g = origData.data[srcIdx+1]; let b = origData.data[srcIdx+2];
-
-                    let gray = 0.299 * r + 0.587 * g + 0.114 * b;
-                    let c;
-                    if (gray > 160) { c = 255; } else if (gray < 100) { c = 0; } else { c = Math.floor((gray - 100) * (255 / 60)); }
-
-                    tData.data[destIdx] = c; tData.data[destIdx+1] = c; tData.data[destIdx+2] = c; tData.data[destIdx+3] = 255;
-                } else {
-                    tData.data[destIdx] = 255; tData.data[destIdx+1] = 255; tData.data[destIdx+2] = 255; tData.data[destIdx+3] = 255;
-                }
-            }
-        }
-        tCtx.putImageData(tData, 0, 0);
-
-        let isLandscape = textW > textH;
-        let canvasW = 1200;
-        let canvasH = isLandscape ? Math.floor(1200 / 1.4142) : Math.floor(1200 * 1.4142);
-        
-        resultCanvas.width = canvasW; resultCanvas.height = canvasH;
-        modalFrame.style.aspectRatio = isLandscape ? "1.4142 / 1" : "1 / 1.4142";
-        
-        ctx.fillStyle = 'white'; ctx.fillRect(0, 0, canvasW, canvasH);
-        
-        let pxPerCm = isLandscape ? (canvasW / 29.7) : (canvasW / 21.0);
-        let marginLeft = 3.0 * pxPerCm;
-        let marginRight = 2.0 * pxPerCm;
-        let marginTop = 2.0 * pxPerCm;
-        let marginBottom = 2.0 * pxPerCm;
-        
-        let drawW = canvasW - marginLeft - marginRight;
-        let drawH = canvasH - marginTop - marginBottom;
-        
-        let scale = Math.min(drawW / textW, drawH / textH);
-        let finalW = textW * scale;
-        let finalH = textH * scale;
-        
-        let drawX = marginLeft + (drawW - finalW) / 2;
-        let drawY = marginTop + (drawH - finalH) / 2;
-        
-        ctx.drawImage(tempCanvas, 0, 0, textW, textH, drawX, drawY, finalW, finalH);
-        scannedImageData = ctx.getImageData(0, 0, canvasW, canvasH);
-    }
-
-    alignBtn.addEventListener('click', () => {
-        if (!isAlignMode) {
-            isAlignMode = true;
-            alignBtn.innerText = "PATVIRTINTI";
-            langSelect.style.display = 'none';
-            translateActionBtn.style.display = 'none';
-            
-            resultCanvas.width = originalUnblurredCanvas.width;
-            resultCanvas.height = originalUnblurredCanvas.height;
-            modalFrame.style.aspectRatio = `${resultCanvas.width} / ${resultCanvas.height}`;
-            drawAlignUI();
-        } else {
-            isAlignMode = false;
-            alignBtn.innerText = "LYGIUOTI";
-            langSelect.style.display = 'block';
-            if (langSelect.value) translateActionBtn.style.display = 'block';
-            
-            executeWarpAndFilter(currentDocPoly);
-        }
-    });
-
-    modalFileInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if(!file) return;
-        try {
-            const img = await loadImage(file);
-            processExtractedImage(img);
-        } catch (err) {
-            showToast("Klaida įkeliant nuotrauką.");
-        }
-    });
-
-    async function processExtractedImage(img) {
-        document.getElementById('mainContainer').style.display = 'none';
-        translationModal.style.display = 'flex';
-        
-        modalFrame.style.display = 'flex';
-        alignBtn.style.display = 'none';
-        langSelect.style.display = 'none';
-        translateActionBtn.style.display = 'none';
-        translateOverlay.style.display = 'flex';
-        translateOverlayText.innerText = "Skenuojamas dokumentas...";
-
-        try {
-            if(!navigator.onLine) throw new Error("Nėra interneto ryšio!");
-
-            originalUnblurredCanvas = document.createElement('canvas');
-            const wCtx = originalUnblurredCanvas.getContext('2d');
-            let w = img.width; let h = img.height;
-            const maxDim = 1600;
-            if(w > maxDim || h > maxDim) {
-                let ratio = Math.min(maxDim / w, maxDim / h);
-                w = Math.floor(w * ratio); h = Math.floor(h * ratio);
-            }
-            originalUnblurredCanvas.width = w; originalUnblurredCanvas.height = h;
-            wCtx.drawImage(img, 0, 0, w, h);
-            
-            const tempC = document.createElement('canvas'); tempC.width = w; tempC.height = h;
-            const tCtx = tempC.getContext('2d'); tCtx.drawImage(originalUnblurredCanvas, 0, 0);
-            let preImgData = tCtx.getImageData(0, 0, w, h); let d = preImgData.data;
-            for (let i = 0; i < d.length; i += 4) {
-                let gray = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
-                let c = gray > 130 ? 255 : Math.max(0, gray - 40);
-                d[i] = d[i+1] = d[i+2] = c;
-            }
-            tCtx.putImageData(preImgData, 0, 0);
-
-            let base64ImageToScan = tempC.toDataURL("image/jpeg", 0.85).split(',')[1];
-            
-            // ============================================================
-            // DIAGNOSTIKA: Siunčiame užklausą ir TIKRINAME atsakymą
-            // ============================================================
-            let visionRes;
-            let visionRawText = "";
-            
-            try {
-                visionRes = await fetch(WORKER_URL + '/vision', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({"requests": [{ 
-                        "image": { "content": base64ImageToScan }, 
-                        "features": [{ "type": "DOCUMENT_TEXT_DETECTION" }] 
-                    }]}) 
-                });
-                visionRawText = await visionRes.text();
-            } catch (fetchErr) {
-                // Tinklo klaida
-                document.getElementById('diagContent').innerText = 
-                    "TINKLO KLAIDA:\n\n" + 
-                    "URL: " + WORKER_URL + "/vision\n" +
-                    "Klaida: " + fetchErr.message + "\n" +
-                    "Tipas: " + fetchErr.name;
-                document.getElementById('diagnosticModal').style.display = 'block';
-                return;
-            }
-            
-            // Jei atsakymas nėra OK (500, 403, 429 ir t.t.) - rodome diagnostiką
-            if (!visionRes.ok) {
-                let formattedDiag = "🔍 GOOGLE VISION KLAIDA\n";
-                formattedDiag += "═══════════════════════════════\n\n";
-                formattedDiag += "HTTP Status: " + visionRes.status + " " + visionRes.statusText + "\n\n";
-                formattedDiag += "Atsakymas iš Worker'io:\n";
-                formattedDiag += "─────────────────────────────\n";
-                
-                try {
-                    let parsed = JSON.parse(visionRawText);
-                    formattedDiag += JSON.stringify(parsed, null, 2);
-                } catch (e) {
-                    formattedDiag += visionRawText.substring(0, 2000);
-                }
-                
-                document.getElementById('diagContent').innerText = formattedDiag;
-                document.getElementById('diagnosticModal').style.display = 'block';
-                return;
-            }
-            
-            // Bandome parsinti JSON
-            let visionData;
-            try {
-                visionData = JSON.parse(visionRawText);
-            } catch (parseErr) {
-                document.getElementById('diagContent').innerText = 
-                    "JSON PARSINIMO KLAIDA:\n\n" + 
-                    "Atsakymas:\n" + visionRawText.substring(0, 2000);
-                document.getElementById('diagnosticModal').style.display = 'block';
-                return;
-            }
-
-            if (visionData.responses && visionData.responses[0].fullTextAnnotation) {
-                extractedTextGlobal = visionData.responses[0].fullTextAnnotation.text;
-                
-                if (visionData.responses[0].textAnnotations && visionData.responses[0].textAnnotations.length > 0) {
-                    currentDocPoly = calculateInitialPoly(visionData);
-                } else {
-                    let page = visionData.responses[0].fullTextAnnotation.pages[0];
-                    let vertices = page.blocks[0].boundingPoly.vertices;
-                    let xs = vertices.map(v => v.x || 0);
-                    let ys = vertices.map(v => v.y || 0);
-                    currentDocPoly = [
-                        {x: Math.min(...xs), y: Math.min(...ys)},
-                        {x: Math.max(...xs), y: Math.min(...ys)},
-                        {x: Math.max(...xs), y: Math.max(...ys)},
-                        {x: Math.min(...xs), y: Math.max(...ys)}
-                    ];
-                }
-                executeWarpAndFilter(currentDocPoly);
-                alignBtn.style.display = 'block'; 
-            } else if (visionData.responses && visionData.responses[0].textAnnotations && visionData.responses[0].textAnnotations.length > 0) {
-                extractedTextGlobal = visionData.responses[0].textAnnotations[0].description;
-                currentDocPoly = calculateInitialPoly(visionData);
-                executeWarpAndFilter(currentDocPoly);
-                alignBtn.style.display = 'block'; 
-            } else {
-                extractedTextGlobal = ""; showToast("Dėmesio: Nuotraukoje nerastas joks tekstas.");
-            }
-
-            translateOverlay.style.display = 'none';
-            langSelect.style.display = 'block';
-
-        } catch(err) {
-            console.error(err);
-            document.getElementById('diagContent').innerText = 
-                "BENDRA KLAIDA:\n\n" + 
-                "Klaida: " + err.message + "\n" +
-                "Tipas: " + err.name + "\n" +
-                "Stack:\n" + (err.stack || "N/A").substring(0, 1000);
-            document.getElementById('diagnosticModal').style.display = 'block';
-        }
-    }
-
-    langSelect.addEventListener('change', () => {
-        const selLang = langSelect.value;
-        if(selLang && !isAlignMode) {
-            translateActionBtn.innerText = "Versti į " + languagesMap[selLang] + " kalbą";
-            translateActionBtn.style.display = 'block';
-        }
-    });
-
-    function wrapText(context, text, x, y, maxWidth, lineHeight) {
-        var words = text.split(' '); var line = ''; var totalHeight = 0;
-        for(var n = 0; n < words.length; n++) {
-            var testLine = line + words[n] + ' '; var metrics = context.measureText(testLine);
-            if (metrics.width > maxWidth && n > 0) { line = words[n] + ' '; totalHeight += lineHeight; } else { line = testLine; }
-        }
-        totalHeight += lineHeight;
-        var currentY = y - (totalHeight / 2) + (lineHeight / 2); line = '';
-        for(var n = 0; n < words.length; n++) {
-            var testLine = line + words[n] + ' '; var metrics = context.measureText(testLine);
-            if (metrics.width > maxWidth && n > 0) { context.fillText(line, x, currentY); line = words[n] + ' '; currentY += lineHeight; } else { line = testLine; }
-        }
-        context.fillText(line, x, currentY);
-    }
-
-    async function runTranslation(targetLang, langName) {
-        if(!extractedTextGlobal) { showToast("Nėra teksto, kurį būtų galima išversti!"); return; }
-        langSelect.style.display = 'none'; translateActionBtn.style.display = 'none'; alignBtn.style.display = 'none';
-        translateOverlayText.innerText = `Verčiama į ${langName} kalbą...`; translateOverlay.style.display = 'flex';
-
-        try {
-            if(!navigator.onLine) throw new Error("Nėra interneto ryšio!");
-            
-            let bodyData = `text=${encodeURIComponent(extractedTextGlobal)}&source_lang=LT&target_lang=${targetLang}`;
-            let transData = null;
-
-            let res = await fetch(WORKER_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: bodyData
-            });
-            
-            if(res.ok) {
-                transData = await res.json();
-            } else {
-                let errText = await res.text();
-                throw new Error(`Worker klaida: ${res.status} - ${errText.substring(0, 300)}`);
-            }
-            
-            if(!transData) throw new Error("Nepavyko susisiekti su vertimo serveriu.");
-            
-            let finalOutputText = transData.translations[0].text;
-            const ctx = resultCanvas.getContext('2d');
-            
-            if(scannedImageData) ctx.putImageData(scannedImageData, 0, 0);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'; ctx.fillRect(0, 0, resultCanvas.width, resultCanvas.height);
-            
-            let isLandscape = resultCanvas.width > resultCanvas.height;
-            let pxPerCm = isLandscape ? (resultCanvas.width / 29.7) : (resultCanvas.width / 21.0);
-            let marginLeft = 3.0 * pxPerCm; let marginRight = 2.0 * pxPerCm; let marginTop = 2.0 * pxPerCm; let marginBottom = 2.0 * pxPerCm;
-            
-            let drawW = resultCanvas.width - marginLeft - marginRight;
-            let drawH = resultCanvas.height - marginTop - marginBottom;
-            let centerX = marginLeft + drawW / 2; let centerY = marginTop + drawH / 2;
-            
-            let fontSize = Math.max(18, Math.floor(resultCanvas.width / 26));
-            ctx.fillStyle = 'black'; ctx.font = `bold ${fontSize}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            wrapText(ctx, finalOutputText, centerX, centerY, drawW, fontSize * 1.4);
-
-        } catch (err) { showToast(err.message); }
-
-        translateOverlay.style.display = 'none'; langSelect.style.display = 'block'; translateActionBtn.style.display = 'block'; alignBtn.style.display = 'block';
-    }
-
-    translateActionBtn.addEventListener('click', () => { runTranslation(langSelect.value, languagesMap[langSelect.value]); });
-
-  </script>
+</script>
 </body>
 </html>
