@@ -163,40 +163,13 @@
     box-shadow: 0 5px 15px rgba(0,0,0,0.6); display: none; text-align: center;
     width: 90%; max-width: 400px; border: 2px solid #ff4081; word-wrap: break-word;
   }
-
-  /* ESP32 IP konfigūracijos juosta */
-  #espConfig {
-    position: fixed; top: 0; left: 0; width: 100%; background: #1a1a1a; 
-    padding: 8px 12px; display: flex; gap: 8px; align-items: center; 
-    z-index: 500; border-bottom: 2px solid #333;
-  }
-  #espConfig input {
-    flex: 1; padding: 8px 10px; background: #222; color: #4CAF50; 
-    border: 1px solid #444; border-radius: 6px; font-size: 13px; outline: none;
-    font-family: monospace;
-  }
-  #espConfig button {
-    padding: 8px 12px; background: #4CAF50; color: white; border: none; 
-    border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;
-  }
-  #espConfig button:active { background: #388E3C; }
-  #espStatus { font-size: 11px; padding: 4px 8px; border-radius: 4px; background: #333; color: #aaa; }
-  #espStatus.online { background: #1B5E20; color: #4CAF50; }
-  #espStatus.offline { background: #B71C1C; color: #ff8a80; }
 </style>
 </head>
 <body>
 
-  <!-- ESP32 IP KONFIGŪRACIJA -->
-  <div id="espConfig">
-    <input type="text" id="espIpInput" placeholder="ESP32 IP (pvz. 192.168.43.100)" />
-    <button id="espSaveBtn">IŠSAUGOTI</button>
-    <span id="espStatus">--</span>
-  </div>
-
   <div id="toastMsg"></div>
   
-  <div id="telemetryBox" style="top: 70px;">
+  <div id="telemetryBox">
     <div class="wifi-icon" title="Wi-Fi ryšys">
       <div class="wifi-bar" style="height: 4px;"></div>
       <div class="wifi-bar" style="height: 8px;"></div>
@@ -217,7 +190,7 @@
     </div>
   </div>
 
-  <div id="settingsIcon" class="settings-icon" style="top: 70px;">
+  <div id="settingsIcon" class="settings-icon">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
   </div>
   
@@ -250,26 +223,8 @@
       <div class="modal-box" style="border-color: #E91E63; max-width: 450px; align-items: flex-start; padding: 30px 20px;">
           <h3 style="color: #E91E63; margin-top: 0; font-size: 18px; text-transform: uppercase;">DĖMESIO: KAMERA BLOKUOJAMA!</h3>
           <p style="color: #ccc; font-size: 14px; line-height: 1.5; margin-bottom: 15px;">
-              „Android Chrome" naršyklė dėl saugumo griežtai blokuoja prieigą HTTP puslapiuose.<br><br>
-              Kadangi įrenginys veikia tiesiogiai, norint naudoti kamerą, privalote suteikti išimtį naršyklėje.
+              Naršyklė dėl saugumo blokuoja prieigą prie kameros. Įsitikinkite, kad puslapis atidarytas per HTTPS.
           </p>
-          
-          <div style="color: #ccc; font-size: 14px; line-height: 1.5; margin-top: 0; margin-bottom: 8px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-              1. Pirmiausia nukopijuokite savo įrenginio IP: <br>
-              <span id="currentIpSpan" style="color: white; font-weight: bold;">http://--</span>
-              <button id="copyIpBtn" style="background: #4CAF50; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; transition: background 0.3s;">KOPIJUOTI</button>
-          </div>
-
-          <p style="color: #ccc; font-size: 14px; line-height: 1.5; margin-top: 15px; margin-bottom: 8px;">2. Dabar paspauskite ant šio adreso, kad jį nukopijuotumėte:</p>
-          
-          <div id="flagLink" style="display: block; width: 100%; padding: 12px; background: #111; border: 1px solid #444; color: #888; text-align: center; border-radius: 6px; margin-bottom: 20px; font-weight: bold; font-size: 13px; word-break: break-all; opacity: 0.4; pointer-events: none; transition: all 0.3s;">
-              chrome://flags/#unsafely-treat-insecure-origin-as-secure
-          </div>
-          
-          <p style="color: #ccc; font-size: 14px; line-height: 1.5; margin-top: 0; margin-bottom: 8px;">3. Atidarykite naują naršyklės langą ir į adreso juostą <b>įklijuokite oranžinį adresą</b>.</p>
-          <p style="color: #ccc; font-size: 14px; line-height: 1.5; margin-top: 0; margin-bottom: 8px;">4. Atsidariusiame nustatymų lange, į tuščią laukelį įklijuokite savo <b>įrenginio IP</b>.</p>
-          <p style="color: #ccc; font-size: 14px; line-height: 1.5; margin-top: 0; margin-bottom: 8px;">5. Pakeiskite nustatymą į <b style="color:white;">Enabled</b>.</p>
-          <p style="color: #ccc; font-size: 14px; line-height: 1.5; margin-top: 0; margin-bottom: 25px;">6. Perkraukite naršyklę (Relaunch).</p>
           
           <button id="closeCameraBlockedBtn" class="action-btn" style="background-color: transparent; border: 2px solid #E91E63; color: #E91E63; width: 100%; max-width: 100%;">SUPRATAU</button>
       </div>
@@ -347,62 +302,16 @@
   </div>
 
   <script>
-    // ============ ESP32 BAZINIS URL ============
-    let ESP32_BASE = localStorage.getItem('esp32_url') || '';
+    // ============================================================
+    // KONFIGŪRACIJA
+    // ============================================================
+    const WORKER_URL = 'https://deepl-proxy.t-jasukaitis.workers.dev/';
+    const GOOGLE_VISION_KEY = 'AIzaSyBjtLcZLH4M1xhg18oEX7V_HXNm-Jptw9U';
+    // ⚠️ PAKEISKITE GOOGLE_VISION_KEY į SAVO NAUJĄ RAKTĄ!
     
-    function getEspUrl(path) {
-      if (!ESP32_BASE) {
-        showToast("Įveskite ESP32 IP adresą viršuje!");
-        throw new Error("No ESP32 URL");
-      }
-      return ESP32_BASE.replace(/\/$/, '') + path;
-    }
+    // ESP32 URL (jei norite valdyti ESP32 per šį puslapį)
+    let ESP32_BASE = localStorage.getItem('esp32_url') || '';
 
-    const espIpInput = document.getElementById('espIpInput');
-    const espSaveBtn = document.getElementById('espSaveBtn');
-    const espStatus = document.getElementById('espStatus');
-
-    if (ESP32_BASE) espIpInput.value = ESP32_BASE;
-
-    function normalizeUrl(input) {
-      input = input.trim();
-      if (!input) return '';
-      if (!/^https?:\/\//i.test(input)) input = 'http://' + input;
-      return input.replace(/\/$/, '');
-    }
-
-    espSaveBtn.addEventListener('click', async () => {
-      let url = normalizeUrl(espIpInput.value);
-      if (!url) { showToast("Įveskite IP adresą"); return; }
-      ESP32_BASE = url;
-      localStorage.setItem('esp32_url', url);
-      espIpInput.value = url;
-      await checkEspOnline();
-    });
-
-    async function checkEspOnline() {
-      if (!ESP32_BASE) { espStatus.innerText = '--'; espStatus.className = ''; return; }
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 3000);
-        const res = await fetch(ESP32_BASE + '/check_trigger?t=' + Date.now(), { 
-          cache: 'no-store', signal: controller.signal 
-        });
-        clearTimeout(timeout);
-        if (res.ok) {
-          espStatus.innerText = 'ONLINE';
-          espStatus.className = 'online';
-          return true;
-        }
-      } catch (e) {}
-      espStatus.innerText = 'OFFLINE';
-      espStatus.className = 'offline';
-      return false;
-    }
-    setTimeout(checkEspOnline, 500);
-    setInterval(checkEspOnline, 15000);
-
-    // ============ TOAST ============
     let toastTimer = null;
     function showToast(msg) {
         const toast = document.getElementById('toastMsg');
@@ -419,10 +328,15 @@
     }
     ['touchstart', 'click'].forEach(evt => { document.addEventListener(evt, activateFullscreen, {capture: true}); });
 
-    // ============ TELEMETRIJOS POLLING ============
+    // ============================================================
+    // TELEMETRIJOS POLLING (jei ESP32 URL nustatytas)
+    // ============================================================
     function pollTrigger() {
-      if (!ESP32_BASE) { setTimeout(pollTrigger, 3000); return; }
-      fetch(getEspUrl('/check_trigger') + '?t=' + Date.now(), { cache: 'no-store' })
+      if (!ESP32_BASE) { 
+        setTimeout(pollTrigger, 3000); 
+        return; 
+      }
+      fetch(ESP32_BASE.replace(/\/$/, '') + '/check_trigger?t=' + Date.now(), { cache: 'no-store' })
         .then(res => res.json())
         .then(data => {
             if (data) {
@@ -462,7 +376,9 @@
     }
     setTimeout(pollTrigger, 500);
 
-    // ============ NUSTATYMAI ============
+    // ============================================================
+    // NUSTATYMAI
+    // ============================================================
     document.getElementById('settingsIcon').addEventListener('click', () => {
       document.getElementById('mainContainer').style.display = 'none';
       document.getElementById('telemetryBox').style.display = 'none';
@@ -474,6 +390,10 @@
       document.getElementById('telemetryBox').style.display = 'flex';
     });
     document.getElementById('openWifiBtn').addEventListener('click', () => {
+      if (!ESP32_BASE) {
+        showToast("Nustatykite ESP32 IP: eikite į nustatymus");
+        return;
+      }
       document.getElementById('settingsModal').style.display = 'none';
       document.getElementById('wifiModal').style.display = 'flex';
       loadWifiList();
@@ -486,7 +406,9 @@
     function loadWifiList() {
       const container = document.getElementById('wifiListContainer');
       container.innerHTML = '<div style="color:#aaa;">Kraunama...</div>';
-      fetch(getEspUrl('/get_wifi') + '?t=' + Date.now()).then(res => res.json()).then(data => {
+      fetch(ESP32_BASE.replace(/\/$/, '') + '/get_wifi?t=' + Date.now())
+        .then(res => res.json())
+        .then(data => {
           container.innerHTML = '';
           if(data.length === 0) { container.innerHTML = '<div style="color:#aaa;">Nėra išsaugotų tinklų</div>'; return; }
           data.forEach(w => {
@@ -502,23 +424,26 @@
     window.deleteWifi = function(ssid) {
       if(!confirm('Ar tikrai norite ištrinti tinklą ' + ssid + '?')) return;
       let fd = new FormData(); fd.append('ssid', ssid);
-      fetch(getEspUrl('/delete_wifi'), { method: 'POST', body: fd }).then(() => loadWifiList());
+      fetch(ESP32_BASE.replace(/\/$/, '') + '/delete_wifi', { method: 'POST', body: fd }).then(() => loadWifiList());
     };
     window.saveNewWifi = function() {
       let s = document.getElementById('newWifiSsid').value.trim();
       let p = document.getElementById('newWifiPass').value.trim();
       if(!s || !p) { showToast("Įveskite pavadinimą ir slaptažodį"); return; }
       let fd = new FormData(); fd.append('ssid', s); fd.append('pass', p);
-      fetch(getEspUrl('/add_wifi'), { method: 'POST', body: fd }).then(() => {
+      fetch(ESP32_BASE.replace(/\/$/, '') + '/add_wifi', { method: 'POST', body: fd }).then(() => {
          document.getElementById('newWifiSsid').value = '';
          document.getElementById('newWifiPass').value = '';
          loadWifiList();
       });
     };
 
-    // ============ OTA ============
+    // ============================================================
+    // OTA
+    // ============================================================
     let selectedOtaFile = null;
     document.getElementById('otaUpdateBtn').addEventListener('click', () => {
+        if (!ESP32_BASE) { showToast("Nustatykite ESP32 IP"); return; }
         document.getElementById('settingsModal').style.display = 'none';
         document.getElementById('otaOverlay').style.display = 'flex';
         document.getElementById('otaSelectFileBtn').style.display = 'inline-block';
@@ -557,7 +482,7 @@
         document.getElementById('otaCloseBtn').style.display = 'none';
         let fd = new FormData(); fd.append("update", selectedOtaFile, "update.bin");
         let xhr = new XMLHttpRequest();
-        xhr.open("POST", getEspUrl('/update'), true);
+        xhr.open("POST", ESP32_BASE.replace(/\/$/, '') + '/update', true);
         xhr.upload.onprogress = function(e) {
             if (e.lengthComputable) {
                 let percentComplete = Math.round((e.loaded / e.total) * 100);
@@ -581,7 +506,9 @@
         xhr.send(fd);
     });
 
-    // ============ KAMERA ============
+    // ============================================================
+    // KAMERA
+    // ============================================================
     const cameraBtnMain = document.getElementById('cameraBtnMain');
     const cameraModal = document.getElementById('cameraModal');
     const closeCameraModalX = document.getElementById('closeCameraModalX');
@@ -640,13 +567,6 @@
                 requestAnimationFrame(detectLiveDocument);
             };
         } catch (err) {
-            document.getElementById('currentIpSpan').innerText = window.location.origin;
-            const flagLink = document.getElementById('flagLink');
-            flagLink.href = "chrome://flags/#unsafely-treat-insecure-origin-as-secure";
-            flagLink.style.opacity = "0.4";
-            flagLink.style.pointerEvents = "none";
-            flagLink.style.borderColor = "#444";
-            flagLink.style.color = "#888";
             document.getElementById('cameraBlockedModal').style.display = 'flex';
         }
     });
@@ -671,48 +591,6 @@
 
     document.getElementById('closeCameraBlockedBtn').addEventListener('click', () => {
         document.getElementById('cameraBlockedModal').style.display = 'none';
-    });
-
-    const copyIpBtn = document.getElementById('copyIpBtn');
-    copyIpBtn.addEventListener('click', () => {
-        const ipText = ESP32_BASE || window.location.origin;
-        const textArea = document.createElement("textarea");
-        textArea.value = ipText;
-        document.body.appendChild(textArea);
-        textArea.select();
-        try {
-            document.execCommand("copy");
-            copyIpBtn.innerText = 'NUKOPIJUOTA';
-            copyIpBtn.style.background = '#9C27B0';
-
-            const flagLink = document.getElementById('flagLink');
-            flagLink.style.opacity = "1";
-            flagLink.style.pointerEvents = "auto";
-            flagLink.style.borderColor = "#FF9800";
-            flagLink.style.color = "#FF9800";
-            flagLink.style.cursor = "pointer";
-
-            setTimeout(() => {
-                copyIpBtn.innerText = 'KOPIJUOTI';
-                copyIpBtn.style.background = '#4CAF50';
-            }, 3000);
-        } catch (err) {
-            showToast("Nepavyko nukopijuoti");
-        }
-        document.body.removeChild(textArea);
-    });
-
-    document.getElementById('flagLink').addEventListener('click', (e) => {
-        e.preventDefault(); 
-        const textArea = document.createElement("textarea");
-        textArea.value = "chrome://flags/#unsafely-treat-insecure-origin-as-secure";
-        document.body.appendChild(textArea);
-        textArea.select();
-        try {
-            document.execCommand("copy");
-            showToast("Nustatymų adresas nukopijuotas! Dabar atidarykite naują kortelę ir įklijuokite jį.");
-        } catch (err) {}
-        document.body.removeChild(textArea);
     });
 
     closeCameraModalX.addEventListener('click', () => {
@@ -876,7 +754,9 @@
         img.src = dataUrl;
     });
 
-    // ============ SKENERIS IR VERTIMAS ============
+    // ============================================================
+    // SKENERIS IR VERTIMAS
+    // ============================================================
     const translationModal = document.getElementById('translationModal');
     const modalFileInput = document.getElementById('modalFileInput');
     const modalFrame = document.getElementById('modalFrame');
@@ -894,10 +774,6 @@
     let currentDocPoly = null; 
     let isAlignMode = false;
     let activeDragPoint = -1;
-    
-    const DEEPL_KEY = '59b410f1-2d7d-49b9-9f57-56f9a6a31019:fx';
-    const GOOGLE_VISION_KEY = 'AIzaSyBjtLcZLH4M1xhg18oEX7V_HXNm-Jptw9U';
-    const CORS_PROXIES = ["https://corsproxy.io/?", "https://api.allorigins.win/raw?url="];
 
     const languagesMap = {
      "EN-US": "Anglų (Amerikiečių)", "EN-GB": "Anglų (Britų)", "DE": "Vokiečių", "FR": "Prancūzų",
@@ -1248,7 +1124,7 @@
             let base64ImageToScan = tempC.toDataURL("image/jpeg", 0.85).split(',')[1];
             const visionUrl = `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_VISION_KEY}`;
             let visionRes = await fetch(visionUrl, { method: 'POST', body: JSON.stringify({"requests": [{ "image": { "content": base64ImageToScan }, "features": [{ "type": "TEXT_DETECTION" }] }]}) });
-            if(!visionRes.ok) throw new Error("Google Vision klaida");
+            if(!visionRes.ok) throw new Error("Google Vision klaida: " + visionRes.status);
             let visionData = await visionRes.json();
 
             if (visionData.responses && visionData.responses[0].textAnnotations && visionData.responses[0].textAnnotations.length > 0) {
@@ -1301,16 +1177,24 @@
 
         try {
             if(!navigator.onLine) throw new Error("Nėra interneto ryšio!");
-            let bodyData = `auth_key=${DEEPL_KEY}&text=${encodeURIComponent(extractedTextGlobal)}&source_lang=LT&target_lang=${targetLang}`;
+            
+            // PAŠALINAME auth_key - Worker'is jį prideda automatiškai
+            let bodyData = `text=${encodeURIComponent(extractedTextGlobal)}&source_lang=LT&target_lang=${targetLang}`;
             let transData = null;
 
-            for(let proxy of CORS_PROXIES) {
-                try {
-                    let res = await fetch(proxy + 'https://api-free.deepl.com/v2/translate', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: bodyData });
-                    if(res.ok) { transData = await res.json(); break; }
-                } catch(e) { }
+            let res = await fetch(WORKER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: bodyData
+            });
+            
+            if(res.ok) {
+                transData = await res.json();
+            } else {
+                throw new Error(`Worker klaida: ${res.status}`);
             }
-            if(!transData) throw new Error("Nepavyko susisiekti su vertimo serveriu. Patikrinkite interneto ryšį.");
+            
+            if(!transData) throw new Error("Nepavyko susisiekti su vertimo serveriu.");
             
             let finalOutputText = transData.translations[0].text;
             const ctx = resultCanvas.getContext('2d');
@@ -1340,4 +1224,3 @@
   </script>
 </body>
 </html>
-
