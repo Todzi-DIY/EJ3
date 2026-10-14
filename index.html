@@ -83,14 +83,13 @@
   .close-x-icon svg { width: 20px; height: 20px; display: block; }
 
   /* ============================================================
-     ŽALIAS A4 RĖMELIS - VISADA VERTIKALUS IR A4 PROPORCIJOS
+     ŽALIAS A4 RĖMELIS - SIAURAS IR AUKŠTAS (VERTIKALUS A4)
      ============================================================ */
   .image-frame {
-    /* A4 portretinis formatas - VISADA 21:29.7 */
-    width: 100%;
-    max-width: 500px;
-    aspect-ratio: 1 / 1.4142;  /* A4 portretinis */
-    max-height: 70vh;
+    width: auto;
+    height: 70vh;             /* Aukštas - vertikalus */
+    aspect-ratio: 1 / 1.4142; /* A4 portretinis */
+    max-width: 90vw;
     
     border: 4px solid #4CAF50; 
     border-radius: 8px; 
@@ -105,9 +104,10 @@
     margin: 0 auto;
   }
   
-  /* Būtinai vertikali orientacija */
   #translationModal .image-frame {
     aspect-ratio: 1 / 1.4142;
+    height: 70vh;
+    width: auto;
   }
   
   .image-frame canvas {
@@ -160,6 +160,51 @@
   }
   .translate-action-btn:active { transform: scale(0.98); }
 
+  /* ============================================================
+     NAUJI MYGTUKAI PO VERTIMO
+     ============================================================ */
+  #printAndDownloadButtons {
+    display: none;
+    width: 100%;
+    max-width: 650px;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+  }
+  
+  .print-btn {
+    background-color: #4CAF50; 
+    color: white; 
+    width: 100%; 
+    padding: 18px; 
+    font-size: 18px; 
+    font-weight: bold; 
+    border: none; 
+    border-radius: 8px; 
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(76, 175, 80, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transition: transform 0.2s;
+  }
+  .print-btn:active { transform: scale(0.98); }
+  
+  .pdf-btn {
+    background-color: #2196F3; 
+    color: white; 
+    width: 100%; 
+    padding: 12px; 
+    font-size: 14px; 
+    font-weight: bold; 
+    border: none; 
+    border-radius: 8px; 
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(33, 150, 243, 0.4);
+    transition: transform 0.2s;
+    opacity: 0.85;
+  }
+  .pdf-btn:active { transform: scale(0.98); }
+
   #settingsModal { display:none; position:fixed; top:0; left:0; width:100vw; min-height:100vh; background-color:black; z-index:100; flex-direction:column; align-items:center; padding-top:40px; }
   #wifiModal { display:none; position:fixed; top:0; left:0; width:100vw; min-height:100vh; background-color:rgba(0,0,0,0.95); z-index:150; flex-direction:column; align-items:center; padding:40px 20px; overflow-y: auto; }
   .modal-btn { border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; color: white; }
@@ -178,6 +223,16 @@
 
   #otaOverlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.95); z-index: 350; flex-direction: column; align-items: center; justify-content: center; }
   .upload-modal-box { background: #1a1a1a; border: 2px solid #00796B; padding: 30px; border-radius: 10px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.8); }
+
+  /* Printerio modalas */
+  #printerModal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.95); z-index: 400; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+  #printerModal .modal-box { background: #1a1a1a; border: 2px solid #4CAF50; padding: 30px; border-radius: 12px; width: 90%; max-width: 500px; text-align: center; }
+  #printerModal h3 { color: #4CAF50; margin-top: 0; }
+  #printerModal input, #printerModal select { width: 100%; padding: 12px; margin: 10px 0; background: #222; color: white; border: 1px solid #444; border-radius: 6px; font-size: 14px; }
+  #printerModal .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  #printerModal .modal-actions button { flex: 1; padding: 12px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
+  #printerModal .btn-save { background: #4CAF50; color: white; }
+  #printerModal .btn-cancel { background: #555; color: white; }
 
   #toastMsg {
     position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
@@ -278,14 +333,51 @@
           </select>
           
           <button id="translateActionBtn" class="translate-action-btn"></button>
+
+          <!-- ============================================================
+               NAUJI MYGTUKAI PO VERTIMO
+               ============================================================ -->
+          <div id="printAndDownloadButtons">
+              <button id="printBtn" class="print-btn">🖨 SPAUSDINTI</button>
+              <button id="downloadPdfBtn" class="pdf-btn">📥 Parsisiųsti PDF</button>
+          </div>
       </div>
   </div>
 
   <div id="settingsModal">
     <h2 style="color:white; letter-spacing:2px; margin-bottom: 30px;">NUSTATYMAI</h2>
+    <button id="printerSettingsBtn" class="modal-btn" style="background-color: #9C27B0; padding: 15px 30px; margin-bottom: 20px; width: 80%; max-width: 300px;">🖨 SPAUSDINTUVAS</button>
     <button id="openWifiBtn" class="modal-btn" style="background-color: #2196F3; padding: 15px 30px; margin-bottom: 20px; width: 80%; max-width: 300px;">📶 Išsaugoti WIFI tinklai</button>
     <button id="otaUpdateBtn" class="modal-btn" style="background-color: #00796B; padding: 15px 30px; margin-bottom: 30px; width: 80%; max-width: 300px;">🛠 Sistemos atnaujinimas</button>
     <button id="closeSettingsBtn" class="close-modal-btn" style="width: 80%; max-width: 300px;">UŽDARYTI</button>
+  </div>
+
+  <!-- ============================================================
+       PRINTERIO NUSTATYMŲ MODALAS
+       ============================================================ -->
+  <div id="printerModal">
+    <div class="modal-box">
+      <h3>🖨 SPAUSDINTUVO NUSTATYMAI</h3>
+      <p style="color:#ccc; font-size:13px;">Įveskite tinklo printerio IP adresą ir pasirinkite tipą.</p>
+      
+      <label style="color:#aaa; font-size:12px; text-align:left; display:block; margin-top:15px;">Printerio IP adresas:</label>
+      <input type="text" id="printerIpInput" placeholder="pvz. 192.168.1.100">
+      
+      <label style="color:#aaa; font-size:12px; text-align:left; display:block; margin-top:10px;">Printerio pavadinimas:</label>
+      <input type="text" id="printerNameInput" placeholder="pvz. HP LaserJet">
+      
+      <label style="color:#aaa; font-size:12px; text-align:left; display:block; margin-top:10px;">Printerio tipas:</label>
+      <select id="printerTypeSelect">
+        <option value="ipp">IPP (Internet Printing Protocol)</option>
+        <option value="raw">Raw TCP (port 9100)</option>
+        <option value="lpd">LPD/LPR</option>
+      </select>
+      
+      <div class="modal-actions">
+        <button class="btn-save" id="savePrinterBtn">IŠSAUGOTI</button>
+        <button class="btn-cancel" id="cancelPrinterBtn">ATGAL</button>
+      </div>
+    </div>
   </div>
 
   <div id="wifiModal">
@@ -398,6 +490,48 @@
       document.getElementById('mainContainer').style.display = 'flex';
       document.getElementById('telemetryBox').style.display = 'flex';
     });
+    
+    // ============================================================
+    // PRINTERIO NUSTATYMAI
+    // ============================================================
+    document.getElementById('printerSettingsBtn').addEventListener('click', () => {
+      document.getElementById('settingsModal').style.display = 'none';
+      document.getElementById('printerModal').style.display = 'flex';
+      
+      // Užkrauname išsaugotus nustatymus
+      let savedPrinterIp = localStorage.getItem('printer_ip') || '';
+      let savedPrinterName = localStorage.getItem('printer_name') || '';
+      let savedPrinterType = localStorage.getItem('printer_type') || 'ipp';
+      
+      document.getElementById('printerIpInput').value = savedPrinterIp;
+      document.getElementById('printerNameInput').value = savedPrinterName;
+      document.getElementById('printerTypeSelect').value = savedPrinterType;
+    });
+    
+    document.getElementById('savePrinterBtn').addEventListener('click', () => {
+      let ip = document.getElementById('printerIpInput').value.trim();
+      let name = document.getElementById('printerNameInput').value.trim();
+      let type = document.getElementById('printerTypeSelect').value;
+      
+      if (!ip) {
+        showToast("Įveskite printerio IP adresą");
+        return;
+      }
+      
+      localStorage.setItem('printer_ip', ip);
+      localStorage.setItem('printer_name', name);
+      localStorage.setItem('printer_type', type);
+      
+      showToast("Printerio nustatymai išsaugoti!");
+      document.getElementById('printerModal').style.display = 'none';
+      document.getElementById('settingsModal').style.display = 'flex';
+    });
+    
+    document.getElementById('cancelPrinterBtn').addEventListener('click', () => {
+      document.getElementById('printerModal').style.display = 'none';
+      document.getElementById('settingsModal').style.display = 'flex';
+    });
+    
     document.getElementById('openWifiBtn').addEventListener('click', () => {
       if (!ESP32_BASE) {
         showToast("Nustatykite ESP32 IP: eikite į nustatymus");
@@ -526,7 +660,6 @@
     let focusRingObj = {x: 0, y: 0, alpha: 0}; 
 
     function applyCameraAspectRatio() {
-        // Kamera VISADA rodo A4 portretinį formatą
         document.querySelector('#cameraModal .image-frame').style.aspectRatio = "1 / 1.4142";
     }
 
@@ -767,6 +900,7 @@
     const translateActionBtn = document.getElementById('translateActionBtn');
     const closeModalX = document.getElementById('closeModalX');
     const alignBtn = document.getElementById('alignBtn');
+    const printAndDownloadButtons = document.getElementById('printAndDownloadButtons');
     
     let extractedTextGlobal = ""; 
     let scannedImageData = null; 
@@ -777,6 +911,7 @@
     
     let detectedImages = [];
     let detectedPageNumbers = [];
+    let translatedCanvasSnapshot = null; // Išversto lapo kopija PDF generavimui
 
     const languagesMap = {
      "EN-US": "Anglų (Amerikiečių)", "EN-GB": "Anglų (Britų)", "DE": "Vokiečių", "FR": "Prancūzų",
@@ -794,6 +929,7 @@
         translationModal.style.display = 'none';
         document.getElementById('mainContainer').style.display = 'flex';
         modalFileInput.value = ''; 
+        printAndDownloadButtons.style.display = 'none';
     });
 
     function loadImage(file) {
@@ -1048,24 +1184,19 @@
         window.colorWarpedCanvas = colorCanvas;
         window.bwWarpedCanvas = tempCanvas;
 
-        // ============================================================
-        // A4 FORMATAS - VISADA PORTRAITINIS (21 × 29.7)
-        // ============================================================
-        // VISADA naudojame A4 portretinį formatą (net jei tekstas horizontalus)
-        let canvasW = 1200;
-        let canvasH = Math.floor(1200 * 1.4142); // 1697 px
+        // VISADA A4 PORTRAITINIS FORMATAS
+        let canvasW = 1240;
+        let canvasH = 1754; // A4 proporcija
         
         resultCanvas.width = canvasW; 
         resultCanvas.height = canvasH;
         
-        // Nustatome modalFrame A4 portretinį
         modalFrame.style.aspectRatio = "1 / 1.4142";
         
         ctx.fillStyle = 'white'; 
         ctx.fillRect(0, 0, canvasW, canvasH);
         
-        // A4 portretinės paraštės
-        let pxPerCm = canvasW / 21.0;  // 1200 px / 21 cm
+        let pxPerCm = canvasW / 21.0;
         let marginLeft = 3.0 * pxPerCm;
         let marginRight = 2.0 * pxPerCm;
         let marginTop = 2.0 * pxPerCm;
@@ -1074,19 +1205,16 @@
         let drawW = canvasW - marginLeft - marginRight;
         let drawH = canvasH - marginTop - marginBottom;
         
-        // Įterpiame vaizdą proporcingai
         let scale = Math.min(drawW / textW, drawH / textH);
         let finalW = textW * scale;
         let finalH = textH * scale;
         
-        // Centruojame horizontaliai, viršuje pagal viršutinę paraštę
         let drawX = marginLeft + (drawW - finalW) / 2;
         let drawY = marginTop;
         
         ctx.drawImage(tempCanvas, 0, 0, textW, textH, drawX, drawY, finalW, finalH);
         scannedImageData = ctx.getImageData(0, 0, canvasW, canvasH);
         
-        // Išsaugome vaizdo poziciją vėlesniam naudojimui
         window.imageDrawInfo = {
             drawX: drawX,
             drawY: drawY,
@@ -1192,9 +1320,6 @@
         return images;
     }
     
-    // ============================================================
-    // PUSLAPIŲ NUMERIŲ ATPAŽINIMAS (SU PRIEVARTU 1-3 SKAITMENŲ)
-    // ============================================================
     function detectPageNumbers(visionData) {
         let pageNumbers = [];
         
@@ -1209,8 +1334,6 @@
             let ann = annotations[i];
             let text = ann.description.trim();
             
-            // Tikriname, ar tai tik skaičius (1-3 skaitmenys)
-            // GALI BŪTI: "5", "12", "123", "1 2" (du skaičiai atskirti tarpu)
             if (/^\d{1,3}(\s+\d{1,3})?$/.test(text)) {
                 let vertices = ann.boundingPoly.vertices;
                 if (vertices && vertices.length > 0) {
@@ -1219,7 +1342,6 @@
                     let minX = Math.min(...vertices.map(v => v.x || 0));
                     let maxX = Math.max(...vertices.map(v => v.x || 0));
                     
-                    // Jei skaičius yra apatinėje 25% lapo dalyje
                     if (minY > pageHeight * 0.75) {
                         pageNumbers.push({
                             text: text,
@@ -1235,12 +1357,9 @@
             }
         }
         
-        // Surikiuojame pagal Y poziciją (kad būtų tvarka)
         pageNumbers.sort((a, b) => a.originalY - b.originalY);
         
-        // Jei radome kelis skaičius - sujungiame juos su tarpu
         if (pageNumbers.length > 1) {
-            // Jei skaičiai yra arti vienas kito (horizontaliai) - sujungiame
             let combined = [];
             let used = new Set();
             
@@ -1251,16 +1370,13 @@
                 let text = pn.text;
                 used.add(i);
                 
-                // Tikriname, ar yra kitas skaičius šalia (toje pačioje eilutėje)
                 for (let j = i + 1; j < pageNumbers.length; j++) {
                     if (used.has(j)) continue;
                     
                     let other = pageNumbers[j];
                     let yDiff = Math.abs(other.y - pn.y);
                     
-                    // Jei Y skirtumas mažas (toje pačioje eilutėje)
                     if (yDiff < pn.height * 1.5) {
-                        // Sujungiame su tarpu
                         text += ' ' + other.text;
                         used.add(j);
                     }
@@ -1288,11 +1404,10 @@
             alignBtn.innerText = "PATVIRTINTI";
             langSelect.style.display = 'none';
             translateActionBtn.style.display = 'none';
+            printAndDownloadButtons.style.display = 'none';
             
             resultCanvas.width = originalUnblurredCanvas.width;
             resultCanvas.height = originalUnblurredCanvas.height;
-            
-            // A4 portretinis formatas
             modalFrame.style.aspectRatio = "1 / 1.4142";
             
             drawAlignUI();
@@ -1325,6 +1440,7 @@
         alignBtn.style.display = 'none';
         langSelect.style.display = 'none';
         translateActionBtn.style.display = 'none';
+        printAndDownloadButtons.style.display = 'none';
         translateOverlay.style.display = 'flex';
         translateOverlayText.innerText = "Skenuojamas dokumentas...";
 
@@ -1373,7 +1489,6 @@
             if (visionData.responses && visionData.responses[0].fullTextAnnotation) {
                 extractedTextGlobal = visionData.responses[0].fullTextAnnotation.text;
                 
-                // Atpažįstame puslapių numerius
                 detectedPageNumbers = detectPageNumbers(visionData);
                 
                 if (visionData.responses[0].textAnnotations && visionData.responses[0].textAnnotations.length > 0) {
@@ -1421,35 +1536,25 @@
         }
     });
 
-    function wrapText(context, text, x, y, maxWidth, lineHeight) {
-        var words = text.split(' '); var line = ''; var totalHeight = 0;
-        for(var n = 0; n < words.length; n++) {
-            var testLine = line + words[n] + ' '; var metrics = context.measureText(testLine);
-            if (metrics.width > maxWidth && n > 0) { line = words[n] + ' '; totalHeight += lineHeight; } else { line = testLine; }
-        }
-        totalHeight += lineHeight;
-        var currentY = y - (totalHeight / 2) + (lineHeight / 2); line = '';
-        for(var n = 0; n < words.length; n++) {
-            var testLine = line + words[n] + ' '; var metrics = context.measureText(testLine);
-            if (metrics.width > maxWidth && n > 0) { context.fillText(line, x, currentY); line = words[n] + ' '; currentY += lineHeight; } else { line = testLine; }
-        }
-        context.fillText(line, x, currentY);
-    }
-    
     function splitIntoParagraphs(text) {
         let paragraphs = text.split(/\n\s*\n/);
         paragraphs = paragraphs.filter(p => p.trim().length > 0);
         return paragraphs;
     }
     
-    function getParagraphFormat(paragraph) {
+    // ============================================================
+    // PASTRAIPŲ IR DIALOGŲ FORMATAVIMAS
+    // ============================================================
+    function getParagraphFormat(paragraph, previousParagraph) {
         let trimmed = paragraph.trim();
         let format = {
             isBold: false,
             isHeading: false,
+            isDialog: false,       // Ar tai dialogas
             indent: 0
         };
         
+        // Antraštė (daug didžiųjų raidžių)
         let upperCount = (trimmed.match(/[A-ZĄČĘĖĮŠŲŪŽ]/g) || []).length;
         let totalChars = trimmed.replace(/\s/g, '').length;
         
@@ -1458,6 +1563,23 @@
             format.isHeading = true;
         }
         
+        // Dialogas (prasideda brūkšneliu, kabute arba yra su „" arba —)
+        if (/^[-–—"'"']/.test(trimmed) || /^[—–]\s/.test(trimmed)) {
+            format.isDialog = true;
+            format.indent = 1;
+        }
+        
+        // Dialogas su autoriaus vardu, pvz., „Jonas: ..."
+        if (/^[A-ZĄČĘĖĮŠŲŪŽ][a-ząčęėįšųūž]+\s*:\s/.test(trimmed)) {
+            format.isDialog = true;
+        }
+        
+        // Jei pastraipa yra labai trumpa (1-2 sakiniai) - gali būti dialogas
+        if (trimmed.length < 200 && /[?!…]/.test(trimmed) && trimmed.split('.').length <= 3) {
+            // Tikėtinas dialogas, bet nebūtinai
+        }
+        
+        // Įtrauka (jei originale buvo)
         if (/^[\s\t]/.test(paragraph)) {
             format.indent = 1;
         }
@@ -1516,29 +1638,42 @@
         }
     }
 
+    // ============================================================
+    // PAGALBINĖ FUNKCIJA: NUIMA PUSLAPIŲ NUMERIUS NUO TEKSTO
+    // ============================================================
+    function removePageNumbersFromText(text) {
+        let lines = text.split('\n');
+        let cleanLines = [];
+        
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i].trim();
+            
+            // Jei eilutė yra tik skaičius (1-3 skaitmenys arba du skaičiai) 
+            // ir yra paskutinėse 5 eilutėse
+            if (/^\d{1,3}(\s+\d{1,3})?$/.test(line) && i >= lines.length - 5) {
+                continue;
+            }
+            
+            cleanLines.push(lines[i]);
+        }
+        
+        return cleanLines.join('\n');
+    }
+
     async function runTranslation(targetLang, langName) {
         if(!extractedTextGlobal) { showToast("Nėra teksto, kurį būtų galima išversti!"); return; }
-        langSelect.style.display = 'none'; translateActionBtn.style.display = 'none'; alignBtn.style.display = 'none';
-        translateOverlayText.innerText = `Verčiama į ${langName} kalbą...`; translateOverlay.style.display = 'flex';
+        langSelect.style.display = 'none'; 
+        translateActionBtn.style.display = 'none'; 
+        alignBtn.style.display = 'none';
+        printAndDownloadButtons.style.display = 'none';
+        translateOverlayText.innerText = `Verčiama į ${langName} kalbą...`; 
+        translateOverlay.style.display = 'flex';
 
         try {
             if(!navigator.onLine) throw new Error("Nėra interneto ryšio!");
             
-            // Pašaliname puslapių numerius iš teksto
-            let textToTranslate = extractedTextGlobal;
-            
-            // Pašaliname eilutes, kurios yra tik skaičiai (puslapių numeriai)
-            let lines = textToTranslate.split('\n');
-            let cleanLines = [];
-            for (let i = 0; i < lines.length; i++) {
-                let line = lines[i].trim();
-                // Pašaliname skaičius, kurie yra paskutinėse 5 eilutėse
-                if (/^\d{1,3}(\s+\d{1,3})?$/.test(line) && i >= lines.length - 5) {
-                    continue;
-                }
-                cleanLines.push(lines[i]);
-            }
-            textToTranslate = cleanLines.join('\n');
+            // Pašaliname puslapių numerius
+            let textToTranslate = removePageNumbersFromText(extractedTextGlobal);
             
             let bodyData = `text=${encodeURIComponent(textToTranslate)}&source_lang=LT&target_lang=${targetLang}`;
             let transData = null;
@@ -1562,10 +1697,10 @@
             const ctx = resultCanvas.getContext('2d');
             
             // ============================================================
-            // A4 PORTRAITINIS FORMATAS (VISADA)
+            // A4 PORTRAITINIS FORMATAS
             // ============================================================
-            let canvasW = 1200;
-            let canvasH = Math.floor(1200 * 1.4142); // 1697 px
+            let canvasW = 1240;
+            let canvasH = 1754;
             
             resultCanvas.width = canvasW; 
             resultCanvas.height = canvasH;
@@ -1578,16 +1713,16 @@
             let marginTopPx = 2.0 * pxPerCm;
             let marginBottomPx = 2.0 * pxPerCm;
             
-            let pageNumberHeight = 25;
+            let pageNumberHeight = 30;
             let usableHeight = canvasH - marginTopPx - marginBottomPx - pageNumberHeight;
             let usableWidth = canvasW - marginLeftPx - marginRightPx;
             
-            // Nupiešiame baltą lapą
+            // Baltas lapas
             ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, canvasW, canvasH);
             
             // ============================================================
-            // NUPIEŠIAME PAVEIKSLĖLIUS
+            // PAVEIKSLĖLIAI
             // ============================================================
             if (detectedImages.length > 0 && window.colorWarpedCanvas) {
                 for (let img of detectedImages) {
@@ -1610,11 +1745,11 @@
             }
             
             // ============================================================
-            // TEKSTO PIEŠIMAS
+            // TEKSTO PIEŠIMAS SU PASTRAIPOMIS IR DIALOGAIS
             // ============================================================
             let paragraphs = splitIntoParagraphs(finalOutputText);
             
-            let baseFontSize = Math.max(14, Math.floor(canvasW / 30));
+            let baseFontSize = Math.max(14, Math.floor(canvasW / 32));
             let minFontSize = 8;
             let fontSize = baseFontSize;
             let lineHeight = 0;
@@ -1624,14 +1759,14 @@
             
             while (fontSize >= minFontSize) {
                 lineHeight = fontSize * 1.5;
-                paragraphSpacing = fontSize * 0.8;
+                paragraphSpacing = fontSize * 1.0;
                 
                 paragraphData = [];
                 totalHeight = 0;
                 
                 for (let i = 0; i < paragraphs.length; i++) {
                     let para = paragraphs[i];
-                    let format = getParagraphFormat(para);
+                    let format = getParagraphFormat(para, i > 0 ? paragraphs[i-1] : null);
                     let text = para.trim();
                     
                     let paraFontSize = format.isHeading ? fontSize * 1.3 : fontSize;
@@ -1641,17 +1776,28 @@
                     
                     ctx.font = paraFont;
                     
-                    let firstLineIndent = paraFontSize * 2;
+                    // Įtrauka: dialogams ir pastraipoms
+                    let firstLineIndent = 0;
+                    if (format.isDialog) {
+                        firstLineIndent = paraFontSize * 1.5;
+                    } else {
+                        firstLineIndent = paraFontSize * 2; // Standartinė pastraipos įtrauka
+                    }
+                    
                     let paraLines = wrapParagraph(ctx, text, usableWidth - firstLineIndent);
                     
-                    let paraHeight = paraLines.length * lineHeight + paragraphSpacing;
+                    // Dialogams - papildomas tarpas po pastraipos
+                    let extraSpacing = format.isDialog ? paragraphSpacing * 0.5 : 0;
+                    let paraHeight = paraLines.length * lineHeight + paragraphSpacing + extraSpacing;
                     
                     paragraphData.push({
                         lines: paraLines,
                         font: paraFont,
                         fontSize: paraFontSize,
                         firstLineIndent: firstLineIndent,
-                        height: paraHeight
+                        height: paraHeight,
+                        isDialog: format.isDialog,
+                        isBold: format.isBold || format.isHeading
                     });
                     
                     totalHeight += paraHeight;
@@ -1661,6 +1807,7 @@
                 fontSize -= 1;
             }
             
+            // Nupiešiame tekstą
             let y = marginTopPx;
             
             for (let i = 0; i < paragraphData.length; i++) {
@@ -1676,8 +1823,10 @@
                     let lineX = marginLeftPx + (j === 0 ? pData.firstLineIndent : 0);
                     
                     if (j === 0) {
+                        // Pirma eilutė - su įtrauka
                         ctx.fillText(line, lineX, y);
                     } else {
+                        // Kitos eilutės - lygiuojamos pagal abi puses
                         drawJustifiedLine(ctx, line, marginLeftPx, y, usableWidth, isLastLine);
                     }
                     
@@ -1688,12 +1837,10 @@
             }
             
             // ============================================================
-            // PUSLAPIO NUMERIS APAČIOJE - TIKSLIAI KAIP ORIGINALE
+            // PUSLAPIO NUMERIS
             // ============================================================
-            let pageNumberText = '1'; // Numatytasis
-            
+            let pageNumberText = '1';
             if (detectedPageNumbers.length > 0) {
-                // Jei radome skaičių - naudojame jį
                 pageNumberText = detectedPageNumbers.map(pn => pn.text).join(' ');
             }
             
@@ -1703,21 +1850,112 @@
             ctx.textBaseline = 'bottom';
             ctx.fillText(pageNumberText, canvasW / 2, canvasH - marginBottomPx / 2);
             
-            if (detectedImages.length > 0) {
-                showToast(`Aptikta ${detectedImages.length} paveikslėlių.`);
-            }
+            // ============================================================
+            // IŠSAUGOME IŠVERSTO LAPO KOPIJĄ PDF GENERAVIMUI
+            // ============================================================
+            translatedCanvasSnapshot = document.createElement('canvas');
+            translatedCanvasSnapshot.width = canvasW;
+            translatedCanvasSnapshot.height = canvasH;
+            translatedCanvasSnapshot.getContext('2d').drawImage(resultCanvas, 0, 0);
+            
+            // ============================================================
+            // RODYTI MYGTUKUS
+            // ============================================================
+            printAndDownloadButtons.style.display = 'flex';
 
         } catch (err) { 
             showToast(err.message); 
         }
 
         translateOverlay.style.display = 'none'; 
-        langSelect.style.display = 'block'; 
-        translateActionBtn.style.display = 'block'; 
-        alignBtn.style.display = 'block';
     }
 
     translateActionBtn.addEventListener('click', () => { runTranslation(langSelect.value, languagesMap[langSelect.value]); });
+
+    // ============================================================
+    // SPAUSDINIMO FUNKCIJA
+    // ============================================================
+    document.getElementById('printBtn').addEventListener('click', () => {
+        let printerIp = localStorage.getItem('printer_ip');
+        let printerName = localStorage.getItem('printer_name') || 'Printeris';
+        let printerType = localStorage.getItem('printer_type') || 'ipp';
+        
+        // Sukuriame naują langą su išverstu lapu ir atidarome spausdinimo dialogą
+        let printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            showToast("Leiskite iššokančius langus");
+            return;
+        }
+        
+        let dataUrl = resultCanvas.toDataURL('image/png');
+        
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Spausdinti - ${printerName}</title>
+                <style>
+                    @page { size: A4 portrait; margin: 0; }
+                    html, body { margin: 0; padding: 0; }
+                    img { width: 100%; height: auto; display: block; }
+                </style>
+            </head>
+            <body>
+                <img src="${dataUrl}" onload="window.print(); setTimeout(() => window.close(), 1000);">
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+        
+        showToast("Spausdinimo langas atidarytas");
+    });
+
+    // ============================================================
+    // PDF PARSISIUNTIMO FUNKCIJA
+    // ============================================================
+    document.getElementById('downloadPdfBtn').addEventListener('click', async () => {
+        if (!translatedCanvasSnapshot) {
+            showToast("Nėra išversto lapo");
+            return;
+        }
+        
+        try {
+            // Naudojame jsPDF biblioteką
+            if (typeof window.jspdf === 'undefined') {
+                // Įkeliame jsPDF dinamiškai
+                await new Promise((resolve, reject) => {
+                    let script = document.createElement('script');
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                });
+            }
+            
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+            
+            // Paimame canvas kaip PNG
+            let imgData = translatedCanvasSnapshot.toDataURL('image/jpeg', 0.95);
+            
+            // A4 matmenys: 210mm x 297mm
+            pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+            
+            // Išsaugome
+            let timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+            pdf.save(`vertejas-${timestamp}.pdf`);
+            
+            showToast("PDF failas parsiųstas");
+            
+        } catch (err) {
+            console.error(err);
+            showToast("Klaida generuojant PDF: " + err.message);
+        }
+    });
 
   </script>
 </body>
