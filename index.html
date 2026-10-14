@@ -202,7 +202,6 @@
     <input type="file" id="modalFileInput" accept="image/*" style="display:none;">
   </div>
 
-  <!-- CAMERA MODAL -->
   <div id="cameraModal" class="modal-overlay">
       <div class="modal-box">
           <div id="closeCameraModalX" class="close-x-icon">
@@ -218,7 +217,6 @@
       </div>
   </div>
 
-  <!-- CAMERA BLOCKED MODAL -->
   <div id="cameraBlockedModal" class="modal-overlay">
       <div class="modal-box" style="border-color: #E91E63; max-width: 450px; align-items: flex-start; padding: 30px 20px;">
           <h3 style="color: #E91E63; margin-top: 0; font-size: 18px; text-transform: uppercase;">DĖMESIO: KAMERA NEPASIEKIAMA!</h3>
@@ -233,7 +231,6 @@
       </div>
   </div>
 
-  <!-- TRANSLATION MODAL -->
   <div id="translationModal" class="modal-overlay">
       <div class="modal-box">
           
@@ -261,7 +258,6 @@
       </div>
   </div>
 
-  <!-- SETTINGS MODALS -->
   <div id="settingsModal">
     <h2 style="color:white; letter-spacing:2px; margin-bottom: 30px;">NUSTATYMAI</h2>
     <button id="openWifiBtn" class="modal-btn" style="background-color: #2196F3; padding: 15px 30px; margin-bottom: 20px; width: 80%; max-width: 300px;">📶 Išsaugoti WIFI tinklai</button>
@@ -306,10 +302,9 @@
 
   <script>
     // ============================================================
-    // KONFIGŪRACIJA
+    // KONFIGŪRACIJA - JOKIŲ RAKTŲ PRIEKINĖJE DALYJE!
     // ============================================================
-    const WORKER_URL = 'https://deepl-proxy.t-jasukaitis.workers.dev/';
-    const GOOGLE_VISION_KEY = 'AIzaSyBncIhTXDW2Y8jAdH8pVl9Ro2Wr92jlNlM';
+    const WORKER_URL = 'https://deepl-proxy.t-jasukaitis.workers.dev';
     
     // ESP32 URL (jei norite valdyti ESP32 per šį puslapį)
     let ESP32_BASE = localStorage.getItem('esp32_url') || '';
@@ -331,7 +326,7 @@
     ['touchstart', 'click'].forEach(evt => { document.addEventListener(evt, activateFullscreen, {capture: true}); });
 
     // ============================================================
-    // TELEMETRIJOS POLLING (jei ESP32 URL nustatytas)
+    // TELEMETRIJOS POLLING
     // ============================================================
     function pollTrigger() {
       if (!ESP32_BASE) { 
@@ -1124,8 +1119,13 @@
             tCtx.putImageData(preImgData, 0, 0);
 
             let base64ImageToScan = tempC.toDataURL("image/jpeg", 0.85).split(',')[1];
-            const visionUrl = `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_VISION_KEY}`;
-            let visionRes = await fetch(visionUrl, { method: 'POST', body: JSON.stringify({"requests": [{ "image": { "content": base64ImageToScan }, "features": [{ "type": "TEXT_DETECTION" }] }]}) });
+            
+            // ⚡ DABAR NAUDOJAME WORKER /vision ENDPOINT'Ą - JOKIŲ RAKTŲ PRIEKINĖJE DALYJE!
+            let visionRes = await fetch(WORKER_URL + '/vision', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({"requests": [{ "image": { "content": base64ImageToScan }, "features": [{ "type": "TEXT_DETECTION" }] }]}) 
+            });
             if(!visionRes.ok) throw new Error("Google Vision klaida: " + visionRes.status);
             let visionData = await visionRes.json();
 
