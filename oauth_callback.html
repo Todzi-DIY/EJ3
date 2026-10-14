@@ -19,29 +19,90 @@
 
 <script>
 (function() {
+  // ============================================================
+  // SAUGUMO KONFIGŪRACIJA
+  // ============================================================
+  // Leidžiami domenai, kuriems galima siųsti OAuth tokeną.
+  // PAKEISKITE į savo tikruosius domenus!
+  var ALLOWED_ORIGINS = [
+    "https://ej3.eu",
+    "https://www.ej3.eu",
+    "https://todzi-diy.github.io"
+  ];
+
+  // ============================================================
+  // TOKENO NUSKAITYMAS IŠ URL FRAGMENTO
+  // ============================================================
   var hash = window.location.hash.substring(1);
   var params = {};
   if (hash) {
     hash.split('&').forEach(function(p) {
       var kv = p.split('=');
-      params[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1]);
+      if (kv.length === 2) {
+        params[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1]);
+      }
     });
   }
 
+  // ============================================================
+  // TOKENO APDOROJIMAS
+  // ============================================================
   if (params.access_token) {
     document.getElementById('msg').innerText = "Grąžinamas raktas. Prašome palaukti...";
-    
+
+    // Nustatome, kuriam domenui siųsti tokeną
+    var targetOrigin = null;
+    if (window.opener && window.opener.location) {
+      try {
+        var openerOrigin = new URL(window.opener.location.href).origin;
+        if (ALLOWED_ORIGINS.indexOf(openerOrigin) !== -1) {
+          targetOrigin = openerOrigin;
+        }
+      } catch(e) {
+        // Cross-origin – negalime perskaityti, naudosime state
+      }
+    }
+
+    // Jei negalime nustatyti opener origin, naudojame state parametrą
+    if (!targetOrigin && params.state) {
+      try {
+        var stateUrl = new URL(params.state);
+        if (ALLOWED_ORIGINS.indexOf(stateUrl.origin) !== -1) {
+          targetOrigin = stateUrl.origin;
+        }
+      } catch(e) {}
+    }
+
+    // Jei vis dar nerastas – naudojame pirmą leidžiamą
+    if (!targetOrigin) {
+      targetOrigin = ALLOWED_ORIGINS[0];
+    }
+
+    // Siunčiame tokeną tik leidžiamam domenui (NE "*")
     if (window.opener) {
       window.opener.postMessage({
         type: 'gdrive_token',
         token: params.access_token,
         expires_in: params.expires_in
-      }, "*");
+      }, targetOrigin);
+      
       setTimeout(function() { window.close(); }, 1000);
     } else {
+      // Jei nėra opener – bandome redirect per state
       var state = params.state ? params.state : '';
       if (state.startsWith('http')) {
-        window.location.href = state + '#access_token=' + params.access_token + '&expires_in=' + params.expires_in;
+        try {
+          var stateUrl = new URL(state);
+          if (ALLOWED_ORIGINS.indexOf(stateUrl.origin) !== -1) {
+            window.location.href = state + '#access_token=' + params.access_token + '&expires_in=' + params.expires_in;
+          } else {
+            document.getElementById('spin').style.display = 'none';
+            document.getElementById('msg').innerHTML = "<span style='color:#E91E63'>Klaida: Nepažįstamas domenas.</span>";
+          }
+        } catch(e) {
+          document.getElementById('spin').style.display = 'none';
+          document.getElementById('msg').innerHTML = "<span style='color:#E91E63'>Klaida: Neteisingas state URL.</span>";
+        }
       } else {
         document.getElementById('spin').style.display = 'none';
         document.getElementById('msg').innerHTML = "Klaida: Nepavyko rasti ESP32 adreso.";
