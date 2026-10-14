@@ -221,9 +221,12 @@
   <!-- CAMERA BLOCKED MODAL -->
   <div id="cameraBlockedModal" class="modal-overlay">
       <div class="modal-box" style="border-color: #E91E63; max-width: 450px; align-items: flex-start; padding: 30px 20px;">
-          <h3 style="color: #E91E63; margin-top: 0; font-size: 18px; text-transform: uppercase;">DĖMESIO: KAMERA BLOKUOJAMA!</h3>
+          <h3 style="color: #E91E63; margin-top: 0; font-size: 18px; text-transform: uppercase;">DĖMESIO: KAMERA NEPASIEKIAMA!</h3>
           <p style="color: #ccc; font-size: 14px; line-height: 1.5; margin-bottom: 15px;">
-              Naršyklė dėl saugumo blokuoja prieigą prie kameros. Įsitikinkite, kad puslapis atidarytas per HTTPS.
+              Naršyklė blokuoja prieigą prie kameros. Įsitikinkite, kad:<br><br>
+              1. Puslapis atidarytas per <b>https://ej3.eu</b><br>
+              2. Suteikėte leidimą naudoti kamerą<br>
+              3. Naudojate modernią naršyklę
           </p>
           
           <button id="closeCameraBlockedBtn" class="action-btn" style="background-color: transparent; border: 2px solid #E91E63; color: #E91E63; width: 100%; max-width: 100%;">SUPRATAU</button>
@@ -306,8 +309,7 @@
     // KONFIGŪRACIJA
     // ============================================================
     const WORKER_URL = 'https://deepl-proxy.t-jasukaitis.workers.dev/';
-    const GOOGLE_VISION_KEY = 'AIzaSyBjtLcZLH4M1xhg18oEX7V_HXNm-Jptw9U';
-    // ⚠️ PAKEISKITE GOOGLE_VISION_KEY į SAVO NAUJĄ RAKTĄ!
+    const GOOGLE_VISION_KEY = 'AIzaSyBncIhTXDW2Y8jAdH8pVl9Ro2Wr92jlNlM';
     
     // ESP32 URL (jei norite valdyti ESP32 per šį puslapį)
     let ESP32_BASE = localStorage.getItem('esp32_url') || '';
@@ -1178,7 +1180,6 @@
         try {
             if(!navigator.onLine) throw new Error("Nėra interneto ryšio!");
             
-            // PAŠALINAME auth_key - Worker'is jį prideda automatiškai
             let bodyData = `text=${encodeURIComponent(extractedTextGlobal)}&source_lang=LT&target_lang=${targetLang}`;
             let transData = null;
 
