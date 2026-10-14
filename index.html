@@ -802,14 +802,21 @@
 
     function calculateInitialPoly(visionData) {
         let allPoints = [];
+        // DOCUMENT_TEXT_DETECTION grąžina fullTextAnnotation ir textAnnotations
         let annotations = visionData.responses[0].textAnnotations;
+        if (!annotations || annotations.length === 0) {
+            // Bandom naudoti fullTextAnnotation
+            if (visionData.responses[0].fullTextAnnotation) {
+                annotations = [{ description: visionData.responses[0].fullTextAnnotation.text, boundingPoly: visionData.responses[0].fullTextAnnotation.pages[0].blocks[0].boundingPoly }];
+            }
+        }
         for(let i=1; i < annotations.length; i++) {
             let v = annotations[i].boundingPoly.vertices;
             if(v) v.forEach(pt => allPoints.push({x: pt.x || 0, y: pt.y || 0}));
         }
 
-        if (allPoints.length < 4) {
-            allPoints = visionData.responses[0].textAnnotations[0].boundingPoly.vertices.map(v => ({x: v.x||0, y: v.y||0}));
+        if (allPoints.length < 4 && annotations[0]) {
+            allPoints = annotations[0].boundingPoly.vertices.map(v => ({x: v.x||0, y: v.y||0}));
         }
 
         let sum = allPoints.map(p => p.x + p.y);
@@ -1120,16 +1127,42 @@
 
             let base64ImageToScan = tempC.toDataURL("image/jpeg", 0.85).split(',')[1];
             
-            // ⚡ DABAR NAUDOJAME WORKER /vision ENDPOINT'Ą - JOKIŲ RAKTŲ PRIEKINĖJE DALYJE!
+            // ⚡ DOCUMENT_TEXT_DETECTION - geriau tinka dokumentams!
             let visionRes = await fetch(WORKER_URL + '/vision', { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({"requests": [{ "image": { "content": base64ImageToScan }, "features": [{ "type": "TEXT_DETECTION" }] }]}) 
+                body: JSON.stringify({"requests": [{ 
+                    "image": { "content": base64ImageToScan }, 
+                    "features": [{ "type": "DOCUMENT_TEXT_DETECTION" }] 
+                }]}) 
             });
             if(!visionRes.ok) throw new Error("Google Vision klaida: " + visionRes.status);
             let visionData = await visionRes.json();
 
-            if (visionData.responses && visionData.responses[0].textAnnotations && visionData.responses[0].textAnnotations.length > 0) {
+            // DOCUMENT_TEXT_DETECTION grąžina fullTextAnnotation - naudojame jį
+            if (visionData.responses && visionData.responses[0].fullTextAnnotation) {
+                extractedTextGlobal = visionData.responses[0].fullTextAnnotation.text;
+                
+                // Bandome gauti poly iš textAnnotations (turi detalesnes koordinates)
+                if (visionData.responses[0].textAnnotations && visionData.responses[0].textAnnotations.length > 0) {
+                    currentDocPoly = calculateInitialPoly(visionData);
+                } else {
+                    // Fallback - naudokime viso dokumento ribas
+                    let page = visionData.responses[0].fullTextAnnotation.pages[0];
+                    let vertices = page.blocks[0].boundingPoly.vertices;
+                    let xs = vertices.map(v => v.x || 0);
+                    let ys = vertices.map(v => v.y || 0);
+                    currentDocPoly = [
+                        {x: Math.min(...xs), y: Math.min(...ys)},
+                        {x: Math.max(...xs), y: Math.min(...ys)},
+                        {x: Math.max(...xs), y: Math.max(...ys)},
+                        {x: Math.min(...xs), y: Math.max(...ys)}
+                    ];
+                }
+                executeWarpAndFilter(currentDocPoly);
+                alignBtn.style.display = 'block'; 
+            } else if (visionData.responses && visionData.responses[0].textAnnotations && visionData.responses[0].textAnnotations.length > 0) {
+                // Fallback į seną TEXT_DETECTION logiką
                 extractedTextGlobal = visionData.responses[0].textAnnotations[0].description;
                 currentDocPoly = calculateInitialPoly(visionData);
                 executeWarpAndFilter(currentDocPoly);
