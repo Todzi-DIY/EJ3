@@ -1186,6 +1186,9 @@
         context.fillText(line, x, currentY);
     }
 
+    // ============================================================
+    // VERTIMO ATVAIZDAVIMAS SU AUTOMATINIU ŠRIFTO MAŽINIMU
+    // ============================================================
     async function runTranslation(targetLang, langName) {
         if(!extractedTextGlobal) { showToast("Nėra teksto, kurį būtų galima išversti!"); return; }
         langSelect.style.display = 'none'; translateActionBtn.style.display = 'none'; alignBtn.style.display = 'none';
@@ -1215,24 +1218,205 @@
             let finalOutputText = transData.translations[0].text;
             const ctx = resultCanvas.getContext('2d');
             
-            if(scannedImageData) ctx.putImageData(scannedImageData, 0, 0);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'; ctx.fillRect(0, 0, resultCanvas.width, resultCanvas.height);
-            
+            // ============================================================
+            // A4 lapo parametrai su paraštėmis
+            // ============================================================
             let isLandscape = resultCanvas.width > resultCanvas.height;
-            let pxPerCm = isLandscape ? (resultCanvas.width / 29.7) : (resultCanvas.width / 21.0);
-            let marginLeft = 3.0 * pxPerCm; let marginRight = 2.0 * pxPerCm; let marginTop = 2.0 * pxPerCm; let marginBottom = 2.0 * pxPerCm;
             
-            let drawW = resultCanvas.width - marginLeft - marginRight;
-            let drawH = resultCanvas.height - marginTop - marginBottom;
-            let centerX = marginLeft + drawW / 2; let centerY = marginTop + drawH / 2;
+            // A4 matmenys cm
+            let a4WidthCm = isLandscape ? 29.7 : 21.0;
+            let a4HeightCm = isLandscape ? 21.0 : 29.7;
             
-            let fontSize = Math.max(18, Math.floor(resultCanvas.width / 26));
-            ctx.fillStyle = 'black'; ctx.font = `bold ${fontSize}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            wrapText(ctx, finalOutputText, centerX, centerY, drawW, fontSize * 1.4);
+            // Paraštės cm
+            let marginLeftCm = 3.0;   // Kairė: 3 cm
+            let marginRightCm = 2.0;  // Dešinė: 2 cm
+            let marginTopCm = 2.0;    // Viršus: 2 cm
+            let marginBottomCm = 2.0; // Apačia: 2 cm
+            
+            // Konvertuojame į pikselius
+            let pxPerCm = resultCanvas.width / a4WidthCm;
+            let marginLeftPx = marginLeftCm * pxPerCm;
+            let marginRightPx = marginRightCm * pxPerCm;
+            let marginTopPx = marginTopCm * pxPerCm;
+            let marginBottomPx = marginBottomCm * pxPerCm;
+            
+            // Naudingas plotas (kur tekstas gali būti)
+            let usableWidth = resultCanvas.width - marginLeftPx - marginRightPx;
+            let usableHeight = resultCanvas.height - marginTopPx - marginBottomPx;
+            
+            // Išvalome lapą
+            if(scannedImageData) ctx.putImageData(scannedImageData, 0, 0);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'; 
+            ctx.fillRect(0, 0, resultCanvas.width, resultCanvas.height);
+            
+            // ============================================================
+            // AUTOMATINIS ŠRIFTO MAŽINIMAS
+            // Bandome skirtingus šrifto dydžius, kol tekstas telpa
+            // ============================================================
+            let fontSize = Math.max(14, Math.floor(resultCanvas.width / 30));
+            let minFontSize = 8; // Mažiausias leistinas šriftas
+            let lineHeight = fontSize * 1.4;
+            
+            let words = finalOutputText.split(/\s+/);
+            let totalLines = 0;
+            let totalHeight = 0;
+            
+            // Bandome skirtingus šrifto dydžius
+            while (fontSize >= minFontSize) {
+                ctx.font = `bold ${fontSize}px Arial`;
+                lineHeight = fontSize * 1.4;
+                
+                // Suskaičiuojame, kiek eilučių reikės
+                let line = '';
+                let lineCount = 0;
+                for (let n = 0; n < words.length; n++) {
+                    let testLine = line + words[n] + ' ';
+                    let metrics = ctx.measureText(testLine);
+                    if (metrics.width > usableWidth && n > 0) {
+                        line = words[n] + ' ';
+                        lineCount++;
+                    } else {
+                        line = testLine;
+                    }
+                }
+                lineCount++;
+                
+                totalLines = lineCount;
+                totalHeight = lineCount * lineHeight;
+                
+                // Jei tekstas telpa į naudingą plotą
+                if (totalHeight <= usableHeight) {
+                    break; // Radome tinkamą dydį
+                }
+                
+                // Sumažiname šriftą
+                fontSize -= 1;
+            }
+            
+            // Galutinis šriftas
+            ctx.font = `bold ${fontSize}px Arial`;
+            ctx.fillStyle = 'black';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            
+            // ============================================================
+            // TEKSTO ATVAIZDAVIMAS SU TIKSLIU PUSLAPIŲ SKAIČIUMI
+            // ============================================================
+            let linesPerPage = Math.floor(usableHeight / lineHeight);
+            let totalPages = Math.ceil(totalLines / linesPerPage);
+            
+            // Jei yra keli puslapiai, išplečiame canvas
+            if (totalPages > 1) {
+                let originalWidth = resultCanvas.width;
+                let originalHeight = resultCanvas.height;
+                
+                // Sukuriame laikiną canvas su visais puslapiais
+                let tempCanvas = document.createElement('canvas');
+                tempCanvas.width = originalWidth;
+                tempCanvas.height = originalHeight * totalPages;
+                let tempCtx = tempCanvas.getContext('2d');
+                
+                // Nupiešiame kiekvieną puslapį atskirai
+                for (let page = 0; page < totalPages; page++) {
+                    let yOffset = page * originalHeight;
+                    
+                    // Baltas fonas
+                    tempCtx.fillStyle = 'white';
+                    tempCtx.fillRect(0, yOffset, originalWidth, originalHeight);
+                    
+                    // Jei yra nuskaitytas fonas, uždengiame
+                    if(scannedImageData) {
+                        tempCtx.putImageData(scannedImageData, 0, yOffset);
+                        tempCtx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+                        tempCtx.fillRect(0, yOffset, originalWidth, originalHeight);
+                    }
+                    
+                    // Nupiešiame tekstą šiam puslapiui
+                    tempCtx.font = `bold ${fontSize}px Arial`;
+                    tempCtx.fillStyle = 'black';
+                    tempCtx.textAlign = 'left';
+                    tempCtx.textBaseline = 'top';
+                    
+                    let startLine = page * linesPerPage;
+                    let endLine = Math.min(startLine + linesPerPage, totalLines);
+                    
+                    // Perskaičiuojame eilutes su konkrečiu šriftu
+                    let line = '';
+                    let currentLine = 0;
+                    let y = yOffset + marginTopPx;
+                    
+                    for (let n = 0; n < words.length && currentLine < endLine; n++) {
+                        let testLine = line + words[n] + ' ';
+                        let metrics = tempCtx.measureText(testLine);
+                        if (metrics.width > usableWidth && n > 0) {
+                            if (currentLine >= startLine) {
+                                tempCtx.fillText(line.trim(), marginLeftPx, y);
+                                y += lineHeight;
+                            }
+                            line = words[n] + ' ';
+                            currentLine++;
+                        } else {
+                            line = testLine;
+                        }
+                    }
+                    if (currentLine >= startLine && currentLine < endLine && line.length > 0) {
+                        tempCtx.fillText(line.trim(), marginLeftPx, y);
+                    }
+                }
+                
+                // Pakeičiame rezultatą
+                resultCanvas.width = originalWidth;
+                resultCanvas.height = originalHeight * totalPages;
+                ctx.drawImage(tempCanvas, 0, 0);
+                
+                // Atnaujiname modalFrame aukštį
+                modalFrame.style.aspectRatio = '';
+                modalFrame.style.height = 'auto';
+                modalFrame.style.maxHeight = '80vh';
+            } else {
+                // Vienas puslapis - paprastas piešimas
+                ctx.font = `bold ${fontSize}px Arial`;
+                ctx.fillStyle = 'black';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                
+                let line = '';
+                let y = marginTopPx;
+                
+                for (let n = 0; n < words.length; n++) {
+                    let testLine = line + words[n] + ' ';
+                    let metrics = ctx.measureText(testLine);
+                    if (metrics.width > usableWidth && n > 0) {
+                        ctx.fillText(line.trim(), marginLeftPx, y);
+                        y += lineHeight;
+                        line = words[n] + ' ';
+                    } else {
+                        line = testLine;
+                    }
+                }
+                if (line.length > 0) {
+                    ctx.fillText(line.trim(), marginLeftPx, y);
+                }
+            }
+            
+            // Pranešame, jei šriftas buvo sumažintas
+            if (fontSize < 16) {
+                showToast(`Tekstas buvo sumažintas iki ${fontSize}px, kad tilptų į A4 formatą.`);
+            }
+            
+            // Pranešame apie puslapių skaičių
+            if (totalPages > 1) {
+                showToast(`Tekstas užima ${totalPages} A4 puslapius.`);
+            }
 
-        } catch (err) { showToast(err.message); }
+        } catch (err) { 
+            showToast(err.message); 
+        }
 
-        translateOverlay.style.display = 'none'; langSelect.style.display = 'block'; translateActionBtn.style.display = 'block'; alignBtn.style.display = 'block';
+        translateOverlay.style.display = 'none'; 
+        langSelect.style.display = 'block'; 
+        translateActionBtn.style.display = 'block'; 
+        alignBtn.style.display = 'block';
     }
 
     translateActionBtn.addEventListener('click', () => { runTranslation(langSelect.value, languagesMap[langSelect.value]); });
