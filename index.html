@@ -6,104 +6,317 @@
 <title>VERTĖJAS</title>
 <style>
   * { box-sizing: border-box; }
-  html, body { min-height: 100vh; width: 100vw; background-color: black; color: white; margin: 0; padding: 0; font-family: Arial, sans-serif; overflow-x: hidden; overflow-y: auto; }
   
-  .container { margin-top: 150px; display: flex; flex-direction: column; align-items: center; width: 100%; padding-bottom: 50px; }
-  
-  .settings-icon {
-    position: absolute; top: 20px; left: 20px; cursor: pointer; background-color: #1a1a1a;
-    width: 44px; height: 44px; border-radius: 10px; border: 2px solid #333; box-shadow: 0 4px 6px rgba(0,0,0,0.5);
-    display: flex; justify-content: center; align-items: center; transition: all 0.3s ease; z-index: 10;
+  html, body { 
+    min-height: 100vh; 
+    width: 100%; 
+    background-color: black; 
+    color: white; 
+    margin: 0; 
+    padding: 0; 
+    font-family: Arial, sans-serif; 
+    overflow-x: hidden; 
+    overflow-y: auto; 
   }
-  .settings-icon:hover { background-color: #252525; border-color: #4CAF50; transform: scale(1.05); }
-  .settings-icon svg { width: 22px; height: 22px; display: block; }
+  
+  /* ============================================================
+     PAGRINDINIS KONTEINERIS - CENTRUOTAS
+     ============================================================ */
+  .container { 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center;
+    width: 100%; 
+    min-height: 100vh;
+    padding: 100px 20px 50px 20px;
+    margin: 0 auto;
+  }
+  
+  /* ============================================================
+     TELEMETRIJOS BLOKAS (viršuje)
+     ============================================================ */
+  .settings-icon {
+    position: fixed; 
+    top: 20px; 
+    left: 20px; 
+    cursor: pointer; 
+    background-color: #1a1a1a;
+    width: 44px; 
+    height: 44px; 
+    border-radius: 10px; 
+    border: 2px solid #333; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    transition: all 0.3s ease; 
+    z-index: 100;
+  }
+  .settings-icon:hover { 
+    background-color: #252525; 
+    border-color: #4CAF50; 
+    transform: scale(1.05); 
+  }
+  .settings-icon svg { 
+    width: 22px; 
+    height: 22px; 
+    display: block; 
+  }
 
   #telemetryBox { 
-    position: absolute; top: 20px; left: 50%; transform: translateX(-50%); 
-    display: flex; gap: 15px; align-items: center; z-index: 10; 
-    background: #1a1a1a; padding: 6px 15px; min-height: 44px;
-    border-radius: 10px; border: 2px solid #333; box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+    position: fixed; 
+    top: 20px; 
+    left: 50%; 
+    transform: translateX(-50%); 
+    display: flex; 
+    gap: 15px; 
+    align-items: center; 
+    z-index: 100; 
+    background: #1a1a1a; 
+    padding: 6px 15px; 
+    min-height: 44px;
+    border-radius: 10px; 
+    border: 2px solid #333; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.5);
   }
-  .wifi-icon { display: flex; align-items: flex-end; gap: 3px; height: 16px; }
-  .wifi-bar { width: 4px; background: #555; border-radius: 2px; transition: background 0.3s; }
+  .wifi-icon { 
+    display: flex; 
+    align-items: flex-end; 
+    gap: 3px; 
+    height: 16px; 
+  }
+  .wifi-bar { 
+    width: 4px; 
+    background: #555; 
+    border-radius: 2px; 
+    transition: background 0.3s; 
+  }
   
-  .bat-container { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 15px; }
-  .bat-icon { position: relative; display: inline-block; width: 40px; height: 18px; border: 2px solid #fff; border-radius: 3px; padding: 1px; background: #222; }
-  .bat-fill { width: 0%; height: 100%; background-color: #4CAF50; border-radius: 1px; transition: width 0.5s ease, background-color 0.5s ease; }
-  .bat-tip { position: absolute; right: -5px; top: 3px; width: 3px; height: 8px; background-color: #fff; border-radius: 0 2px 2px 0; }
-  .charging-icon { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 3px #000; z-index: 2; }
+  .bat-container { 
+    display: flex; 
+    flex-direction: row; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 15px; 
+  }
+  .bat-icon { 
+    position: relative; 
+    display: inline-block; 
+    width: 40px; 
+    height: 18px; 
+    border: 2px solid #fff; 
+    border-radius: 3px; 
+    padding: 1px; 
+    background: #222; 
+  }
+  .bat-fill { 
+    width: 0%; 
+    height: 100%; 
+    background-color: #4CAF50; 
+    border-radius: 1px; 
+    transition: width 0.5s ease, background-color 0.5s ease; 
+  }
+  .bat-tip { 
+    position: absolute; 
+    right: -5px; 
+    top: 3px; 
+    width: 3px; 
+    height: 8px; 
+    background-color: #fff; 
+    border-radius: 0 2px 2px 0; 
+  }
+  .charging-icon { 
+    display: none; 
+    position: absolute; 
+    top: 50%; 
+    left: 50%; 
+    transform: translate(-50%, -50%); 
+    color: #fff; 
+    font-weight: bold; 
+    font-size: 14px; 
+    text-shadow: 1px 1px 3px #000; 
+    z-index: 2; 
+  }
   
-  .bat-info { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; min-width: 40px; }
-  .bat-pct { font-size: 14px; color: #fff; font-weight: bold; text-align: center; margin-bottom: 2px; }
-  .bat-volt { font-size: 11px; color: #aaa; font-weight: normal; text-align: center; }
+  .bat-info { 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center; 
+    line-height: 1.1; 
+    min-width: 40px; 
+  }
+  .bat-pct { 
+    font-size: 14px; 
+    color: #fff; 
+    font-weight: bold; 
+    text-align: center; 
+    margin-bottom: 2px; 
+  }
+  .bat-volt { 
+    font-size: 11px; 
+    color: #aaa; 
+    font-weight: normal; 
+    text-align: center; 
+  }
 
-  @keyframes chargeAnim { 0% { width: 10%; background-color: #E91E63; } 50% { background-color: #ffeb3b; } 100% { width: 100%; background-color: #4CAF50; } }
-  .charging-active { animation: chargeAnim 1.5s infinite ease-in-out; }
+  @keyframes chargeAnim { 
+    0% { width: 10%; background-color: #E91E63; } 
+    50% { background-color: #ffeb3b; } 
+    100% { width: 100%; background-color: #4CAF50; } 
+  }
+  .charging-active { 
+    animation: chargeAnim 1.5s infinite ease-in-out; 
+  }
   
-  .title { font-size: 28px; margin-bottom: 40px; letter-spacing: 3px; font-weight: bold; color: #4CAF50; text-transform: uppercase; }
+  /* ============================================================
+     PAGRINDINIS PUSLAPIS (VERTĖJAS)
+     ============================================================ */
+  .title { 
+    font-size: 28px; 
+    margin-bottom: 40px; 
+    letter-spacing: 3px; 
+    font-weight: bold; 
+    color: #4CAF50; 
+    text-transform: uppercase; 
+    text-align: center;
+  }
   
   .action-btn { 
-    background-color: #2196F3; color: white; width: 90%; max-width: 320px; padding: 18px 15px; 
-    font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; 
-    text-align: center; transition: all 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    background-color: #2196F3; 
+    color: white; 
+    width: 100%; 
+    max-width: 320px; 
+    padding: 18px 15px; 
+    font-size: 16px; 
+    font-weight: bold; 
+    border: none; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    text-align: center; 
+    transition: all 0.3s; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    margin: 10px 0;
   }
-  .action-btn:active { transform: scale(0.98); }
+  .action-btn:active { 
+    transform: scale(0.98); 
+  }
 
+  /* ============================================================
+     MODALAI
+     ============================================================ */
   .modal-overlay { 
-    display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-    background-color: rgba(0, 0, 0, 0.95); z-index: 200; flex-direction: column; align-items: center; 
-    padding: 30px 15px; overflow-y: auto;
+    display: none; 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100vw; 
+    height: 100vh; 
+    background-color: rgba(0, 0, 0, 0.95); 
+    z-index: 200; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center;
+    padding: 20px; 
+    overflow-y: auto;
   }
   
   #translationModal .modal-box {
-    width: 100%; max-width: 650px; display: flex; flex-direction: column; align-items: center; gap: 15px;
-    border: 2px solid #333; border-radius: 12px; padding: 60px 20px 20px 20px; background-color: #1a1a1a;
-    min-height: 85vh; position: relative;
+    width: 100%; 
+    max-width: 750px; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    gap: 15px;
+    border: 2px solid #333; 
+    border-radius: 12px; 
+    padding: 60px 20px 20px 20px; 
+    background-color: #1a1a1a;
+    position: relative;
+    margin: auto;
   }
 
   #cameraModal .modal-box {
-    width: 100%; max-width: 650px; display: flex; flex-direction: column; align-items: center; gap: 15px;
-    border: 2px solid #333; border-radius: 12px; padding: 60px 12px 20px 12px; background-color: #1a1a1a;
-    height: auto; max-height: 95vh; position: relative;
+    width: 100%; 
+    max-width: 650px; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    gap: 15px;
+    border: 2px solid #333; 
+    border-radius: 12px; 
+    padding: 60px 12px 20px 12px; 
+    background-color: #1a1a1a;
+    position: relative;
+    margin: auto;
   }
   
   #cameraModal .image-frame {
-    width: 100%; max-height: 75vh;
+    width: 100%; 
+    max-height: 75vh;
     aspect-ratio: 1 / 1.4142;
-    margin: 0 auto; flex: none;
+    margin: 0 auto; 
+    flex: none;
   }
 
   .close-x-icon {
-    position: absolute; top: 13px; right: 15px; cursor: pointer; color: #E91E63;
-    width: 34px; height: 34px; display: flex; justify-content: center; align-items: center;
-    background: rgba(233, 30, 99, 0.15); border-radius: 50%; transition: all 0.3s ease;
+    position: absolute; 
+    top: 13px; 
+    right: 15px; 
+    cursor: pointer; 
+    color: #E91E63;
+    width: 34px; 
+    height: 34px; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center;
+    background: rgba(233, 30, 99, 0.15); 
+    border-radius: 50%; 
+    transition: all 0.3s ease;
     z-index: 50;
   }
-  .close-x-icon:hover { background: rgba(233, 30, 99, 0.4); transform: scale(1.1); }
-  .close-x-icon svg { width: 20px; height: 20px; display: block; }
+  .close-x-icon:hover { 
+    background: rgba(233, 30, 99, 0.4); 
+    transform: scale(1.1); 
+  }
+  .close-x-icon svg { 
+    width: 20px; 
+    height: 20px; 
+    display: block; 
+  }
 
+  /* ============================================================
+     A4 LANGAS SU ŽALIU RĖMELIU - VISADA CENTRUOTAS
+     ============================================================ */
   .image-frame {
-    width: auto;
-    height: 70vh;
+    /* A4 proporcija - VISADA portretinė */
     aspect-ratio: 1 / 1.4142;
-    max-width: 90vw;
+    
+    /* Dydis - prisitaiko prie ekrano, bet neviršija ribų */
+    width: auto;
+    height: min(70vh, 900px);
+    max-width: 95vw;
+    
+    /* Centravimas */
+    margin: 0 auto;
+    display: none;
+    justify-content: center; 
+    align-items: center; 
+    flex-direction: column;
+    
+    /* Stilius */
     border: 4px solid #4CAF50; 
     border-radius: 8px; 
     position: relative; 
     background-color: white; 
     overflow: hidden; 
-    display: none;
-    justify-content: center; 
-    align-items: center; 
-    flex-direction: column;
     box-shadow: 0 5px 25px rgba(76, 175, 80, 0.3);
-    margin: 0 auto;
   }
   
-  #translationModal .image-frame {
-    aspect-ratio: 1 / 1.4142;
-    height: 70vh;
-    width: auto;
+  /* Kai langas rodomas - flex */
+  .image-frame[style*="display: flex"] {
+    display: flex !important;
   }
   
   .image-frame canvas {
@@ -111,58 +324,154 @@
     height: 100%; 
     object-fit: contain; 
     touch-action: none;
+    display: block;
   }
   
-  #liveVideo { width: 100%; height: 100%; object-fit: cover; }
-  #liveOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair; }
+  #liveVideo { 
+    width: 100%; 
+    height: 100%; 
+    object-fit: cover; 
+  }
+  #liveOverlay { 
+    position: absolute; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    cursor: crosshair; 
+  }
 
+  /* ============================================================
+     DIDINIMO STIKLAS
+     ============================================================ */
   #magnifier {
-    display: none; position: absolute; left: 50%; transform: translateX(-50%);
-    width: 170px; height: 170px; 
-    border: 3px solid #FF9800; border-radius: 8px; 
-    z-index: 100; pointer-events: none; box-shadow: 0 4px 15px rgba(0,0,0,0.8); background-color: #111;
+    display: none; 
+    position: absolute; 
+    left: 50%; 
+    transform: translateX(-50%);
+    width: 170px; 
+    height: 170px; 
+    border: 3px solid #FF9800; 
+    border-radius: 8px; 
+    z-index: 100; 
+    pointer-events: none; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.8); 
+    background-color: #111;
   }
 
+  /* ============================================================
+     MYGTUKAI
+     ============================================================ */
   .align-btn {
-    background-color: #FF9800; color: white; padding: 12px 20px; 
-    font-size: 14px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; 
-    display: none; box-shadow: 0 4px 10px rgba(255, 152, 0, 0.4); transition: transform 0.2s;
-    width: 100%; max-width: 250px; text-transform: uppercase; margin-top: 5px;
+    background-color: #FF9800; 
+    color: white; 
+    padding: 12px 20px; 
+    font-size: 14px; 
+    font-weight: bold; 
+    border: none; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    display: none; 
+    box-shadow: 0 4px 10px rgba(255, 152, 0, 0.4); 
+    transition: transform 0.2s;
+    width: 100%; 
+    max-width: 250px; 
+    text-transform: uppercase; 
+    margin-top: 5px;
   }
-  .align-btn:active { transform: scale(0.98); }
+  .align-btn:active { 
+    transform: scale(0.98); 
+  }
 
+  /* ============================================================
+     OVERLAY LAYER
+     ============================================================ */
   .overlay-layer {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-    background: rgba(0,0,0,0.85); display: flex; flex-direction: column; 
-    justify-content: center; align-items: center; z-index: 10;
+    position: absolute; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(0,0,0,0.85); 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: center; 
+    align-items: center; 
+    z-index: 10;
   }
 
-  .spinner { border: 4px solid rgba(255, 255, 255, 0.2); border-top: 4px solid #4CAF50; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
-  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  .spinner { 
+    border: 4px solid rgba(255, 255, 255, 0.2); 
+    border-top: 4px solid #4CAF50; 
+    border-radius: 50%; 
+    width: 40px; 
+    height: 40px; 
+    animation: spin 1s linear infinite; 
+    margin-bottom: 15px; 
+  }
+  @keyframes spin { 
+    0% { transform: rotate(0deg); } 
+    100% { transform: rotate(360deg); } 
+  }
   
-  .overlay-text { font-size: 16px; font-weight: bold; color: white; text-align: center; padding: 0 10px; }
+  .overlay-text { 
+    font-size: 16px; 
+    font-weight: bold; 
+    color: white; 
+    text-align: center; 
+    padding: 0 10px; 
+  }
 
+  /* ============================================================
+     KALBOS PASIRINKIMAS
+     ============================================================ */
   .lang-select {
-    width: 100%; padding: 15px; font-size: 16px; text-align: center; font-weight: bold;
-    background-color: #2c2c2c; color: white; border: 2px solid #555; border-radius: 8px; outline: none; cursor: pointer;
-    flex-shrink: 0; margin-top: 5px;
+    width: 100%; 
+    padding: 15px; 
+    font-size: 16px; 
+    text-align: center; 
+    font-weight: bold;
+    background-color: #2c2c2c; 
+    color: white; 
+    border: 2px solid #555; 
+    border-radius: 8px; 
+    outline: none; 
+    cursor: pointer;
+    flex-shrink: 0; 
+    margin-top: 5px;
   }
   
   .translate-action-btn {
-    background-color: #E91E63; color: white; width: 100%; padding: 18px; 
-    font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; 
-    display: none; box-shadow: 0 4px 10px rgba(233, 30, 99, 0.4); transition: transform 0.2s;
+    background-color: #E91E63; 
+    color: white; 
+    width: 100%; 
+    padding: 18px; 
+    font-size: 16px; 
+    font-weight: bold; 
+    border: none; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    display: none; 
+    box-shadow: 0 4px 10px rgba(233, 30, 99, 0.4); 
+    transition: transform 0.2s;
     flex-shrink: 0;
   }
-  .translate-action-btn:active { transform: scale(0.98); }
+  .translate-action-btn:active { 
+    transform: scale(0.98); 
+  }
 
+  /* ============================================================
+     SPAUSDINIMO IR PDF MYGTUKAI
+     ============================================================ */
   #printAndDownloadButtons {
     display: none;
     width: 100%;
-    max-width: 650px;
+    max-width: 750px;
     flex-direction: column;
     gap: 10px;
     margin-top: 15px;
+    margin-left: auto;
+    margin-right: auto;
   }
   
   .print-btn {
@@ -180,7 +489,9 @@
     letter-spacing: 2px;
     transition: transform 0.2s;
   }
-  .print-btn:active { transform: scale(0.98); }
+  .print-btn:active { 
+    transform: scale(0.98); 
+  }
   
   .pdf-btn {
     background-color: #2196F3; 
@@ -196,42 +507,325 @@
     transition: transform 0.2s;
     opacity: 0.85;
   }
-  .pdf-btn:active { transform: scale(0.98); }
+  .pdf-btn:active { 
+    transform: scale(0.98); 
+  }
 
-  #settingsModal { display:none; position:fixed; top:0; left:0; width:100vw; min-height:100vh; background-color:black; z-index:100; flex-direction:column; align-items:center; padding-top:40px; }
-  #wifiModal { display:none; position:fixed; top:0; left:0; width:100vw; min-height:100vh; background-color:rgba(0,0,0,0.95); z-index:150; flex-direction:column; align-items:center; padding:40px 20px; overflow-y: auto; }
-  .modal-btn { border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; color: white; }
-  .wifi-list { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-  .wifi-item { background: #2c2c2c; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444; }
-  .wifi-info { display: flex; flex-direction: column; gap: 5px; text-align: left; }
-  .wifi-ssid { font-weight: bold; font-size: 16px; color: white; }
-  .wifi-ip { font-size: 12px; color: #aaa; }
-  .wifi-online { color: #4CAF50; font-size: 10px; font-weight: bold; border: 1px solid #4CAF50; padding: 2px 6px; border-radius: 4px; display: inline-block; width: fit-content; }
-  .wifi-del-btn { background: #E91E63; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-  .wifi-add-box { background: #1a1a1a; border: 2px dashed #555; padding: 20px; border-radius: 8px; max-width: 400px; width: 100%; display: flex; flex-direction: column; gap: 10px; }
-  .wifi-input { padding: 10px; border-radius: 6px; border: 1px solid #444; background: #222; color: white; outline: none; font-size: 14px; }
-  .wifi-save-btn { background: #4CAF50; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;}
+  /* ============================================================
+     NUSTATYMAI IR KITI MODALAI
+     ============================================================ */
+  #settingsModal { 
+    display: none; 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100vw; 
+    min-height: 100vh; 
+    background-color: black; 
+    z-index: 100; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: flex-start;
+    padding: 40px 20px; 
+  }
   
-  .close-modal-btn { background-color: transparent; color: #888; border: 1px solid #444; width: 100%; padding: 15px; border-radius: 8px; font-size: 14px; cursor: pointer; margin-top: auto; flex-shrink: 0;}
+  #wifiModal { 
+    display: none; 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100vw; 
+    min-height: 100vh; 
+    background-color: rgba(0,0,0,0.95); 
+    z-index: 150; 
+    flex-direction: column; 
+    align-items: center; 
+    padding: 40px 20px; 
+    overflow-y: auto; 
+  }
+  
+  .modal-btn { 
+    border: none; 
+    border-radius: 5px; 
+    cursor: pointer; 
+    font-size: 14px; 
+    font-weight: bold; 
+    color: white; 
+    transition: opacity 0.3s;
+  }
+  .modal-btn:hover {
+    opacity: 0.9;
+  }
+  
+  .wifi-list { 
+    width: 100%; 
+    max-width: 400px; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 10px; 
+    margin-bottom: 20px; 
+  }
+  .wifi-item { 
+    background: #2c2c2c; 
+    padding: 15px; 
+    border-radius: 8px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    border: 1px solid #444; 
+  }
+  .wifi-info { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 5px; 
+    text-align: left; 
+  }
+  .wifi-ssid { 
+    font-weight: bold; 
+    font-size: 16px; 
+    color: white; 
+  }
+  .wifi-ip { 
+    font-size: 12px; 
+    color: #aaa; 
+  }
+  .wifi-online { 
+    color: #4CAF50; 
+    font-size: 10px; 
+    font-weight: bold; 
+    border: 1px solid #4CAF50; 
+    padding: 2px 6px; 
+    border-radius: 4px; 
+    display: inline-block; 
+    width: fit-content; 
+  }
+  .wifi-del-btn { 
+    background: #E91E63; 
+    color: white; 
+    border: none; 
+    padding: 8px 12px; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-weight: bold; 
+  }
+  .wifi-add-box { 
+    background: #1a1a1a; 
+    border: 2px dashed #555; 
+    padding: 20px; 
+    border-radius: 8px; 
+    max-width: 400px; 
+    width: 100%; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 10px; 
+  }
+  .wifi-input { 
+    padding: 10px; 
+    border-radius: 6px; 
+    border: 1px solid #444; 
+    background: #222; 
+    color: white; 
+    outline: none; 
+    font-size: 14px; 
+  }
+  .wifi-save-btn { 
+    background: #4CAF50; 
+    color: white; 
+    border: none; 
+    padding: 10px; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-weight: bold; 
+    font-size: 14px;
+  }
+  
+  .close-modal-btn { 
+    background-color: transparent; 
+    color: #888; 
+    border: 1px solid #444; 
+    width: 100%; 
+    padding: 15px; 
+    border-radius: 8px; 
+    font-size: 14px; 
+    cursor: pointer; 
+    margin-top: 20px; 
+    flex-shrink: 0;
+  }
 
-  #otaOverlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.95); z-index: 350; flex-direction: column; align-items: center; justify-content: center; }
-  .upload-modal-box { background: #1a1a1a; border: 2px solid #00796B; padding: 30px; border-radius: 10px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.8); }
+  #otaOverlay { 
+    display: none; 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100vw; 
+    height: 100vh; 
+    background-color: rgba(0, 0, 0, 0.95); 
+    z-index: 350; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center; 
+    padding: 20px;
+  }
+  .upload-modal-box { 
+    background: #1a1a1a; 
+    border: 2px solid #00796B; 
+    padding: 30px; 
+    border-radius: 10px; 
+    width: 100%; 
+    max-width: 400px; 
+    text-align: center; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.8); 
+  }
 
-  #printerModal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.95); z-index: 400; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-  #printerModal .modal-box { background: #1a1a1a; border: 2px solid #4CAF50; padding: 30px; border-radius: 12px; width: 90%; max-width: 500px; text-align: center; }
-  #printerModal h3 { color: #4CAF50; margin-top: 0; }
-  #printerModal input, #printerModal select { width: 100%; padding: 12px; margin: 10px 0; background: #222; color: white; border: 1px solid #444; border-radius: 6px; font-size: 14px; }
-  #printerModal .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
-  #printerModal .modal-actions button { flex: 1; padding: 12px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
-  #printerModal .btn-save { background: #4CAF50; color: white; }
-  #printerModal .btn-cancel { background: #555; color: white; }
+  #printerModal { 
+    display: none; 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100vw; 
+    height: 100vh; 
+    background-color: rgba(0, 0, 0, 0.95); 
+    z-index: 400; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center; 
+    padding: 20px; 
+  }
+  #printerModal .modal-box { 
+    background: #1a1a1a; 
+    border: 2px solid #4CAF50; 
+    padding: 30px; 
+    border-radius: 12px; 
+    width: 100%; 
+    max-width: 500px; 
+    text-align: center; 
+  }
+  #printerModal h3 { 
+    color: #4CAF50; 
+    margin-top: 0; 
+  }
+  #printerModal input, 
+  #printerModal select { 
+    width: 100%; 
+    padding: 12px; 
+    margin: 10px 0; 
+    background: #222; 
+    color: white; 
+    border: 1px solid #444; 
+    border-radius: 6px; 
+    font-size: 14px; 
+  }
+  #printerModal .modal-actions { 
+    display: flex; 
+    gap: 10px; 
+    margin-top: 20px; 
+  }
+  #printerModal .modal-actions button { 
+    flex: 1; 
+    padding: 12px; 
+    font-weight: bold; 
+    border: none; 
+    border-radius: 6px; 
+    cursor: pointer; 
+  }
+  #printerModal .btn-save { 
+    background: #4CAF50; 
+    color: white; 
+  }
+  #printerModal .btn-cancel { 
+    background: #555; 
+    color: white; 
+  }
 
+  /* ============================================================
+     TOAST PRANEŠIMAI
+     ============================================================ */
   #toastMsg {
-    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-    background-color: rgba(233, 30, 99, 0.95); color: white; padding: 15px 25px;
-    border-radius: 8px; font-weight: bold; z-index: 1000; font-size: 14px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.6); display: none; text-align: center;
-    width: 90%; max-width: 400px; border: 2px solid #ff4081; word-wrap: break-word;
+    position: fixed; 
+    top: 80px; 
+    left: 50%; 
+    transform: translateX(-50%);
+    background-color: rgba(233, 30, 99, 0.95); 
+    color: white; 
+    padding: 15px 25px;
+    border-radius: 8px; 
+    font-weight: bold; 
+    z-index: 1000; 
+    font-size: 14px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.6); 
+    display: none; 
+    text-align: center;
+    width: 90%; 
+    max-width: 400px; 
+    border: 2px solid #ff4081; 
+    word-wrap: break-word;
+  }
+
+  /* ============================================================
+     RESPONSYVUMAS - MAŽIEMS EKRANAMS
+     ============================================================ */
+  @media (max-width: 768px) {
+    .title { 
+      font-size: 22px; 
+      letter-spacing: 2px;
+      margin-bottom: 30px;
+    }
+    
+    .action-btn { 
+      padding: 16px 12px; 
+      font-size: 15px; 
+    }
+    
+    #translationModal .modal-box {
+      padding: 50px 15px 15px 15px;
+    }
+    
+    .image-frame {
+      height: min(65vh, 700px);
+      max-width: 98vw;
+    }
+    
+    .print-btn {
+      padding: 15px;
+      font-size: 16px;
+    }
+    
+    .pdf-btn {
+      padding: 10px;
+      font-size: 13px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .container {
+      padding: 90px 12px 30px 12px;
+    }
+    
+    .title { 
+      font-size: 20px; 
+    }
+    
+    #telemetryBox {
+      padding: 4px 10px;
+      gap: 10px;
+    }
+    
+    .image-frame {
+      height: min(60vh, 600px);
+    }
+  }
+
+  /* ============================================================
+     LANDSCAPE ORIENTACIJA
+     ============================================================ */
+  @media (max-height: 500px) and (orientation: landscape) {
+    .image-frame {
+      height: min(80vh, 500px);
+    }
+    
+    .container {
+      padding: 60px 20px 20px 20px;
+    }
   }
 </style>
 </head>
@@ -239,6 +833,9 @@
 
   <div id="toastMsg"></div>
   
+  <!-- ============================================================
+       TELEMETRIJOS BLOKAS
+       ============================================================ -->
   <div id="telemetryBox">
     <div class="wifi-icon" title="Wi-Fi ryšys">
       <div class="wifi-bar" style="height: 4px;"></div>
@@ -260,22 +857,36 @@
     </div>
   </div>
 
+  <!-- ============================================================
+       NUSTATYMŲ IKONA (viršuje kairėje)
+       ============================================================ -->
   <div id="settingsIcon" class="settings-icon">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>
   </div>
   
+  <!-- ============================================================
+       PAGRINDINIS PUSLAPIS
+       ============================================================ -->
   <div class="container" id="mainContainer">
     <div class="title">V E R T Ė J A S</div>
     <button id="addFileBtnMain" class="action-btn">Pridėkite failą</button>
-    <div style="margin-top: 80px;"></div>
     <button id="cameraBtnMain" class="action-btn" style="background-color: #4CAF50;">FOTOGRAFUOTI</button>
     <input type="file" id="modalFileInput" accept="image/*" style="display:none;">
   </div>
 
+  <!-- ============================================================
+       KAMEROS MODALAS
+       ============================================================ -->
   <div id="cameraModal" class="modal-overlay">
       <div class="modal-box">
           <div id="closeCameraModalX" class="close-x-icon">
-              <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
           </div>
 
           <div class="image-frame" style="display: flex; background: black;">
@@ -287,8 +898,11 @@
       </div>
   </div>
 
+  <!-- ============================================================
+       KAMEROS BLOKAVIMO MODALAS
+       ============================================================ -->
   <div id="cameraBlockedModal" class="modal-overlay">
-      <div class="modal-box" style="border-color: #E91E63; max-width: 450px; align-items: flex-start; padding: 30px 20px;">
+      <div class="modal-box" style="border-color: #E91E63; max-width: 450px; align-items: flex-start; padding: 30px 20px; margin: auto;">
           <h3 style="color: #E91E63; margin-top: 0; font-size: 18px; text-transform: uppercase;">DĖMESIO: KAMERA NEPASIEKIAMA!</h3>
           <p style="color: #ccc; font-size: 14px; line-height: 1.5; margin-bottom: 15px;">
               Naršyklė blokuoja prieigą prie kameros. Įsitikinkite, kad:<br><br>
@@ -301,11 +915,17 @@
       </div>
   </div>
 
+  <!-- ============================================================
+       VERTIMO MODALAS
+       ============================================================ -->
   <div id="translationModal" class="modal-overlay">
       <div class="modal-box">
           
           <div id="closeModalX" class="close-x-icon">
-              <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
           </div>
 
           <div id="modalFrame" class="image-frame">
@@ -325,14 +945,17 @@
           </select>
           
           <button id="translateActionBtn" class="translate-action-btn"></button>
-
-          <div id="printAndDownloadButtons">
-              <button id="printBtn" class="print-btn">🖨 SPAUSDINTI</button>
-              <button id="downloadPdfBtn" class="pdf-btn">📥 Parsisiųsti PDF</button>
-          </div>
+      </div>
+      
+      <div id="printAndDownloadButtons">
+          <button id="printBtn" class="print-btn">🖨 SPAUSDINTI</button>
+          <button id="downloadPdfBtn" class="pdf-btn">📥 Parsisiųsti PDF</button>
       </div>
   </div>
 
+  <!-- ============================================================
+       NUSTATYMŲ MODALAS
+       ============================================================ -->
   <div id="settingsModal">
     <h2 style="color:white; letter-spacing:2px; margin-bottom: 30px;">NUSTATYMAI</h2>
     <button id="printerSettingsBtn" class="modal-btn" style="background-color: #9C27B0; padding: 15px 30px; margin-bottom: 20px; width: 80%; max-width: 300px;">🖨 SPAUSDINTUVAS</button>
@@ -341,6 +964,9 @@
     <button id="closeSettingsBtn" class="close-modal-btn" style="width: 80%; max-width: 300px;">UŽDARYTI</button>
   </div>
 
+  <!-- ============================================================
+       SPAUSDINTUVO NUSTATYMŲ MODALAS
+       ============================================================ -->
   <div id="printerModal">
     <div class="modal-box">
       <h3>🖨 SPAUSDINTUVO NUSTATYMAI</h3>
@@ -366,6 +992,9 @@
     </div>
   </div>
 
+  <!-- ============================================================
+       WIFI MODALAS
+       ============================================================ -->
   <div id="wifiModal">
     <h2 style="color: white; letter-spacing: 2px; text-align: center;">IŠSAUGOTI WIFI TINKLAI</h2>
     <div id="wifiListContainer" class="wifi-list"></div>
@@ -378,6 +1007,9 @@
     <button id="closeWifiBtn" class="close-modal-btn" style="margin-top: 30px; max-width:400px;">ATGAL</button>
   </div>
 
+  <!-- ============================================================
+       OTA (SISTEMOS ATNAUJINIMO) MODALAS
+       ============================================================ -->
   <div id="otaOverlay">
     <div class="upload-modal-box">
       <h3 style="color: white; margin-top: 0; letter-spacing: 1px;">SISTEMOS ATNAUJINIMAS</h3>
@@ -400,10 +1032,16 @@
       <button id="otaCloseBtn" class="close-modal-btn" style="margin-top: 0; width: 100%;">UŽDARYTI</button>
     </div>
   </div>
-    <script>
+  <script>
+    // ============================================================
+    // KONFIGŪRACIJA
+    // ============================================================
     const WORKER_URL = 'https://deepl-proxy.t-jasukaitis.workers.dev';
     let ESP32_BASE = localStorage.getItem('esp32_url') || '';
 
+    // ============================================================
+    // PAGRINDINIAI KINTAMIEJI
+    // ============================================================
     let toastTimer = null;
     function showToast(msg) {
         const toast = document.getElementById('toastMsg');
@@ -418,10 +1056,18 @@
         document.documentElement.requestFullscreen().catch(err => {}); 
       } 
     }
-    ['touchstart', 'click'].forEach(evt => { document.addEventListener(evt, activateFullscreen, {capture: true}); });
+    ['touchstart', 'click'].forEach(evt => { 
+      document.addEventListener(evt, activateFullscreen, {capture: true}); 
+    });
 
+    // ============================================================
+    // TELEMETRIJOS POLLING
+    // ============================================================
     function pollTrigger() {
-      if (!ESP32_BASE) { setTimeout(pollTrigger, 3000); return; }
+      if (!ESP32_BASE) { 
+        setTimeout(pollTrigger, 3000); 
+        return; 
+      }
       fetch(ESP32_BASE.replace(/\/$/, '') + '/check_trigger?t=' + Date.now(), { cache: 'no-store' })
         .then(res => res.json())
         .then(data => {
@@ -434,7 +1080,9 @@
                     else if (r > -75) activeBars = 3;
                     else if (r > -85) activeBars = 2;
                     else if (r > -95) activeBars = 1;
-                    bars.forEach((b, i) => { b.style.background = i < activeBars ? '#4CAF50' : '#555'; });
+                    bars.forEach((b, i) => { 
+                      b.style.background = i < activeBars ? '#4CAF50' : '#555'; 
+                    });
                 }
                 if (data.bat !== undefined) {
                     let batLevel = document.getElementById('batFill');
@@ -461,17 +1109,19 @@
     }
     setTimeout(pollTrigger, 500);
 
+    // ============================================================
+    // NUSTATYMŲ VALDYMAS
+    // ============================================================
     document.getElementById('settingsIcon').addEventListener('click', () => {
       document.getElementById('mainContainer').style.display = 'none';
-      document.getElementById('telemetryBox').style.display = 'none';
       document.getElementById('settingsModal').style.display = 'flex';
     });
     document.getElementById('closeSettingsBtn').addEventListener('click', () => {
       document.getElementById('settingsModal').style.display = 'none';
       document.getElementById('mainContainer').style.display = 'flex';
-      document.getElementById('telemetryBox').style.display = 'flex';
     });
     
+    // Printerio nustatymai
     document.getElementById('printerSettingsBtn').addEventListener('click', () => {
       document.getElementById('settingsModal').style.display = 'none';
       document.getElementById('printerModal').style.display = 'flex';
@@ -498,6 +1148,7 @@
       document.getElementById('settingsModal').style.display = 'flex';
     });
     
+    // WiFi nustatymai
     document.getElementById('openWifiBtn').addEventListener('click', () => {
       if (!ESP32_BASE) { showToast("Nustatykite ESP32 IP"); return; }
       document.getElementById('settingsModal').style.display = 'none';
@@ -516,7 +1167,10 @@
         .then(res => res.json())
         .then(data => {
           container.innerHTML = '';
-          if(data.length === 0) { container.innerHTML = '<div style="color:#aaa;">Nėra išsaugotų tinklų</div>'; return; }
+          if(data.length === 0) { 
+            container.innerHTML = '<div style="color:#aaa;">Nėra išsaugotų tinklų</div>'; 
+            return; 
+          }
           data.forEach(w => {
              let statusHtml = '';
              if(w.connected) statusHtml = `<div class="wifi-online">ONLINE</div><div class="wifi-ip">Adresas: http://${w.ip}</div>`;
@@ -544,6 +1198,9 @@
       });
     };
 
+    // ============================================================
+    // OTA ATNAUJINIMAS
+    // ============================================================
     let selectedOtaFile = null;
     document.getElementById('otaUpdateBtn').addEventListener('click', () => {
         if (!ESP32_BASE) { showToast("Nustatykite ESP32 IP"); return; }
@@ -560,7 +1217,9 @@
         document.getElementById('otaOverlay').style.display = 'none';
         document.getElementById('settingsModal').style.display = 'flex';
     });
-    document.getElementById('otaSelectFileBtn').addEventListener('click', () => { document.getElementById('otaFileInput').click(); });
+    document.getElementById('otaSelectFileBtn').addEventListener('click', () => { 
+      document.getElementById('otaFileInput').click(); 
+    });
     document.getElementById('otaFileInput').addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -632,7 +1291,11 @@
             applyCameraAspectRatio();
             window.addEventListener('resize', applyCameraAspectRatio);
             liveStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } } 
+                video: { 
+                    facingMode: { ideal: "environment" }, 
+                    width: { ideal: 1920 }, 
+                    height: { ideal: 1080 } 
+                } 
             });
             liveVideo.srcObject = liveStream;
             cameraModal.style.display = 'flex';
@@ -834,7 +1497,7 @@
     });
 
     // ============================================================
-    // PAGRINDINIAI KINTAMIEJI
+    // FAILO ĮKĖLIMAS
     // ============================================================
     const translationModal = document.getElementById('translationModal');
     const modalFileInput = document.getElementById('modalFileInput');
@@ -866,11 +1529,15 @@
      "LV": "Latvių", "ET": "Estų", "FI": "Suomių", "SV": "Švedų", "NB": "Norvegų"
     };
     Object.keys(languagesMap).forEach(code => {
-        let opt = document.createElement('option'); opt.value = code; opt.innerText = languagesMap[code];
+        let opt = document.createElement('option'); 
+        opt.value = code; 
+        opt.innerText = languagesMap[code];
         langSelect.appendChild(opt);
     });
 
-    document.getElementById('addFileBtnMain').addEventListener('click', () => { modalFileInput.click(); });
+    document.getElementById('addFileBtnMain').addEventListener('click', () => { 
+      modalFileInput.click(); 
+    });
 
     closeModalX.addEventListener('click', () => {
         translationModal.style.display = 'none';
@@ -883,134 +1550,199 @@
         return new Promise((resolve) => {
             const reader = new FileReader();
             reader.onload = (e) => {
-                const img = new Image(); img.onload = () => resolve(img); img.src = e.target.result;
+                const img = new Image(); 
+                img.onload = () => resolve(img); 
+                img.src = e.target.result;
             };
             reader.readAsDataURL(file);
         });
     }
 
-    function drawAlignUI() {
-        const ctx = resultCanvas.getContext('2d');
-        let cw = resultCanvas.width;
-        let ch = resultCanvas.height;
-
-        ctx.clearRect(0, 0, cw, ch);
-        ctx.drawImage(originalUnblurredCanvas, 0, 0);
-
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
-        ctx.beginPath();
-        ctx.rect(0, 0, cw, ch);
-        ctx.moveTo(currentDocPoly[0].x, currentDocPoly[0].y);
-        ctx.lineTo(currentDocPoly[1].x, currentDocPoly[1].y);
-        ctx.lineTo(currentDocPoly[2].x, currentDocPoly[2].y);
-        ctx.lineTo(currentDocPoly[3].x, currentDocPoly[3].y);
-        ctx.closePath();
-        ctx.fill('evenodd'); 
+    // ============================================================
+    // AUTOMATINIS DOKUMENTO RIBŲ ATPAŽINIMAS
+    // ============================================================
+    function detectDocumentBounds(canvas) {
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width;
+        const H = canvas.height;
+        const imgData = ctx.getImageData(0, 0, W, H);
+        const data = imgData.data;
         
-        ctx.strokeStyle = '#FF9800';
-        ctx.lineWidth = Math.max(2, cw * 0.003);
-        ctx.beginPath();
-        ctx.moveTo(currentDocPoly[0].x, currentDocPoly[0].y);
-        for(let i=1; i<4; i++) ctx.lineTo(currentDocPoly[i].x, currentDocPoly[i].y);
-        ctx.closePath();
-        ctx.stroke();
-
-        let radius = Math.max(22, cw * 0.035); 
-        currentDocPoly.forEach(p => {
-            ctx.fillStyle = 'rgba(255, 152, 0, 0.25)';
-            ctx.beginPath(); ctx.arc(p.x, p.y, radius * 2.2, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#FF9800';
-            ctx.beginPath(); ctx.arc(p.x, p.y, radius, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = 'white';
-            ctx.beginPath(); ctx.arc(p.x, p.y, radius*0.3, 0, Math.PI*2); ctx.fill();
-        });
-    }
-
-    function getPointerPos(e) {
-        let rect = resultCanvas.getBoundingClientRect();
-        let cw = resultCanvas.width; let ch = resultCanvas.height;
-        let scale = Math.min(rect.width / cw, rect.height / ch);
-        let displayW = cw * scale; let displayH = ch * scale;
-        let offX = (rect.width - displayW) / 2;
-        let offY = (rect.height - displayH) / 2;
+        // Sumažiname analizei
+        const smallW = 100;
+        const smallH = Math.floor(smallW * (H / W));
+        const smallCanvas = document.createElement('canvas');
+        smallCanvas.width = smallW;
+        smallCanvas.height = smallH;
+        const sCtx = smallCanvas.getContext('2d');
+        sCtx.drawImage(canvas, 0, 0, smallW, smallH);
         
-        let clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        let clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        let x = (clientX - rect.left - offX) / scale;
-        let y = (clientY - rect.top - offY) / scale;
-        return {x, y};
-    }
-
-    function updateMagnifier(x, y) {
-        const mag = document.getElementById('magnifier');
-        const mCtx = mag.getContext('2d');
-        mag.style.display = 'block';
-
-        if (activeDragPoint === 0 || activeDragPoint === 1) { 
-            mag.style.top = 'auto'; mag.style.bottom = '10px';
-        } else if (activeDragPoint === 2 || activeDragPoint === 3) {
-            mag.style.top = '10px'; mag.style.bottom = 'auto';
-        }
-
-        const magW = mag.width; const magH = mag.height;
-        mCtx.fillStyle = '#111';
-        mCtx.fillRect(0, 0, magW, magH);
+        const sData = sCtx.getImageData(0, 0, smallW, smallH).data;
         
-        const zoom = 1.10; 
-        const srcW = magW / zoom; const srcH = magH / zoom;
-        const srcX = x - srcW / 2; const srcY = y - srcH / 2;
-        mCtx.drawImage(originalUnblurredCanvas, srcX, srcY, srcW, srcH, 0, 0, magW, magH);
+        // Randame šviesius (balto popieriaus) pikselius
+        let minX = smallW, maxX = 0, minY = smallH, maxY = 0;
+        let found = false;
         
-        let cx = magW / 2; let cy = magH / 2;
-        mCtx.strokeStyle = 'rgba(255, 152, 0, 0.9)';
-        mCtx.lineWidth = 3;
-        mCtx.beginPath();
-        mCtx.moveTo(cx - 35, cy); mCtx.lineTo(cx - 5, cy);
-        mCtx.moveTo(cx + 5, cy); mCtx.lineTo(cx + 35, cy);
-        mCtx.moveTo(cx, cy - 35); mCtx.lineTo(cx, cy - 5);
-        mCtx.moveTo(cx, cy + 5); mCtx.lineTo(cx, cy + 35);
-        mCtx.stroke();
-    }
-
-    resultCanvas.addEventListener('mousedown', pointerDown);
-    resultCanvas.addEventListener('touchstart', pointerDown, {passive: false});
-    resultCanvas.addEventListener('mousemove', pointerMove);
-    resultCanvas.addEventListener('touchmove', pointerMove, {passive: false});
-    window.addEventListener('mouseup', pointerUp);
-    window.addEventListener('touchend', pointerUp);
-
-    function pointerDown(e) {
-        if(!isAlignMode) return;
-        let pos = getPointerPos(e);
-        let touchRadius = resultCanvas.width * 0.15; 
-        for(let i=0; i<4; i++) {
-            let dx = pos.x - currentDocPoly[i].x; let dy = pos.y - currentDocPoly[i].y;
-            if(Math.sqrt(dx*dx + dy*dy) <= touchRadius) {
-                activeDragPoint = i; e.preventDefault(); 
-                updateMagnifier(currentDocPoly[i].x, currentDocPoly[i].y);
-                return;
+        for (let y = 0; y < smallH; y++) {
+            for (let x = 0; x < smallW; x++) {
+                const idx = (y * smallW + x) * 4;
+                const r = sData[idx];
+                const g = sData[idx + 1];
+                const b = sData[idx + 2];
+                const brightness = (r + g + b) / 3;
+                
+                // Baltas popierius: šviesus ir be spalvų
+                if (brightness > 140) {
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                    found = true;
+                }
             }
         }
-    }
-
-    function pointerMove(e) {
-        if(!isAlignMode || activeDragPoint === -1) return;
-        e.preventDefault();
-        let pos = getPointerPos(e);
-        pos.x = Math.max(0, Math.min(resultCanvas.width, pos.x));
-        pos.y = Math.max(0, Math.min(resultCanvas.height, pos.y));
-        currentDocPoly[activeDragPoint] = pos;
-        drawAlignUI();
-        updateMagnifier(pos.x, pos.y);
-    }
-    
-    function pointerUp(e) { 
-        activeDragPoint = -1; 
-        document.getElementById('magnifier').style.display = 'none';
+        
+        if (!found || (maxX - minX) < 10 || (maxY - minY) < 10) {
+            // Neradome dokumento - naudojame visą plotą
+            return [
+                {x: 0, y: 0},
+                {x: W, y: 0},
+                {x: W, y: H},
+                {x: 0, y: H}
+            ];
+        }
+        
+        // Konvertuojame į pilną dydį
+        const scaleX = W / smallW;
+        const scaleY = H / smallH;
+        
+        // Pridedame šiek tiek paraštės
+        const padding = 5;
+        
+        const TL = {x: Math.max(0, (minX - padding) * scaleX), y: Math.max(0, (minY - padding) * scaleY)};
+        const TR = {x: Math.min(W, (maxX + padding) * scaleX), y: Math.max(0, (minY - padding) * scaleY)};
+        const BR = {x: Math.min(W, (maxX + padding) * scaleX), y: Math.min(H, (maxY + padding) * scaleY)};
+        const BL = {x: Math.max(0, (minX - padding) * scaleX), y: Math.min(H, (maxY + padding) * scaleY)};
+        
+        return [TL, TR, BR, BL];
     }
 
     // ============================================================
-    // WARP
+    // DOCUMENT AI ATPAŽINIMAS
+    // ============================================================
+    async function processExtractedImage(img) {
+        document.getElementById('mainContainer').style.display = 'none';
+        translationModal.style.display = 'flex';
+        
+        modalFrame.style.display = 'flex';
+        alignBtn.style.display = 'none';
+        langSelect.style.display = 'none';
+        translateActionBtn.style.display = 'none';
+        printAndDownloadButtons.style.display = 'none';
+        translateOverlay.style.display = 'flex';
+        translateOverlayText.innerText = "Skenuojamas dokumentas su Document AI...";
+
+        try {
+            if(!navigator.onLine) throw new Error("Nėra interneto ryšio!");
+
+            // ============================================================
+            // SUMAŽINAME PAVEIKSLĄ
+            // ============================================================
+            originalUnblurredCanvas = document.createElement('canvas');
+            const wCtx = originalUnblurredCanvas.getContext('2d');
+            let w = img.width; 
+            let h = img.height;
+            
+            const maxDim = 1400;
+            if(w > maxDim || h > maxDim) {
+                let ratio = Math.min(maxDim / w, maxDim / h);
+                w = Math.floor(w * ratio); 
+                h = Math.floor(h * ratio);
+            }
+            originalUnblurredCanvas.width = w; 
+            originalUnblurredCanvas.height = h;
+            wCtx.drawImage(img, 0, 0, w, h);
+            
+            let base64ImageToScan = originalUnblurredCanvas.toDataURL("image/jpeg", 0.75).split(',')[1];
+            
+            let sizeMB = (base64ImageToScan.length / 1024 / 1024);
+            console.log("Base64 dydis:", sizeMB.toFixed(2), "MB");
+            
+            if (sizeMB > 15) {
+                console.log("Per didelis, mažiname dar...");
+                const maxDim2 = 1000;
+                if(w > maxDim2 || h > maxDim2) {
+                    let ratio = Math.min(maxDim2 / w, maxDim2 / h);
+                    w = Math.floor(w * ratio); 
+                    h = Math.floor(h * ratio);
+                }
+                originalUnblurredCanvas.width = w; 
+                originalUnblurredCanvas.height = h;
+                wCtx.drawImage(img, 0, 0, w, h);
+                base64ImageToScan = originalUnblurredCanvas.toDataURL("image/jpeg", 0.65).split(',')[1];
+            }
+            
+            // ============================================================
+            // SIUNČIAME Į DOCUMENT AI
+            // ============================================================
+            let aiRes = await fetch(WORKER_URL + '/documentai', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    image: { 
+                        content: base64ImageToScan,
+                        mimeType: 'image/jpeg'
+                    }
+                }) 
+            });
+            
+            if(!aiRes.ok) {
+                let errText = await aiRes.text();
+                throw new Error("Document AI klaida: " + aiRes.status + " - " + errText.substring(0, 300));
+            }
+            
+            documentAiData = await aiRes.json();
+            
+            if (documentAiData.document && documentAiData.document.text) {
+                extractedTextGlobal = documentAiData.document.text;
+            } else {
+                extractedTextGlobal = "";
+                showToast("Document AI nerado teksto");
+            }
+            
+            // ============================================================
+            // AUTOMATINIS RIBŲ APTIKIMAS (be vartotojo patvirtinimo)
+            // ============================================================
+            currentDocPoly = detectDocumentBounds(originalUnblurredCanvas);
+            
+            // Automatiškai apdorojame
+            executeWarpAndFilter(currentDocPoly);
+            
+            // Rodyti "LYGIUOTI" mygtuką, jei vartotojas nori pakoreguoti
+            alignBtn.style.display = 'block'; 
+
+            translateOverlay.style.display = 'none';
+            langSelect.style.display = 'block';
+
+        } catch(err) {
+            console.error(err); 
+            showToast(err.message);
+            translationModal.style.display = 'none'; 
+            document.getElementById('mainContainer').style.display = 'flex';
+            modalFileInput.value = '';
+        }
+    }
+
+    langSelect.addEventListener('change', () => {
+        const selLang = langSelect.value;
+        if(selLang && !isAlignMode) {
+            translateActionBtn.innerText = "Versti į " + languagesMap[selLang] + " kalbą";
+            translateActionBtn.style.display = 'block';
+        }
+    });
+
+    // ============================================================
+    // WARP + SPALVOTO VAIZDO IŠSAUGOJIMAS
     // ============================================================
     function executeWarpAndFilter(poly) {
         const ctx = resultCanvas.getContext('2d');
@@ -1063,6 +1795,7 @@
         
         warpedColorCanvas = colorCanvas;
 
+        // A4 portretinis formatas
         let canvasW = 1240;
         let canvasH = 1754;
         
@@ -1088,6 +1821,133 @@
         };
         
         scannedImageData = ctx.getImageData(0, 0, canvasW, canvasH);
+    }
+
+    // ============================================================
+    // LYGIUOTI MYGTUKAS
+    // ============================================================
+    function drawAlignUI() {
+        const ctx = resultCanvas.getContext('2d');
+        let cw = resultCanvas.width;
+        let ch = resultCanvas.height;
+
+        ctx.clearRect(0, 0, cw, ch);
+        ctx.drawImage(originalUnblurredCanvas, 0, 0, cw, ch);
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+        ctx.beginPath();
+        ctx.rect(0, 0, cw, ch);
+        ctx.moveTo(currentDocPoly[0].x, currentDocPoly[0].y);
+        ctx.lineTo(currentDocPoly[1].x, currentDocPoly[1].y);
+        ctx.lineTo(currentDocPoly[2].x, currentDocPoly[2].y);
+        ctx.lineTo(currentDocPoly[3].x, currentDocPoly[3].y);
+        ctx.closePath();
+        ctx.fill('evenodd'); 
+        
+        ctx.strokeStyle = '#FF9800';
+        ctx.lineWidth = Math.max(2, cw * 0.003);
+        ctx.beginPath();
+        ctx.moveTo(currentDocPoly[0].x, currentDocPoly[0].y);
+        for(let i=1; i<4; i++) ctx.lineTo(currentDocPoly[i].x, currentDocPoly[i].y);
+        ctx.closePath();
+        ctx.stroke();
+
+        let radius = Math.max(22, cw * 0.035); 
+        currentDocPoly.forEach(p => {
+            ctx.fillStyle = 'rgba(255, 152, 0, 0.25)';
+            ctx.beginPath(); ctx.arc(p.x, p.y, radius * 2.2, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#FF9800';
+            ctx.beginPath(); ctx.arc(p.x, p.y, radius, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'white';
+            ctx.beginPath(); ctx.arc(p.x, p.y, radius*0.3, 0, Math.PI*2); ctx.fill();
+        });
+    }
+
+    function getPointerPos(e) {
+        let rect = resultCanvas.getBoundingClientRect();
+        let cw = resultCanvas.width; let ch = resultCanvas.height;
+        let scale = Math.min(rect.width / cw, rect.height / ch);
+        let displayW = cw * scale; let displayH = ch * scale;
+        let offX = (rect.width - displayW) / 2;
+        let offY = (rect.height - displayH) / 2;
+        
+        let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        let x = (clientX - rect.left - offX) / scale;
+        let y = (clientY - rect.top - offY) / scale;
+        return {x, y};
+    }
+
+    function updateMagnifier(x, y) {
+        const mag = document.getElementById('magnifier');
+        const mCtx = mag.getContext('2d');
+        mag.style.display = 'block';
+
+        if (activeDragPoint === 0 || activeDragPoint === 1) { 
+            mag.style.top = 'auto'; 
+            mag.style.bottom = '10px';
+        } else if (activeDragPoint === 2 || activeDragPoint === 3) {
+            mag.style.top = '10px'; 
+            mag.style.bottom = 'auto';
+        }
+
+        const magW = mag.width; const magH = mag.height;
+        mCtx.fillStyle = '#111';
+        mCtx.fillRect(0, 0, magW, magH);
+        
+        const zoom = 1.10; 
+        const srcW = magW / zoom; const srcH = magH / zoom;
+        const srcX = x - srcW / 2; const srcY = y - srcH / 2;
+        mCtx.drawImage(originalUnblurredCanvas, srcX, srcY, srcW, srcH, 0, 0, magW, magH);
+        
+        let cx = magW / 2; let cy = magH / 2;
+        mCtx.strokeStyle = 'rgba(255, 152, 0, 0.9)';
+        mCtx.lineWidth = 3;
+        mCtx.beginPath();
+        mCtx.moveTo(cx - 35, cy); mCtx.lineTo(cx - 5, cy);
+        mCtx.moveTo(cx + 5, cy); mCtx.lineTo(cx + 35, cy);
+        mCtx.moveTo(cx, cy - 35); mCtx.lineTo(cx, cy - 5);
+        mCtx.moveTo(cx, cy + 5); mCtx.lineTo(cx, cy + 35);
+        mCtx.stroke();
+    }
+
+    resultCanvas.addEventListener('mousedown', pointerDown);
+    resultCanvas.addEventListener('touchstart', pointerDown, {passive: false});
+    resultCanvas.addEventListener('mousemove', pointerMove);
+    resultCanvas.addEventListener('touchmove', pointerMove, {passive: false});
+    window.addEventListener('mouseup', pointerUp);
+    window.addEventListener('touchend', pointerUp);
+
+    function pointerDown(e) {
+        if(!isAlignMode) return;
+        let pos = getPointerPos(e);
+        let touchRadius = resultCanvas.width * 0.15; 
+        for(let i=0; i<4; i++) {
+            let dx = pos.x - currentDocPoly[i].x; 
+            let dy = pos.y - currentDocPoly[i].y;
+            if(Math.sqrt(dx*dx + dy*dy) <= touchRadius) {
+                activeDragPoint = i; 
+                e.preventDefault(); 
+                updateMagnifier(currentDocPoly[i].x, currentDocPoly[i].y);
+                return;
+            }
+        }
+    }
+
+    function pointerMove(e) {
+        if(!isAlignMode || activeDragPoint === -1) return;
+        e.preventDefault();
+        let pos = getPointerPos(e);
+        pos.x = Math.max(0, Math.min(resultCanvas.width, pos.x));
+        pos.y = Math.max(0, Math.min(resultCanvas.height, pos.y));
+        currentDocPoly[activeDragPoint] = pos;
+        drawAlignUI();
+        updateMagnifier(pos.x, pos.y);
+    }
+    
+    function pointerUp(e) { 
+        activeDragPoint = -1; 
+        document.getElementById('magnifier').style.display = 'none';
     }
 
     alignBtn.addEventListener('click', () => {
@@ -1121,129 +1981,14 @@
             showToast("Klaida įkeliant nuotrauką.");
         }
     });
-
     // ============================================================
-    // DOCUMENT AI ATPAŽINIMAS (su paveikslo mažinimu)
-    // ============================================================
-    async function processExtractedImage(img) {
-        document.getElementById('mainContainer').style.display = 'none';
-        translationModal.style.display = 'flex';
-        
-        modalFrame.style.display = 'flex';
-        alignBtn.style.display = 'none';
-        langSelect.style.display = 'none';
-        translateActionBtn.style.display = 'none';
-        printAndDownloadButtons.style.display = 'none';
-        translateOverlay.style.display = 'flex';
-        translateOverlayText.innerText = "Skenuojamas dokumentas su Document AI...";
-
-        try {
-            if(!navigator.onLine) throw new Error("Nėra interneto ryšio!");
-
-            // ============================================================
-            // SUMAŽINAME PAVEIKSLĄ KAD TILPTŲ Į LIMITĄ
-            // ============================================================
-            originalUnblurredCanvas = document.createElement('canvas');
-            const wCtx = originalUnblurredCanvas.getContext('2d');
-            let w = img.width; 
-            let h = img.height;
-            
-            // Mažiname iki 1400 px
-            const maxDim = 1400;
-            if(w > maxDim || h > maxDim) {
-                let ratio = Math.min(maxDim / w, maxDim / h);
-                w = Math.floor(w * ratio); 
-                h = Math.floor(h * ratio);
-            }
-            originalUnblurredCanvas.width = w; 
-            originalUnblurredCanvas.height = h;
-            wCtx.drawImage(img, 0, 0, w, h);
-            
-            // JPEG su 0.7 kokybe
-            let base64ImageToScan = originalUnblurredCanvas.toDataURL("image/jpeg", 0.7).split(',')[1];
-            
-            let sizeMB = (base64ImageToScan.length / 1024 / 1024);
-            console.log("Base64 dydis:", sizeMB.toFixed(2), "MB");
-            
-            // Jei per didelis - mažiname dar labiau
-            if (sizeMB > 15) {
-                console.log("Per didelis, mažiname dar kartą...");
-                const maxDim2 = 1000;
-                if(w > maxDim2 || h > maxDim2) {
-                    let ratio = Math.min(maxDim2 / w, maxDim2 / h);
-                    w = Math.floor(w * ratio); 
-                    h = Math.floor(h * ratio);
-                }
-                originalUnblurredCanvas.width = w; 
-                originalUnblurredCanvas.height = h;
-                wCtx.drawImage(img, 0, 0, w, h);
-                base64ImageToScan = originalUnblurredCanvas.toDataURL("image/jpeg", 0.6).split(',')[1];
-                console.log("Naujas base64 dydis:", (base64ImageToScan.length / 1024 / 1024).toFixed(2), "MB");
-            }
-            
-            // ============================================================
-            // SIUNČIAME Į /documentai
-            // ============================================================
-            let aiRes = await fetch(WORKER_URL + '/documentai', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    image: { 
-                        content: base64ImageToScan,
-                        mimeType: 'image/jpeg'
-                    }
-                }) 
-            });
-            
-            if(!aiRes.ok) {
-                let errText = await aiRes.text();
-                throw new Error("Document AI klaida: " + aiRes.status + " - " + errText.substring(0, 300));
-            }
-            
-            documentAiData = await aiRes.json();
-            
-            if (documentAiData.document && documentAiData.document.text) {
-                extractedTextGlobal = documentAiData.document.text;
-            } else {
-                extractedTextGlobal = "";
-                showToast("Document AI nerado teksto");
-            }
-            
-            currentDocPoly = [
-                {x: 0, y: 0},
-                {x: originalUnblurredCanvas.width, y: 0},
-                {x: originalUnblurredCanvas.width, y: originalUnblurredCanvas.height},
-                {x: 0, y: originalUnblurredCanvas.height}
-            ];
-            
-            executeWarpAndFilter(currentDocPoly);
-            alignBtn.style.display = 'block'; 
-
-            translateOverlay.style.display = 'none';
-            langSelect.style.display = 'block';
-
-        } catch(err) {
-            console.error(err); 
-            showToast(err.message);
-            translationModal.style.display = 'none'; 
-            document.getElementById('mainContainer').style.display = 'flex';
-            modalFileInput.value = '';
-        }
-    }
-
-    langSelect.addEventListener('change', () => {
-        const selLang = langSelect.value;
-        if(selLang && !isAlignMode) {
-            translateActionBtn.innerText = "Versti į " + languagesMap[selLang] + " kalbą";
-            translateActionBtn.style.display = 'block';
-        }
-    });
-
-    // ============================================================
-    // VERTIMAS
+    // PAGRINDINĖ VERTIMO FUNKCIJA
     // ============================================================
     async function runTranslation(targetLang, langName) {
-        if(!extractedTextGlobal) { showToast("Nėra teksto!"); return; }
+        if(!extractedTextGlobal) { 
+            showToast("Nėra teksto!"); 
+            return; 
+        }
         langSelect.style.display = 'none'; 
         translateActionBtn.style.display = 'none'; 
         alignBtn.style.display = 'none';
@@ -1277,61 +2022,39 @@
             resultCanvas.width = canvasW;
             resultCanvas.height = canvasH;
             
-            // Nupiešiame spalvotą dokumentą
-            ctx.drawImage(warpedColorCanvas, 0, 0, 
-                imageDrawInfo.textW, imageDrawInfo.textH,
-                imageDrawInfo.drawX, imageDrawInfo.drawY,
-                imageDrawInfo.finalW, imageDrawInfo.finalH);
-            
-            // Nubraukiame tekstą (baltas fonas)
+            // ============================================================
+            // 1. NUBRAUKIAME VISKĄ - BALTAS FONAS
+            // ============================================================
             ctx.fillStyle = 'white';
-            ctx.fillRect(imageDrawInfo.drawX, imageDrawInfo.drawY, 
-                         imageDrawInfo.finalW, imageDrawInfo.finalH);
+            ctx.fillRect(0, 0, canvasW, canvasH);
             
-            // Nupiešiame paveikslėlius atgal
-            drawColoredImages(ctx, canvasW, canvasH);
+            // ============================================================
+            // 2. APTINKAME IR NUPIEŠIAME SPALVOTUS REGIONUS (paveikslėlius)
+            // ============================================================
+            drawColoredRegions(ctx);
             
-            // Įrašome išverstą tekstą
+            // ============================================================
+            // 3. ĮRAŠOME IŠVERSTĄ TEKSTĄ PAGAL ORIGINALIAS PASTRAIPAS
+            // ============================================================
             let paragraphs = extractParagraphsFromDocumentAI();
             
             if (paragraphs.length === 0) {
                 // Fallback - verčiame visą tekstą kaip vieną bloką
-                let fontSize = Math.max(11, Math.floor(canvasW / 42));
-                ctx.font = `${fontSize}px Arial`;
-                ctx.fillStyle = 'black';
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'top';
-                
-                let textX = imageDrawInfo.drawX + 10;
-                let textY = imageDrawInfo.drawY + 10;
-                let textW = imageDrawInfo.finalW - 20;
-                
-                let words = finalOutputText.split(/\s+/);
-                let line = '';
-                let y = textY;
-                let lineHeight = fontSize * 1.4;
-                
-                for (let word of words) {
-                    let testLine = line ? line + ' ' + word : word;
-                    if (ctx.measureText(testLine).width > textW && line) {
-                        ctx.fillText(line, textX, y);
-                        y += lineHeight;
-                        line = word;
-                    } else {
-                        line = testLine;
-                    }
-                }
-                if (line) ctx.fillText(line, textX, y);
+                drawFullText(ctx, finalOutputText);
             } else {
-                // Verčiame pastraipas atskirai ir įrašome jų vietose
+                // Verčiame kiekvieną pastraipą atskirai ir įrašome į jos vietą
                 await translateAndDrawParagraphs(paragraphs, targetLang, ctx);
             }
             
+            // ============================================================
+            // 4. IŠSAUGOME SNAPSHOT PDF GENERAVIMUI
+            // ============================================================
             translatedCanvasSnapshot = document.createElement('canvas');
             translatedCanvasSnapshot.width = canvasW;
             translatedCanvasSnapshot.height = canvasH;
             translatedCanvasSnapshot.getContext('2d').drawImage(resultCanvas, 0, 0);
             
+            // Rodyti spausdinimo mygtukus
             printAndDownloadButtons.style.display = 'flex';
 
         } catch (err) { 
@@ -1341,9 +2064,9 @@
 
         translateOverlay.style.display = 'none'; 
     }
-    
+
     // ============================================================
-    // IŠTRAUKIAME PASTRAIPAS IŠ DOCUMENT AI
+    // IŠTRAUKIAME PASTRAIPAS IŠ DOCUMENT AI ATSAKYMO
     // ============================================================
     function extractParagraphsFromDocumentAI() {
         let paragraphs = [];
@@ -1352,44 +2075,49 @@
             return paragraphs;
         }
         
-        let page = documentAiData.document.pages[0];
-        let blocks = page.blocks || [];
         let fullText = documentAiData.document.text;
         
-        for (let block of blocks) {
-            let blockParagraphs = block.paragraphs || [];
-            for (let para of blockParagraphs) {
-                let paraText = '';
-                if (para.layout && para.layout.textAnchor && para.layout.textAnchor.textSegments) {
-                    for (let seg of para.layout.textAnchor.textSegments) {
-                        let start = parseInt(seg.startIndex || 0);
-                        let end = parseInt(seg.endIndex || 0);
-                        paraText += fullText.substring(start, end);
-                    }
-                }
+        for (let page of documentAiData.document.pages) {
+            let blocks = page.blocks || [];
+            
+            for (let block of blocks) {
+                let blockParagraphs = block.paragraphs || [];
                 
-                if (paraText.trim().length > 0 && para.layout && para.layout.boundingPoly) {
-                    let poly = para.layout.boundingPoly;
-                    let vertices = poly.normalizedVertices || poly.vertices || [];
+                for (let para of blockParagraphs) {
+                    let paraText = '';
                     
-                    if (vertices.length >= 4) {
-                        // Ar normalizuotos koordinatės (0-1), ar pikseliais
-                        let isNormalized = (vertices[0].x !== undefined && vertices[0].x <= 1);
-                        let scaleW = isNormalized ? originalUnblurredCanvas.width : 1;
-                        let scaleH = isNormalized ? originalUnblurredCanvas.height : 1;
+                    // Ištraukiame tekstą iš paragraph
+                    if (para.layout && para.layout.textAnchor && para.layout.textAnchor.textSegments) {
+                        for (let seg of para.layout.textAnchor.textSegments) {
+                            let start = parseInt(seg.startIndex || 0);
+                            let end = parseInt(seg.endIndex || 0);
+                            paraText += fullText.substring(start, end);
+                        }
+                    }
+                    
+                    if (paraText.trim().length > 0 && para.layout && para.layout.boundingPoly) {
+                        let poly = para.layout.boundingPoly;
+                        let vertices = poly.normalizedVertices || poly.vertices || [];
                         
-                        let xs = vertices.map(v => (v.x || 0) * scaleW);
-                        let ys = vertices.map(v => (v.y || 0) * scaleH);
-                        
-                        paragraphs.push({
-                            text: paraText.trim(),
-                            x: Math.min(...xs),
-                            y: Math.min(...ys),
-                            x2: Math.max(...xs),
-                            y2: Math.max(...ys),
-                            width: Math.max(...xs) - Math.min(...xs),
-                            height: Math.max(...ys) - Math.min(...ys)
-                        });
+                        if (vertices.length >= 4) {
+                            // Ar normalizuotos koordinatės (0-1), ar pikseliais
+                            let isNormalized = (vertices[0].x !== undefined && vertices[0].x <= 1);
+                            let scaleW = isNormalized ? originalUnblurredCanvas.width : 1;
+                            let scaleH = isNormalized ? originalUnblurredCanvas.height : 1;
+                            
+                            let xs = vertices.map(v => (v.x || 0) * scaleW);
+                            let ys = vertices.map(v => (v.y || 0) * scaleH);
+                            
+                            paragraphs.push({
+                                text: paraText.trim(),
+                                x: Math.min(...xs),
+                                y: Math.min(...ys),
+                                x2: Math.max(...xs),
+                                y2: Math.max(...ys),
+                                width: Math.max(...xs) - Math.min(...xs),
+                                height: Math.max(...ys) - Math.min(...ys)
+                            });
+                        }
                     }
                 }
             }
@@ -1397,139 +2125,65 @@
         
         return paragraphs;
     }
-    
-    // ============================================================
-    // VERČIAME IR PIEŠIAME PASTRAIPAS
-    // ============================================================
-    async function translateAndDrawParagraphs(paragraphs, targetLang, ctx) {
-        // Verčiame kiekvieną pastraipą atskirai (DeepL leidžia iki 50 vienu metu)
-        let BATCH_SIZE = 50;
-        let translations = [];
-        
-        for (let i = 0; i < paragraphs.length; i += BATCH_SIZE) {
-            let batch = paragraphs.slice(i, i + BATCH_SIZE);
-            
-            // Verčiame po vieną (kad išlaikytume tvarką)
-            for (let para of batch) {
-                try {
-                    let bodyData = `text=${encodeURIComponent(para.text)}&source_lang=LT&target_lang=${targetLang}`;
-                    let res = await fetch(WORKER_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: bodyData
-                    });
-                    
-                    if (res.ok) {
-                        let data = await res.json();
-                        translations.push(data.translations[0].text);
-                    } else {
-                        translations.push(para.text);
-                    }
-                } catch(e) {
-                    translations.push(para.text);
-                }
-            }
-        }
-        
-        // Dabar piešiame kiekvieną išverstą pastraipą
-        let scaleX = imageDrawInfo.finalW / imageDrawInfo.textW;
-        let scaleY = imageDrawInfo.finalH / imageDrawInfo.textH;
-        
-        for (let i = 0; i < paragraphs.length; i++) {
-            let p = paragraphs[i];
-            let translatedText = translations[i] || p.text;
-            
-            let paraX = imageDrawInfo.drawX + p.x * scaleX;
-            let paraY = imageDrawInfo.drawY + p.y * scaleY;
-            let paraW = p.width * scaleX;
-            let paraH = p.height * scaleY;
-            
-            if (paraW < 20 || paraH < 5) continue;
-            
-            // Apskaičiuojame šrifto dydį
-            let fontSize = Math.max(10, Math.min(30, paraH * 0.55));
-            ctx.font = `${fontSize}px Arial`;
-            ctx.fillStyle = 'black';
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'top';
-            
-            // Suskaidome į eilutes
-            let words = translatedText.split(/\s+/);
-            let lines = [];
-            let currentLine = '';
-            
-            for (let w of words) {
-                let testLine = currentLine ? currentLine + ' ' + w : w;
-                if (ctx.measureText(testLine).width > paraW && currentLine) {
-                    lines.push(currentLine);
-                    currentLine = w;
-                } else {
-                    currentLine = testLine;
-                }
-            }
-            if (currentLine) lines.push(currentLine);
-            
-            // Piešiame
-            let lineHeight = fontSize * 1.3;
-            let y = paraY;
-            
-            for (let line of lines) {
-                if (y + lineHeight > paraY + paraH + lineHeight * 1.5) break;
-                ctx.fillText(line, paraX, y);
-                y += lineHeight;
-            }
-        }
-    }
 
     // ============================================================
-    // PAVEIKSLĖLIŲ ATPAŽINIMAS
+    // PAVEIKSLĖLIŲ (SPALVOTŲ REGIONŲ) ATPAŽINIMAS
     // ============================================================
-    function drawColoredImages(ctx, canvasW, canvasH) {
+    function drawColoredRegions(ctx) {
         if (!warpedColorCanvas) return;
         
-        let textW = imageDrawInfo.textW;
-        let textH = imageDrawInfo.textH;
+        const textW = imageDrawInfo.textW;
+        const textH = imageDrawInfo.textH;
         
-        let smallCanvas = document.createElement('canvas');
-        let smallW = Math.min(200, textW);
-        let smallH = Math.floor(smallW * (textH / textW));
+        // Sumažiname analizei
+        const smallW = 200;
+        const smallH = Math.floor(smallW * (textH / textW));
+        const smallCanvas = document.createElement('canvas');
         smallCanvas.width = smallW;
         smallCanvas.height = smallH;
-        let sCtx = smallCanvas.getContext('2d');
+        const sCtx = smallCanvas.getContext('2d');
         sCtx.drawImage(warpedColorCanvas, 0, 0, smallW, smallH);
         
-        let imgData = sCtx.getImageData(0, 0, smallW, smallH);
-        let data = imgData.data;
+        const imgData = sCtx.getImageData(0, 0, smallW, smallH);
+        const data = imgData.data;
         
-        let colorMask = new Uint8Array(smallW * smallH);
+        // Randame spalvotus pikselius
+        // Spalvotas = didelis spalvų skirtumas tarp R, G, B
+        const colorMask = new Uint8Array(smallW * smallH);
         for (let i = 0; i < data.length; i += 4) {
-            let r = data[i];
-            let g = data[i+1];
-            let b = data[i+2];
-            let maxRGB = Math.max(r, g, b);
-            let minRGB = Math.min(r, g, b);
-            let saturation = maxRGB - minRGB;
+            const r = data[i];
+            const g = data[i+1];
+            const b = data[i+2];
+            const maxRGB = Math.max(r, g, b);
+            const minRGB = Math.min(r, g, b);
+            const saturation = maxRGB - minRGB;
             
-            if (saturation > 60 && maxRGB > 80) {
+            // Spalvotas, bet ne per tamsus
+            if (saturation > 50 && maxRGB > 70) {
                 colorMask[i / 4] = 1;
             }
         }
         
-        let visited = new Uint8Array(smallW * smallH);
-        let scaleX = imageDrawInfo.finalW / textW;
-        let scaleY = imageDrawInfo.finalH / textH;
+        // BFS - randame sujungtas grupes
+        const visited = new Uint8Array(smallW * smallH);
+        const scaleX = imageDrawInfo.finalW / textW;
+        const scaleY = imageDrawInfo.finalH / textH;
+        
+        let regionsCount = 0;
         
         for (let y = 0; y < smallH; y++) {
             for (let x = 0; x < smallW; x++) {
-                let idx = y * smallW + x;
+                const idx = y * smallW + x;
+                
                 if (colorMask[idx] === 1 && visited[idx] === 0) {
-                    let queue = [{x, y}];
+                    // BFS
+                    const queue = [{x, y}];
                     let minX = x, maxX = x, minY = y, maxY = y;
                     let pixelCount = 0;
                     visited[idx] = 1;
                     
                     while (queue.length > 0) {
-                        let p = queue.shift();
+                        const p = queue.shift();
                         pixelCount++;
                         
                         if (p.x < minX) minX = p.x;
@@ -1537,14 +2191,16 @@
                         if (p.y < minY) minY = p.y;
                         if (p.y > maxY) maxY = p.y;
                         
-                        let neighbors = [
-                            {x: p.x+1, y: p.y}, {x: p.x-1, y: p.y},
-                            {x: p.x, y: p.y+1}, {x: p.x, y: p.y-1}
+                        const neighbors = [
+                            {x: p.x+1, y: p.y}, 
+                            {x: p.x-1, y: p.y},
+                            {x: p.x, y: p.y+1}, 
+                            {x: p.x, y: p.y-1}
                         ];
                         
-                        for (let n of neighbors) {
+                        for (const n of neighbors) {
                             if (n.x >= 0 && n.x < smallW && n.y >= 0 && n.y < smallH) {
-                                let nIdx = n.y * smallW + n.x;
+                                const nIdx = n.y * smallW + n.x;
                                 if (colorMask[nIdx] === 1 && visited[nIdx] === 0) {
                                     visited[nIdx] = 1;
                                     queue.push(n);
@@ -1553,33 +2209,196 @@
                         }
                     }
                     
-                    let area = (maxX - minX + 1) * (maxY - minY + 1);
-                    if (pixelCount > 150 && area > 300) {
-                        let srcScaleX = textW / smallW;
-                        let srcScaleY = textH / smallH;
+                    // Tik pakankamai dideli regionai
+                    const area = (maxX - minX + 1) * (maxY - minY + 1);
+                    if (pixelCount > 200 && area > 400) {
+                        const srcScaleX = textW / smallW;
+                        const srcScaleY = textH / smallH;
                         
-                        let imgSrcX = minX * srcScaleX;
-                        let imgSrcY = minY * srcScaleY;
-                        let imgSrcW = (maxX - minX + 1) * srcScaleX;
-                        let imgSrcH = (maxY - minY + 1) * srcScaleY;
+                        const imgSrcX = minX * srcScaleX;
+                        const imgSrcY = minY * srcScaleY;
+                        const imgSrcW = (maxX - minX + 1) * srcScaleX;
+                        const imgSrcH = (maxY - minY + 1) * srcScaleY;
                         
-                        let imgDestX = imageDrawInfo.drawX + imgSrcX * scaleX;
-                        let imgDestY = imageDrawInfo.drawY + imgSrcY * scaleY;
-                        let imgDestW = imgSrcW * scaleX;
-                        let imgDestH = imgSrcH * scaleY;
+                        const imgDestX = imageDrawInfo.drawX + imgSrcX * scaleX;
+                        const imgDestY = imageDrawInfo.drawY + imgSrcY * scaleY;
+                        const imgDestW = imgSrcW * scaleX;
+                        const imgDestH = imgSrcH * scaleY;
                         
+                        // Nupiešiame spalvotą regioną
                         ctx.drawImage(
                             warpedColorCanvas,
                             imgSrcX, imgSrcY, imgSrcW, imgSrcH,
                             imgDestX, imgDestY, imgDestW, imgDestH
                         );
+                        
+                        regionsCount++;
                     }
                 }
             }
         }
+        
+        console.log(`Aptikta ${regionsCount} spalvotų regionų`);
     }
 
-    translateActionBtn.addEventListener('click', () => { runTranslation(langSelect.value, languagesMap[langSelect.value]); });
+    // ============================================================
+    // VERČIAME IR PIEŠIAME PASTRAIPAS
+    // ============================================================
+    async function translateAndDrawParagraphs(paragraphs, targetLang, ctx) {
+        // Verčiame kiekvieną pastraipą atskirai
+        // DeepL leidžia iki 50 vienu metu, bet mes verčiame po vieną, kad išlaikytume tvarką
+        
+        const translations = [];
+        
+        for (let i = 0; i < paragraphs.length; i++) {
+            const para = paragraphs[i];
+            
+            try {
+                let bodyData = `text=${encodeURIComponent(para.text)}&source_lang=LT&target_lang=${targetLang}`;
+                let res = await fetch(WORKER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: bodyData
+                });
+                
+                if (res.ok) {
+                    let data = await res.json();
+                    translations.push(data.translations[0].text);
+                } else {
+                    translations.push(para.text);
+                }
+            } catch(e) {
+                console.error("Vertimo klaida:", e);
+                translations.push(para.text);
+            }
+        }
+        
+        // Dabar piešiame kiekvieną išverstą pastraipą į jos vietą
+        const scaleX = imageDrawInfo.finalW / imageDrawInfo.textW;
+        const scaleY = imageDrawInfo.finalH / imageDrawInfo.textH;
+        
+        for (let i = 0; i < paragraphs.length; i++) {
+            const p = paragraphs[i];
+            const translatedText = translations[i] || p.text;
+            
+            // Pastraipos vieta A4 lapo koordinatėmis
+            const paraX = imageDrawInfo.drawX + p.x * scaleX;
+            const paraY = imageDrawInfo.drawY + p.y * scaleY;
+            const paraW = p.width * scaleX;
+            const paraH = p.height * scaleY;
+            
+            if (paraW < 20 || paraH < 5) continue;
+            
+            // ============================================================
+            // AUTOMATINIS ŠRIFTO MAŽINIMAS KAD TILPTŲ Į ORIGINALIĄ VIETĄ
+            // ============================================================
+            let fontSize = Math.max(8, Math.min(30, paraH * 0.6));
+            let lineHeight = fontSize * 1.3;
+            let lines = [];
+            
+            // Bandome skirtingus šrifto dydžius, kol tekstas tilps
+            while (fontSize >= 6) {
+                ctx.font = `${fontSize}px Arial`;
+                lineHeight = fontSize * 1.3;
+                lines = wrapTextToLines(ctx, translatedText, paraW);
+                
+                const totalHeight = lines.length * lineHeight;
+                
+                if (totalHeight <= paraH) {
+                    break; // Telpa
+                }
+                
+                fontSize -= 0.5;
+            }
+            
+            // Galutinis šriftas
+            ctx.font = `${fontSize}px Arial`;
+            ctx.fillStyle = 'black';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            
+            // Piešiame eilutes
+            let y = paraY;
+            const lineHeightFinal = fontSize * 1.3;
+            
+            for (const line of lines) {
+                if (y + lineHeightFinal > paraY + paraH + lineHeightFinal * 1.2) break;
+                ctx.fillText(line, paraX, y);
+                y += lineHeightFinal;
+            }
+        }
+    }
+
+    // ============================================================
+    // TEKSTO SKAIDYMAS Į EILUTES
+    // ============================================================
+    function wrapTextToLines(ctx, text, maxWidth) {
+        const words = text.split(/\s+/);
+        const lines = [];
+        let currentLine = '';
+        
+        for (const word of words) {
+            if (!word) continue;
+            
+            const testLine = currentLine ? currentLine + ' ' + word : word;
+            const metrics = ctx.measureText(testLine);
+            
+            if (metrics.width > maxWidth && currentLine) {
+                lines.push(currentLine);
+                currentLine = word;
+            } else {
+                currentLine = testLine;
+            }
+        }
+        
+        if (currentLine) lines.push(currentLine);
+        return lines;
+    }
+
+    // ============================================================
+    // FALLBACK - PIEŠIAME VISĄ TEKSTĄ VIENAME BLOKE
+    // ============================================================
+    function drawFullText(ctx, finalOutputText) {
+        const textX = imageDrawInfo.drawX + 20;
+        const textY = imageDrawInfo.drawY + 20;
+        const textW = imageDrawInfo.finalW - 40;
+        const textH = imageDrawInfo.finalH - 40;
+        
+        let fontSize = 14;
+        let lines = [];
+        let lineHeight = fontSize * 1.4;
+        
+        // Bandome skirtingus dydžius
+        while (fontSize >= 8) {
+            ctx.font = `${fontSize}px Arial`;
+            lineHeight = fontSize * 1.4;
+            lines = wrapTextToLines(ctx, finalOutputText, textW);
+            
+            const totalHeight = lines.length * lineHeight;
+            if (totalHeight <= textH) break;
+            
+            fontSize -= 1;
+        }
+        
+        ctx.font = `${fontSize}px Arial`;
+        ctx.fillStyle = 'black';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        
+        let y = textY;
+        for (const line of lines) {
+            if (y + lineHeight > textY + textH + lineHeight) break;
+            ctx.fillText(line, textX, y);
+            y += lineHeight;
+        }
+    }
+
+    // ============================================================
+    // VERTIMO MYGTUKAS
+    // ============================================================
+    translateActionBtn.addEventListener('click', () => { 
+        runTranslation(langSelect.value, languagesMap[langSelect.value]); 
+    });
 
     // ============================================================
     // SPAUSDINIMAS
@@ -1631,7 +2450,11 @@
                 });
             }
             const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pdf = new jsPDF({ 
+                orientation: 'portrait', 
+                unit: 'mm', 
+                format: 'a4' 
+            });
             let imgData = translatedCanvasSnapshot.toDataURL('image/jpeg', 0.95);
             pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
             let timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
