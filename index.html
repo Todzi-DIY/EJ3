@@ -5,47 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>VERTĖJAS PRO</title>
 
-<!-- OpenCV.js su krovimo patikrinimu -->
-<script>
-  // Globalus kintamasis - ar OpenCV užsikrovė
-  window.cvReady = false;
-  window.cvLoadError = null;
-  
-  // Laiko limitas OpenCV krovimui (15 sek.)
-  setTimeout(function() {
-    if (!window.cvReady) {
-      window.cvLoadError = 'OpenCV.js neužsikrovė per 15 sek.';
-      console.error('[VERTĖJAS] ❌ OpenCV.js neužsikrovė per 15 sek.');
-      var statusEl = document.getElementById('cvStatus');
-      if (statusEl) {
-        statusEl.style.display = 'block';
-        statusEl.style.background = '#E91E63';
-        statusEl.innerText = '⚠️ OpenCV.js neužsikrovė. Vaizdo apdorojimas neveiks, bet OCR ir vertimas veiks.';
-      }
-    }
-  }, 15000);
-  
-  // OpenCV krovimo callback
-  window.onOpenCvReady = function() {
-    console.log('[VERTĖJAS] OpenCV.js onload iškviestas');
-    if (typeof cv !== 'undefined' && cv.then) {
-      cv.then(() => {
-        window.cvReady = true;
-        console.log('[VERTĖJAS] ✅ OpenCV.js pilnai paruoštas');
-        var statusEl = document.getElementById('cvStatus');
-        if (statusEl) statusEl.style.display = 'none';
-      });
-    } else if (typeof cv !== 'undefined') {
-      window.cvReady = true;
-      console.log('[VERTĖJAS] ✅ OpenCV.js paruoštas (sinchroninis)');
-      var statusEl = document.getElementById('cvStatus');
-      if (statusEl) statusEl.style.display = 'none';
-    }
-  };
-</script>
-
-<script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady();" onerror="window.cvLoadError='OpenCV.js krovimo klaida'; console.error('[VERTĖJAS] ❌ OpenCV.js krovimo klaida');"></script>
-
+<script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady();"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -717,24 +677,6 @@
     word-wrap: break-word;
   }
 
-  #cvStatus {
-    position: fixed;
-    top: 80px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #E91E63;
-    color: white;
-    padding: 12px 20px;
-    border-radius: 8px;
-    font-weight: bold;
-    z-index: 999;
-    font-size: 13px;
-    display: none;
-    max-width: 90%;
-    text-align: center;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.6);
-  }
-
   #progressBarContainer {
     width: 100%;
     max-width: 750px;
@@ -784,7 +726,6 @@
 <body>
 
   <div id="toastMsg"></div>
-  <div id="cvStatus">Laukiama OpenCV.js...</div>
   
   <!-- ============================================================
        TELEMETRIJOS BLOKAS
@@ -1005,6 +946,7 @@
     // ============================================================
     // BŪSENOS KINTAMIEJI
     // ============================================================
+    let cvReady = false;
     let ocrWorker = null;
     let toastTimer = null;
 
@@ -1570,13 +1512,22 @@
     });
 
     // ============================================================
-    // OPENCV.JS PATIKRINIMAS
+    // OPENCV.JS PARUOŠIMAS
     // ============================================================
-    function isCvReady() {
-        return window.cvReady === true && typeof cv !== 'undefined' && cv.Mat;
+    function onOpenCvReady() {
+        log('OpenCV.js paruoštas');
+        if (typeof cv !== 'undefined' && cv.then) {
+            cv.then(() => {
+                cvReady = true;
+                log('✅ OpenCV.js pilnai paruoštas');
+            });
+        } else {
+            cvReady = true;
+            log('✅ OpenCV.js paruoštas (sinchroninis)');
+        }
     }
          // ============================================================
-    // MODULIS 1: DOKUMENTO KRAŠTŲ APTIKIMAS
+    // MODULIS 1: DOKUMENTO KRAŠTŲ APTIKIMAS (PATAISYTAS)
     // ============================================================
     function detectDocumentBounds(canvas) {
         log('--- MODULIS 1: Kraštų aptikimas ---');
@@ -1585,7 +1536,7 @@
         const H = canvas.height;
         
         // ============================================================
-        // METODAS A: Šviesaus regiono (popieriaus) paieška
+        // NAUJAS METODAS: ieškome šviesiausio regiono (popieriaus)
         // ============================================================
         try {
             log('Bandome šviesaus regiono metodą...');
@@ -1601,6 +1552,7 @@
             
             let minX = smallW, maxX = 0, minY = smallH, maxY = 0;
             let found = false;
+            let totalBright = 0;
             let brightCount = 0;
             
             for (let y = 0; y < smallH; y++) {
@@ -1611,6 +1563,9 @@
                     const b = sData[idx + 2];
                     const brightness = (r + g + b) / 3;
                     
+                    totalBright += brightness;
+                    
+                    // Baltas popierius: šviesus ir be spalvų
                     if (brightness > 140) {
                         if (x < minX) minX = x;
                         if (x > maxX) maxX = x;
@@ -1622,9 +1577,12 @@
                 }
             }
             
+            const avgBright = totalBright / (smallW * smallH);
             const brightPercent = (brightCount / (smallW * smallH)) * 100;
-            log(`Šviesių pikselių: ${brightPercent.toFixed(1)}%`);
             
+            log(`Vidutinis šviesumas: ${avgBright.toFixed(1)}, šviesių pikselių: ${brightPercent.toFixed(1)}%`);
+            
+            // Naudojame tik jei rastas pakankamai didelis šviesus regionas
             if (found && (maxX - minX) > 20 && (maxY - minY) > 20 && brightPercent > 15) {
                 log(`✅ Rastas šviesus regionas: ${minX},${minY} - ${maxX},${maxY}`);
                 
@@ -1644,9 +1602,9 @@
         }
         
         // ============================================================
-        // METODAS B: Canny + kontūrai (jei OpenCV veikia)
+        // SENAS METODAS: Canny + kontūrai
         // ============================================================
-        if (!isCvReady()) {
+        if (!cvReady) {
             log('⚠️ OpenCV neparuoštas, naudojamas visas plotas');
             return [
                 {x: 0, y: 0},
@@ -1762,6 +1720,10 @@
             pts[diff.indexOf(Math.min(...diff))]
         ];
     }
+    
+    function dist(a, b) { 
+        return Math.hypot(a.x - b.x, a.y - b.y); 
+    }
 
     // ============================================================
     // MODULIS 2: PERSPEKTYVOS KOREKCIJA (WARP)
@@ -1822,6 +1784,7 @@
         
         warpedColorCanvas = colorCanvas;
 
+        // A4 portretinis formatas
         let canvasW = 1240;
         let canvasH = 1754;
         
@@ -1849,6 +1812,7 @@
         
         scannedImageData = ctx.getImageData(0, 0, canvasW, canvasH);
         
+        // Sukuriame deskewed versiją
         deskewedCanvas = document.createElement('canvas');
         deskewedCanvas.width = canvasW;
         deskewedCanvas.height = canvasH;
@@ -1863,7 +1827,7 @@
     function deskewImage(canvas) {
         log('--- MODULIS 3: Deskew ---');
         
-        if (!isCvReady()) {
+        if (!cvReady) {
             log('⚠️ OpenCV neparuoštas, deskew praleistas');
             return canvas;
         }
@@ -1940,7 +1904,7 @@
     function separateTextFromBackground(canvas) {
         log('--- MODULIS 4: Fono atskyrimas ---');
         
-        if (!isCvReady()) {
+        if (!cvReady) {
             log('⚠️ OpenCV neparuoštas, praleidžiama');
             return canvas;
         }
@@ -2014,7 +1978,7 @@
             const words = parseTSV(data.tsv || '');
             log(`✅ Nuskaityta ${words.length} žodžių`);
             
-            if (isCvReady() && window.textMaskMat && words.length > 0) {
+            if (cvReady && window.textMaskMat && words.length > 0) {
                 analyzeStrokeWidth(words);
             }
             
@@ -2062,10 +2026,14 @@
         return words;
     }
     
+    // ============================================================
+    // PATAISYTAS BOLD APTIKIMAS (slenkstis 0.65)
+    // ============================================================
     function analyzeStrokeWidth(words) {
         log('Analizuojamas šrifto storis...');
         
         const mask = window.textMaskMat;
+        
         if (!mask) {
             log('⚠️ Kaukės nėra, bold praleistas');
             return;
@@ -2096,6 +2064,7 @@
                 }
                 
                 const density = textPixels / totalPixels;
+                // PATAISYMAS: slenkstis 0.65 (buvo 0.35)
                 word.isBold = density > 0.65;
                 
                 roi.delete();
@@ -2198,7 +2167,7 @@
             setProgress(30, 'Aptinkamas dokumento rėmelis...');
             translateOverlayText.innerText = "Aptinkamas dokumento rėmelis...";
             
-            // 3. Automatinis kraštų aptikimas
+            // 3. Automatinis kraštų aptikimas (PATAISYTAS)
             currentDocPoly = detectDocumentBounds(originalUnblurredCanvas);
             
             setProgress(45, 'Išlyginamas dokumentas...');
@@ -2247,7 +2216,8 @@
             isProcessing = false;
         }
     }
-         // ============================================================
+
+    // ============================================================
     // KOREGAVIMO RĖMELIO UI
     // ============================================================
     function drawAlignUI() {
@@ -2412,8 +2382,7 @@
             executeWarpAndFilter(currentDocPoly);
         }
     });
-
-    // ============================================================
+         // ============================================================
     // MODULIS 6: VERTIMAS IR TEKSTO ATKŪRIMAS
     // ============================================================
     async function runTranslation(targetLang, langName) {
@@ -2464,7 +2433,7 @@
             ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, canvasW, canvasH);
             
-            // 2. Nupiešiame spalvotus regionus
+            // 2. Nupiešiame spalvotus regionus (paveikslėlius) su filtravimu
             drawColoredRegions(ctx);
             
             setProgress(60, 'Atkuriamas tekstas...');
@@ -2481,6 +2450,7 @@
             
             setProgress(95, 'Baigiama...');
             
+            // 4. Snapshot PDF
             translatedCanvasSnapshot = document.createElement('canvas');
             translatedCanvasSnapshot.width = canvasW;
             translatedCanvasSnapshot.height = canvasH;
@@ -2560,7 +2530,7 @@
     }
 
     // ============================================================
-    // PAVEIKSLĖLIŲ ATPAŽINIMAS (SU FILTRAVIMU)
+    // PAVEIKSLĖLIŲ ATPAŽINIMAS (SU PATAISYTU FILTRAVIMU)
     // ============================================================
     function drawColoredRegions(ctx) {
         if (!warpedColorCanvas) return;
@@ -2588,6 +2558,7 @@
             const minRGB = Math.min(r, g, b);
             const saturation = maxRGB - minRGB;
             
+            // Spalvotas (ryškus, ne per tamsus/šviesus)
             if (saturation > 60 && maxRGB > 80 && minRGB < 220) {
                 colorMask[i / 4] = 1;
             }
@@ -2636,10 +2607,18 @@
                         }
                     }
                     
+                    // ============================================================
+                    // PATAISYTAS FILTRAVIMAS
+                    // ============================================================
                     const area = (maxX - minX + 1) * (maxY - minY + 1);
                     const w = maxX - minX + 1;
                     const h = maxY - minY + 1;
                     const aspectRatio = Math.max(w / h, h / w);
+                    
+                    // Filtrai:
+                    // - Pakankamai didelis (ne 1 px)
+                    // - Ne per plonas (aspect ratio < 8)
+                    // - Užima pakankamą plotą (density > 20%)
                     const density = pixelCount / area;
                     
                     if (pixelCount > 200 && 
@@ -2727,6 +2706,7 @@
             
             if (paraW < 20 || paraH < 5) continue;
             
+            // Automatinis šrifto mažinimas
             let fontSize = Math.max(8, Math.min(30, paraH * 0.6));
             let lineHeight = fontSize * 1.3;
             let lines = [];
@@ -2908,33 +2888,8 @@
     log('Puslapis įkeltas');
     log('Laukiama OpenCV.js...');
     
-    // Patikriname OpenCV būseną
-    if (isCvReady()) {
-        log('✅ OpenCV jau paruoštas');
-        document.getElementById('cvStatus').style.display = 'none';
-    } else {
-        log('⏳ OpenCV dar nesikrovė');
-        // Rodome pranešimą, kad laukiama
-        const statusEl = document.getElementById('cvStatus');
-        statusEl.style.display = 'block';
-        statusEl.style.background = '#FF9800';
-        statusEl.innerText = '⏳ Laukiama OpenCV.js...';
-        
-        // Tikriname kas 500ms
-        let cvCheckCount = 0;
-        const cvCheckInterval = setInterval(() => {
-            cvCheckCount++;
-            if (isCvReady()) {
-                clearInterval(cvCheckInterval);
-                log('✅ OpenCV paruoštas (patikrintas)');
-                statusEl.style.display = 'none';
-            } else if (cvCheckCount > 30) {
-                clearInterval(cvCheckInterval);
-                log('❌ OpenCV neužsikrovė per 15 sek.');
-                statusEl.style.background = '#E91E63';
-                statusEl.innerText = '⚠️ OpenCV.js neužsikrovė. Vaizdo apdorojimas neveiks, bet OCR ir vertimas veiks.';
-            }
-        }, 500);
+    if (typeof cv !== 'undefined' && cv.Mat) {
+        onOpenCvReady();
     }
     
   </script>
