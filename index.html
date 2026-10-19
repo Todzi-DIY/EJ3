@@ -148,7 +148,6 @@
     }
   }
 
-  /* „Įjunkite EJ3 įrenginį!" – ANT raudono rėmelio, didesnis už jį */
   #offlineAlert {
     display: none;
     position: absolute;
@@ -780,6 +779,9 @@
     display: none;
   }
 
+  /* ============================================================
+     PRIVALOMAS REGISTRACIJOS MODALAS
+     ============================================================ */
   #registrationModal {
     display: none;
     position: fixed;
@@ -855,6 +857,7 @@
   #regSaveBtn:active { transform: scale(0.98); }
   #regSaveBtn:disabled { background: #333; cursor: not-allowed; opacity: 0.6; }
 
+  /* Registracijos modalo IP eilutė su info ikonėle */
   .reg-ip-row {
     display: flex;
     align-items: center;
@@ -869,18 +872,20 @@
     text-align: center;
     flex: 0 1 auto;
   }
+
+  /* INFO IKONĖLĖ – DIDESNĖ PRISILIETIMO ZONA */
   .reg-info-icon {
     flex-shrink: 0;
-    width: 32px;
-    height: 32px;
-    min-width: 32px;
-    min-height: 32px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
     border-radius: 50%;
     background-color: rgba(33, 150, 243, 0.25);
     border: 2px solid #2196F3;
     color: #2196F3;
     font-weight: bold;
-    font-size: 16px;
+    font-size: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -891,7 +896,12 @@
     position: relative;
     z-index: 10;
     pointer-events: auto;
+    touch-action: manipulation;
     animation: pulseInfo 1.2s ease-in-out infinite;
+    /* papildoma prisilietimo zona aplink ikonėlę */
+    padding: 6px;
+    margin: -6px;
+    box-sizing: content-box;
   }
   .reg-info-icon:active {
     transform: scale(0.9);
@@ -908,13 +918,19 @@
     }
   }
 
+  /* Paslėpti pagrindinį turinį, kol nebaigta registracija (BE overflow: hidden) */
   body.locked .container,
   body.locked #telemetryBox,
   body.locked #settingsIcon {
     display: none !important;
   }
   body.locked {
-    overflow: hidden !important;
+    /* NENAUDOJAME overflow: hidden – kad fullscreen veiktų registracijos modale */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
   }
 
   @media (max-width: 768px) {
@@ -1203,16 +1219,13 @@
     }
 
     // ============================================================
-    // FULLSCREEN – SINCHRONIŠKAI, BE await, ant click/touchend
+    // FULLSCREEN + INFO IKONĖLĖ – VIENAS BENDRAS HANDLER'IS
     // ============================================================
-    // Strategija:
-    //  - Fullscreen bandomas SINCHRONIŠKAI ant click arba touchend
-    //  - NE ant touchstart (per anksti – Chrome Android atmeta)
-    //  - Jei target = #regInfoIcon → rodo info pranešimą, NEJUNGIA fullscreen
-    //  - Jei nepavyksta → bandome vėl kitame geste (neblokuojame)
+    // Fullscreen veikia ir registracijos modale, ir pagrindiniame puslapyje.
+    // Info ikonėlė – daugkartinis paspaudimas (infoIconJustClicked atstatomas).
     // ============================================================
     let fullscreenActivated = false;
-    let infoIconJustClicked = false;
+    let infoIconClickedRecently = false;
 
     function tryFullscreen(e) {
       // Jei jau fullscreen – nieko
@@ -1221,9 +1234,9 @@
         return;
       }
 
-      // Jei ką tik buvo paspausta info ikonėlė – nefullscreen
-      if (infoIconJustClicked) {
-        infoIconJustClicked = false;
+      // Jei ką tik buvo paspausta info ikonėlė – nefullscreen ŠĮ KARTĄ
+      if (infoIconClickedRecently) {
+        infoIconClickedRecently = false;
         return;
       }
 
@@ -1252,11 +1265,15 @@
       }
     }
 
-    // Info ikonėlė – atskiras handler'is, kuris pažymi vėliavėlę
+    // Info ikonėlė – daugkartinis paspaudimas
     function handleInfoIconClick(e) {
       if (!e.target || !e.target.closest || !e.target.closest('#regInfoIcon')) return;
-      infoIconJustClicked = true;
+
+      infoIconClickedRecently = true;
+
+      try { e.preventDefault(); } catch(_) {}
       try { e.stopPropagation(); } catch(_) {}
+      try { e.stopImmediatePropagation(); } catch(_) {}
 
       const html = `
         <div class="info-title">IP adresą sužinoti galite:</div>
@@ -1264,6 +1281,9 @@
         <div class="info-line"><span class="info-bullet">•</span> prisijungiant prie EJ3 įrenginio su <span class="info-strong">NFC</span></div>
       `;
       showInfoToast(html, 6000);
+
+      // Po 500 ms atstatome vėliavėlę, kad antras paspaudimas vėl veiktų
+      setTimeout(() => { infoIconClickedRecently = false; }, 500);
     }
 
     // Registruojame abu – info handler'is pirmas, fullscreen – antras
