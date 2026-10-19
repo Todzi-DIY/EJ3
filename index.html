@@ -606,56 +606,6 @@
     box-shadow: 0 4px 15px rgba(0,0,0,0.8); 
   }
 
-  #printerModal { 
-    display: none; 
-    position: fixed; 
-    top: 0; 
-    left: 0; 
-    width: 100vw; 
-    height: 100vh; 
-    background-color: rgba(0, 0, 0, 0.95); 
-    z-index: 400; 
-    flex-direction: column; 
-    align-items: center; 
-    justify-content: center; 
-    padding: 20px; 
-  }
-  #printerModal .modal-box { 
-    background: #1a1a1a; 
-    border: 2px solid #4CAF50; 
-    padding: 30px; 
-    border-radius: 12px; 
-    width: 100%; 
-    max-width: 500px; 
-    text-align: center; 
-  }
-  #printerModal h3 { color: #4CAF50; margin-top: 0; }
-  #printerModal input, #printerModal select { 
-    width: 100%; 
-    padding: 12px; 
-    margin: 10px 0; 
-    background: #222; 
-    color: white; 
-    border: 1px solid #444; 
-    border-radius: 6px; 
-    font-size: 14px; 
-  }
-  #printerModal .modal-actions { 
-    display: flex; 
-    gap: 10px; 
-    margin-top: 20px; 
-  }
-  #printerModal .modal-actions button { 
-    flex: 1; 
-    padding: 12px; 
-    font-weight: bold; 
-    border: none; 
-    border-radius: 6px; 
-    cursor: pointer; 
-  }
-  #printerModal .btn-save { background: #4CAF50; color: white; }
-  #printerModal .btn-cancel { background: #555; color: white; }
-
   #toastMsg {
     position: fixed; 
     top: 80px; 
@@ -857,40 +807,9 @@
        ============================================================ -->
   <div id="settingsModal">
     <h2 style="color:white; letter-spacing:2px; margin-bottom: 30px;">NUSTATYMAI</h2>
-    <button id="printerSettingsBtn" class="modal-btn" style="background-color: #9C27B0; padding: 15px 30px; margin-bottom: 20px; width: 80%; max-width: 300px;">🖨 SPAUSDINTUVAS</button>
     <button id="openWifiBtn" class="modal-btn" style="background-color: #2196F3; padding: 15px 30px; margin-bottom: 20px; width: 80%; max-width: 300px;">📶 Išsaugoti WIFI tinklai</button>
     <button id="otaUpdateBtn" class="modal-btn" style="background-color: #00796B; padding: 15px 30px; margin-bottom: 30px; width: 80%; max-width: 300px;">🛠 Sistemos atnaujinimas</button>
     <button id="closeSettingsBtn" class="close-modal-btn" style="width: 80%; max-width: 300px;">UŽDARYTI</button>
-  </div>
-
-  <!-- ============================================================
-       SPAUSDINTUVO NUSTATYMŲ MODALAS (PATAISYTAS)
-       ============================================================ -->
-  <div id="printerModal">
-    <div class="modal-box">
-      <h3>🖨 SPAUSDINTUVO NUSTATYMAI</h3>
-      <p style="color:#ccc; font-size:13px;">Įveskite spausdintuvo pavadinimą, kurį matote telefone. Šis pavadinimas bus išsaugotas ir naudojamas ateityje.</p>
-      
-      <label style="color:#aaa; font-size:12px; text-align:left; display:block; margin-top:15px;">Spausdintuvo pavadinimas (iš telefono nustatymų):</label>
-      <input type="text" id="printerNameInput" placeholder="pvz. HP LaserJet M404">
-      
-      <label style="color:#aaa; font-size:12px; text-align:left; display:block; margin-top:10px;">Popieriaus formatas:</label>
-      <select id="printerPaperSelect">
-        <option value="A4">A4 (210 × 297 mm)</option>
-        <option value="Letter">Letter (215.9 × 279.4 mm)</option>
-      </select>
-
-      <label style="color:#aaa; font-size:12px; text-align:left; display:block; margin-top:10px;">Orientacija:</label>
-      <select id="printerOrientationSelect">
-        <option value="portrait">Stačias (Portrait)</option>
-        <option value="landscape">Gulsčias (Landscape)</option>
-      </select>
-      
-      <div class="modal-actions">
-        <button class="btn-save" id="savePrinterBtn">IŠSAUGOTI</button>
-        <button class="btn-cancel" id="cancelPrinterBtn">ATGAL</button>
-      </div>
-    </div>
   </div>
 
   <!-- ============================================================
@@ -933,6 +852,7 @@
       <button id="otaCloseBtn" class="close-modal-btn" style="margin-top: 0; width: 100%;">UŽDARYTI</button>
     </div>
   </div>
+
     <script>
     // ============================================================
     // KONFIGŪRACIJA
@@ -966,6 +886,8 @@
     let isAlignMode = false;
     let activeDragPoint = -1;
     let isProcessing = false;
+    let extractedTextGlobal = '';
+    let scannedImageData = null;
 
     // ============================================================
     // UTILITY
@@ -1076,42 +998,6 @@
     document.getElementById('closeSettingsBtn').addEventListener('click', () => {
       document.getElementById('settingsModal').style.display = 'none';
       document.getElementById('mainContainer').style.display = 'flex';
-    });
-    
-    // ============================================================
-    // SPAUSDINTUVO NUSTATYMAI (PATAISYTA)
-    // ============================================================
-    document.getElementById('printerSettingsBtn').addEventListener('click', () => {
-      document.getElementById('settingsModal').style.display = 'none';
-      document.getElementById('printerModal').style.display = 'flex';
-      
-      document.getElementById('printerNameInput').value = localStorage.getItem('printer_name') || '';
-      document.getElementById('printerPaperSelect').value = localStorage.getItem('printer_paper') || 'A4';
-      document.getElementById('printerOrientationSelect').value = localStorage.getItem('printer_orientation') || 'portrait';
-    });
-    
-    document.getElementById('savePrinterBtn').addEventListener('click', () => {
-      let name = document.getElementById('printerNameInput').value.trim();
-      let paper = document.getElementById('printerPaperSelect').value;
-      let orientation = document.getElementById('printerOrientationSelect').value;
-      
-      if (!name) { 
-        showToast("Įveskite spausdintuvo pavadinimą"); 
-        return; 
-      }
-      
-      localStorage.setItem('printer_name', name);
-      localStorage.setItem('printer_paper', paper);
-      localStorage.setItem('printer_orientation', orientation);
-      
-      showToast("Spausdintuvo nustatymai išsaugoti!");
-      document.getElementById('printerModal').style.display = 'none';
-      document.getElementById('settingsModal').style.display = 'flex';
-    });
-    
-    document.getElementById('cancelPrinterBtn').addEventListener('click', () => {
-      document.getElementById('printerModal').style.display = 'none';
-      document.getElementById('settingsModal').style.display = 'flex';
     });
     
     // WiFi nustatymai
@@ -2793,25 +2679,19 @@
     });
 
     // ============================================================
-    // SPAUSDINIMAS (PATAISYTA - automatinis spausdinimo langas)
+    // SPAUSDINIMAS (be printerName patikrinimo)
     // ============================================================
     document.getElementById('printBtn').addEventListener('click', () => {
-        if (!translatedCanvasSnapshot && !resultCanvas) {
+        const sourceCanvas = translatedCanvasSnapshot || resultCanvas;
+        if (!sourceCanvas || sourceCanvas.width === 0) {
             showToast("Nėra ką spausdinti");
             return;
         }
 
-        let printerName = localStorage.getItem('printer_name') || '';
         let paperSize = localStorage.getItem('printer_paper') || 'A4';
         let orientation = localStorage.getItem('printer_orientation') || 'portrait';
 
-        if (!printerName) {
-            showToast("Pirmiausia nustatykite spausdintuvą (NUSTATYMAI → 🖨 SPAUSDINTUVAS)");
-            document.getElementById('settingsModal').style.display = 'flex';
-            return;
-        }
-
-        const dataUrl = (translatedCanvasSnapshot || resultCanvas).toDataURL('image/png');
+        const dataUrl = sourceCanvas.toDataURL('image/png');
 
         let iframe = document.getElementById('printIframe');
         if (!iframe) {
@@ -2859,7 +2739,7 @@
         `);
         doc.close();
 
-        showToast("Atidaromas spausdinimo langas. Pasirinkite spausdintuvą: " + printerName);
+        showToast("Atidaromas spausdinimo langas. Pasirinkite spausdintuvą.");
     });
 
     // ============================================================
