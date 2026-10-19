@@ -63,32 +63,70 @@
     display: block; 
   }
 
+  /* ============================================================
+     TELEMETRIJOS BLOKAS
+     ============================================================ */
   #telemetryBox { 
     position: fixed; 
     top: 20px; 
     left: 50%; 
     transform: translateX(-50%); 
-    display: flex; 
-    gap: 15px; 
-    align-items: center; 
     z-index: 100; 
     background: #1a1a1a; 
     padding: 6px 15px; 
     min-height: 44px;
+    min-width: 180px;
     border-radius: 10px; 
     border: 2px solid #333; 
     box-shadow: 0 4px 6px rgba(0,0,0,0.5);
-    transition: border-color 0.3s, box-shadow 0.3s;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   #telemetryBox.disconnected {
     border-color: #E91E63 !important;
     box-shadow: 0 0 12px rgba(233, 30, 99, 0.6) !important;
-    animation: pulseRed 1s infinite;
   }
-  @keyframes pulseRed {
-    0%, 100% { border-color: #E91E63; }
-    50% { border-color: #ff4081; }
+  
+  /* Online telemetrijos turinys */
+  #telemetryOnline {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
   }
+  
+  /* Offline telemetrijos turinys */
+  #telemetryOffline {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    gap: 2px;
+  }
+  #telemetryOffline .offline-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #E91E63;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+  }
+  #telemetryOffline .offline-blink {
+    font-size: 10px;
+    font-weight: bold;
+    color: #ff4081;
+    text-align: center;
+    animation: blinkOffline 1s infinite;
+  }
+  @keyframes blinkOffline {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0.15; }
+  }
+  
   .wifi-icon { 
     display: flex; 
     align-items: flex-end; 
@@ -99,7 +137,7 @@
     width: 4px; 
     background: #555; 
     border-radius: 2px; 
-    transition: background 0.3s; 
+    transition: background 0.2s; 
   }
   
   .bat-container { 
@@ -124,7 +162,7 @@
     height: 100%; 
     background-color: #4CAF50; 
     border-radius: 1px; 
-    transition: width 0.5s ease, background-color 0.5s ease; 
+    transition: width 0.3s ease, background-color 0.3s ease; 
   }
   .bat-tip { 
     position: absolute; 
@@ -799,23 +837,32 @@
        TELEMETRIJOS BLOKAS
        ============================================================ -->
   <div id="telemetryBox" class="disconnected">
-    <div class="wifi-icon" title="Wi-Fi ryšys">
-      <div class="wifi-bar" style="height: 4px;"></div>
-      <div class="wifi-bar" style="height: 8px;"></div>
-      <div class="wifi-bar" style="height: 12px;"></div>
-      <div class="wifi-bar" style="height: 16px;"></div>
+    <!-- Online turinys -->
+    <div id="telemetryOnline">
+      <div class="wifi-icon" title="Wi-Fi ryšys">
+        <div class="wifi-bar" style="height: 4px;"></div>
+        <div class="wifi-bar" style="height: 8px;"></div>
+        <div class="wifi-bar" style="height: 12px;"></div>
+        <div class="wifi-bar" style="height: 16px;"></div>
+      </div>
+      <div style="width: 2px; height: 30px; background: #333; margin: 0 5px;"></div>
+      <div class="bat-container" title="Baterijos lygis">
+        <div class="bat-icon">
+          <div id="batFill" class="bat-fill"></div>
+          <div class="bat-tip"></div>
+          <div id="charging-icon" class="charging-icon">⚡</div>
+        </div>
+        <div class="bat-info">
+          <span id="batText" class="bat-pct">--%</span>
+          <span id="batVolt" class="bat-volt">--V</span>
+        </div>
+      </div>
     </div>
-    <div style="width: 2px; height: 30px; background: #333; margin: 0 5px;"></div>
-    <div class="bat-container" title="Baterijos lygis">
-      <div class="bat-icon">
-        <div id="batFill" class="bat-fill"></div>
-        <div class="bat-tip"></div>
-        <div id="charging-icon" class="charging-icon">⚡</div>
-      </div>
-      <div class="bat-info">
-        <span id="batText" class="bat-pct">--%</span>
-        <span id="batVolt" class="bat-volt">--V</span>
-      </div>
+    
+    <!-- Offline turinys -->
+    <div id="telemetryOffline">
+      <div class="offline-title">EJ3 telemetrija</div>
+      <div class="offline-blink">Offline</div>
     </div>
   </div>
 
@@ -1023,10 +1070,6 @@
         console.log('[VERTĖJAS]', msg);
     }
 
-    function setStatus(msg) {
-        log('STATUS: ' + msg);
-    }
-
     function setProgress(percent, text) {
         const container = document.getElementById('progressBarContainer');
         const fill = document.getElementById('progressBarFill');
@@ -1136,52 +1179,61 @@
         pollTrigger();
       } else {
         registrationModal.style.display = 'flex';
+        setTelemetryOffline();
       }
     }
 
     // ============================================================
-    // TELEMETRIJOS POLLING (greitas atnaujinimas, kai neprisijungta)
+    // TELEMETRIJOS POLLING – GREITAS OFFLINE/ONLINE APTIKIMAS
+    // ============================================================
+    // Strategija:
+    //  - Timeout 800 ms (ESP32 turi atsakyti per 800 ms, kitu atveju laikoma OFFLINE)
+    //  - Poll intervalas:
+    //      * jei ONLINE: 1000 ms
+    //      * jei OFFLINE: 300 ms (greitai atsinaujina, kai ESP32 grįžta)
+    //  - Po 2 klaidų IŠ EILĖS → rodomas OFFLINE blokas
+    //  - Po pirmos sėkmės → IŠKART rodomas ONLINE blokas
     // ============================================================
     let telemetryFailCount = 0;
-    let telemetryLastOk = 0;
+    let telemetryIsOnline = false; // dabartinė būsena
     const TELEMETRY_OK_INTERVAL = 1000;
-    const TELEMETRY_FAIL_INTERVAL = 500;
-    const TELEMETRY_TIMEOUT = 1500;
+    const TELEMETRY_FAIL_INTERVAL = 300;
+    const TELEMETRY_TIMEOUT = 800;
+    const TELEMETRY_FAIL_THRESHOLD = 2; // po 2 klaidų → OFFLINE
 
-    function setTelemetryDisconnected() {
+    function setTelemetryOnline() {
+      if (telemetryIsOnline) return;
+      telemetryIsOnline = true;
       const box = document.getElementById('telemetryBox');
-      if (box) box.classList.add('disconnected');
-      document.querySelectorAll('.wifi-bar').forEach(b => b.style.background = '#555');
-      const batLevel = document.getElementById('batFill');
-      const batText = document.getElementById('batText');
-      const batVolt = document.getElementById('batVolt');
-      const chargeIcon = document.getElementById('charging-icon');
-      if (batLevel) {
-        batLevel.style.width = '0%';
-        batLevel.style.backgroundColor = '#555';
-        batLevel.classList.remove('charging-active');
-      }
-      if (batText) batText.innerText = '--%';
-      if (batVolt) batVolt.innerText = '--V';
-      if (chargeIcon) chargeIcon.style.display = 'none';
+      const online = document.getElementById('telemetryOnline');
+      const offline = document.getElementById('telemetryOffline');
+      if (box) box.classList.remove('disconnected');
+      if (online) online.style.display = 'flex';
+      if (offline) offline.style.display = 'none';
     }
 
-    function setTelemetryConnected() {
+    function setTelemetryOffline() {
+      if (!telemetryIsOnline) return;
+      telemetryIsOnline = false;
       const box = document.getElementById('telemetryBox');
-      if (box) box.classList.remove('disconnected');
+      const online = document.getElementById('telemetryOnline');
+      const offline = document.getElementById('telemetryOffline');
+      if (box) box.classList.add('disconnected');
+      if (online) online.style.display = 'none';
+      if (offline) offline.style.display = 'flex';
     }
 
     function pollTrigger() {
       if (!ESP32_BASE) {
-        setTelemetryDisconnected();
         setTimeout(pollTrigger, 1000);
         return;
       }
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), TELEMETRY_TIMEOUT);
+      const started = Date.now();
 
-      fetch(ESP32_BASE.replace(/\/$/, '') + '/check_trigger?t=' + Date.now(), {
+      fetch(ESP32_BASE.replace(/\/$/, '') + '/check_trigger?t=' + started, {
         cache: 'no-store',
         signal: controller.signal
       })
@@ -1191,9 +1243,9 @@
           return res.json();
         })
         .then(data => {
+            // Sėkmė – atstatome skaitliuką
             telemetryFailCount = 0;
-            telemetryLastOk = Date.now();
-            setTelemetryConnected();
+            setTelemetryOnline();
 
             if (data) {
                 if (data.rssi !== undefined) {
@@ -1213,19 +1265,21 @@
                     let batText = document.getElementById('batText');
                     let batVolt = document.getElementById('batVolt');
                     let chargeIcon = document.getElementById('charging-icon');
-                    batText.innerText = data.bat + '%';
-                    if(data.volt !== undefined) batVolt.innerText = data.volt + 'V';
-                    if (data.charging) {
-                       chargeIcon.style.display = 'block';
-                       batLevel.classList.add('charging-active');
-                       batLevel.style.width = '100%';
-                    } else {
-                       chargeIcon.style.display = 'none';
-                       batLevel.classList.remove('charging-active');
-                       batLevel.style.width = data.bat + '%';
-                       if (data.bat > 50) batLevel.style.backgroundColor = '#4CAF50';
-                       else if (data.bat > 20) batLevel.style.backgroundColor = '#ffeb3b';
-                       else batLevel.style.backgroundColor = '#E91E63';
+                    if (batText) batText.innerText = data.bat + '%';
+                    if (data.volt !== undefined && batVolt) batVolt.innerText = data.volt + 'V';
+                    if (batLevel) {
+                      if (data.charging) {
+                         if (chargeIcon) chargeIcon.style.display = 'block';
+                         batLevel.classList.add('charging-active');
+                         batLevel.style.width = '100%';
+                      } else {
+                         if (chargeIcon) chargeIcon.style.display = 'none';
+                         batLevel.classList.remove('charging-active');
+                         batLevel.style.width = data.bat + '%';
+                         if (data.bat > 50) batLevel.style.backgroundColor = '#4CAF50';
+                         else if (data.bat > 20) batLevel.style.backgroundColor = '#ffeb3b';
+                         else batLevel.style.backgroundColor = '#E91E63';
+                      }
                     }
                 }
             }
@@ -1233,14 +1287,14 @@
         .catch(e => {
             clearTimeout(timeoutId);
             telemetryFailCount++;
-            if (telemetryFailCount >= 1) {
-                setTelemetryDisconnected();
+            if (telemetryFailCount >= TELEMETRY_FAIL_THRESHOLD) {
+                setTelemetryOffline();
             }
         })
         .finally(() => {
-            const interval = telemetryFailCount > 0
-                ? TELEMETRY_FAIL_INTERVAL
-                : TELEMETRY_OK_INTERVAL;
+            const interval = telemetryIsOnline
+                ? TELEMETRY_OK_INTERVAL
+                : TELEMETRY_FAIL_INTERVAL;
             setTimeout(pollTrigger, interval);
         });
     }
@@ -2110,7 +2164,6 @@
     // ============================================================
     async function recognizeTextWithFont(imageSource) {
         log('--- MODULIS 5: OCR su Tesseract.js ---');
-        setStatus('⏳ Atpažįstamas tekstas...');
         setProgress(50, 'OCR: atpažįstamas tekstas...');
         
         try {
@@ -2944,7 +2997,7 @@
     });
 
     // ============================================================
-    // SPAUSDINIMAS (be printerName patikrinimo)
+    // SPAUSDINIMAS
     // ============================================================
     document.getElementById('printBtn').addEventListener('click', () => {
         const sourceCanvas = translatedCanvasSnapshot || resultCanvas;
