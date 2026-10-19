@@ -264,7 +264,6 @@
     animation: chargeAnim 1.5s infinite ease-in-out; 
   }
   
-  /* Pagrindinio puslapio antraštė – PAŠALINTA */
   .title { 
     display: none;
   }
@@ -717,7 +716,6 @@
     word-wrap: break-word;
   }
 
-  /* INFO TOAST – 6 sekundžių pranešimas */
   #infoToast {
     position: fixed; 
     top: 80px; 
@@ -782,9 +780,6 @@
     display: none;
   }
 
-  /* ============================================================
-     PRIVALOMAS REGISTRACIJOS MODALAS
-     ============================================================ */
   #registrationModal {
     display: none;
     position: fixed;
@@ -860,7 +855,6 @@
   #regSaveBtn:active { transform: scale(0.98); }
   #regSaveBtn:disabled { background: #333; cursor: not-allowed; opacity: 0.6; }
 
-  /* Registracijos modalo IP eilutė su info ikonėle */
   .reg-ip-row {
     display: flex;
     align-items: center;
@@ -914,7 +908,6 @@
     }
   }
 
-  /* Paslėpti pagrindinį turinį, kol nebaigta registracija */
   body.locked .container,
   body.locked #telemetryBox,
   body.locked #settingsIcon {
@@ -949,9 +942,6 @@
   <div id="toastMsg"></div>
   <div id="infoToast"></div>
 
-  <!-- ============================================================
-       PRIVALOMAS REGISTRACIJOS MODALAS
-       ============================================================ -->
   <div id="registrationModal">
     <div class="reg-box">
       <h2>REGISTRUOTI ĮRENGINĮ</h2>
@@ -969,9 +959,6 @@
     </div>
   </div>
   
-  <!-- ============================================================
-       TELEMETRIJOS BLOKAS
-       ============================================================ -->
   <div id="telemetryBox" class="disconnected">
     <div id="telemetryOnline">
       <div class="wifi-icon" title="Wi-Fi ryšys">
@@ -1000,13 +987,9 @@
       </div>
     </div>
 
-    <!-- Pranešimas, dengiantis VISĄ raudoną rėmelį (šiek tiek didesnis) -->
     <div id="offlineAlert">Įjunkite EJ3 įrenginį!</div>
   </div>
 
-  <!-- ============================================================
-       NUSTATYMŲ IKONA
-       ============================================================ -->
   <div id="settingsIcon" class="settings-icon">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="3"></circle>
@@ -1014,18 +997,12 @@
     </svg>
   </div>
   
-  <!-- ============================================================
-       PAGRINDINIS PUSLAPIS (be "VERTĖJAS" antraštės)
-       ============================================================ -->
   <div class="container" id="mainContainer">
     <button id="addFileBtnMain" class="action-btn">📁 Pridėkite failą</button>
     <button id="cameraBtnMain" class="action-btn" style="background-color: #4CAF50;">📷 FOTOGRAFUOTI</button>
     <input type="file" id="modalFileInput" accept="image/*" style="display:none;">
   </div>
 
-  <!-- ============================================================
-       KAMEROS MODALAS
-       ============================================================ -->
   <div id="cameraModal" class="modal-overlay">
       <div class="modal-box">
           <div id="closeCameraModalX" class="close-x-icon">
@@ -1044,9 +1021,6 @@
       </div>
   </div>
 
-  <!-- ============================================================
-       KAMEROS BLOKAVIMO MODALAS
-       ============================================================ -->
   <div id="cameraBlockedModal" class="modal-overlay">
       <div class="modal-box" style="border-color: #E91E63; max-width: 450px; align-items: flex-start; padding: 30px 20px; margin: auto;">
           <h3 style="color: #E91E63; margin-top: 0; font-size: 18px; text-transform: uppercase;">DĖMESIO: KAMERA NEPASIEKIAMA!</h3>
@@ -1061,9 +1035,6 @@
       </div>
   </div>
 
-  <!-- ============================================================
-       VERTIMO MODALAS
-       ============================================================ -->
   <div id="translationModal" class="modal-overlay">
       <div class="modal-box">
           
@@ -1104,9 +1075,6 @@
       </div>
   </div>
 
-  <!-- ============================================================
-       NUSTATYMŲ MODALAS
-       ============================================================ -->
   <div id="settingsModal">
     <h2 style="color:white; letter-spacing:2px; margin-bottom: 30px;">NUSTATYMAI</h2>
     <button id="changeDeviceBtn" class="modal-btn" style="background-color: #2196F3; padding: 15px 30px; margin-bottom: 20px; width: 80%; max-width: 300px;">📡 KEISTI EJ3 ĮRENGINĮ</button>
@@ -1115,9 +1083,6 @@
     <button id="closeSettingsBtn" class="close-modal-btn" style="width: 80%; max-width: 300px;">UŽDARYTI</button>
   </div>
 
-  <!-- ============================================================
-       WIFI MODALAS
-       ============================================================ -->
   <div id="wifiModal">
     <h2 style="color: white; letter-spacing: 2px; text-align: center;">IŠSAUGOTI WIFI TINKLAI</h2>
     <div id="wifiListContainer" class="wifi-list"></div>
@@ -1130,9 +1095,6 @@
     <button id="closeWifiBtn" class="close-modal-btn" style="margin-top: 30px; max-width:400px;">ATGAL</button>
   </div>
 
-  <!-- ============================================================
-       OTA (SISTEMOS ATNAUJINIMO) MODALAS
-       ============================================================ -->
   <div id="otaOverlay">
     <div class="upload-modal-box">
       <h3 style="color: white; margin-top: 0; letter-spacing: 1px;">SISTEMOS ATNAUJINIMAS</h3>
@@ -1241,52 +1203,75 @@
     }
 
     // ============================================================
-    // FULLSCREEN + INFO IKONĖLĖ – VIENAS BENDRAS HANDLER'IS
+    // FULLSCREEN – SINCHRONIŠKAI, BE await, ant click/touchend
     // ============================================================
-    // Šis handler'is iškviečiamas ant PIRMO touchstart ir click.
-    // 1. Patikrina, ar target yra #regInfoIcon.
-    // 2. Jei TAIP → rodo info pranešimą, NEJUNGIA fullscreen.
-    // 3. Jei NE → jungia fullscreen (griežtas nuo pirmo prisilietimo).
+    // Strategija:
+    //  - Fullscreen bandomas SINCHRONIŠKAI ant click arba touchend
+    //  - NE ant touchstart (per anksti – Chrome Android atmeta)
+    //  - Jei target = #regInfoIcon → rodo info pranešimą, NEJUNGIA fullscreen
+    //  - Jei nepavyksta → bandome vėl kitame geste (neblokuojame)
     // ============================================================
     let fullscreenActivated = false;
-    let firstGestureHandled = false;
+    let infoIconJustClicked = false;
 
-    function handleFirstGesture(e) {
-      // Jei jau apdorota – nieko nedarom
-      if (firstGestureHandled) return;
-
-      const target = e.target;
-
-      // 1. INFO IKONĖLĖ – rodom pranešimą, NEJUNGiam fullscreen
-      if (target && target.closest && target.closest('#regInfoIcon')) {
-        firstGestureHandled = true;
-        try { e.preventDefault(); } catch(_) {}
-        try { e.stopPropagation(); } catch(_) {}
-        try { e.stopImmediatePropagation(); } catch(_) {}
-
-        const html = `
-          <div class="info-title">IP adresą sužinoti galite:</div>
-          <div class="info-line"><span class="info-bullet">•</span> prisijungiant prie WIFI tinklo <span class="info-strong">„EJ3“</span></div>
-          <div class="info-line"><span class="info-bullet">•</span> prisijungiant prie EJ3 įrenginio su <span class="info-strong">NFC</span></div>
-        `;
-        showInfoToast(html, 6000);
+    function tryFullscreen(e) {
+      // Jei jau fullscreen – nieko
+      if (document.fullscreenElement) {
+        fullscreenActivated = true;
         return;
       }
 
-      // 2. FULLSCREEN – griežtas nuo pirmo prisilietimo
-      firstGestureHandled = true;
-      if (!fullscreenActivated && document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen()
-          .then(() => { fullscreenActivated = true; })
-          .catch(err => {
-            // Jei naršyklė atmeta – leidžiame bandyti dar kartą
-            firstGestureHandled = false;
-          });
+      // Jei ką tik buvo paspausta info ikonėlė – nefullscreen
+      if (infoIconJustClicked) {
+        infoIconJustClicked = false;
+        return;
+      }
+
+      // Jei target yra info ikonėlė – nefullscreen
+      if (e && e.target && e.target.closest && e.target.closest('#regInfoIcon')) {
+        return;
+      }
+
+      // SINCHRONIŠKAI kviečiame requestFullscreen
+      if (document.documentElement.requestFullscreen) {
+        try {
+          const promise = document.documentElement.requestFullscreen();
+          if (promise && promise.then) {
+            promise.then(() => {
+              fullscreenActivated = true;
+              log('✅ Fullscreen įjungtas');
+            }).catch(err => {
+              log('⚠️ Fullscreen nepavyko: ' + err.message);
+            });
+          } else {
+            fullscreenActivated = true;
+          }
+        } catch (err) {
+          log('⚠️ Fullscreen išimtis: ' + err.message);
+        }
       }
     }
 
-    document.addEventListener('touchstart', handleFirstGesture, {capture: true, passive: false});
-    document.addEventListener('click', handleFirstGesture, {capture: true});
+    // Info ikonėlė – atskiras handler'is, kuris pažymi vėliavėlę
+    function handleInfoIconClick(e) {
+      if (!e.target || !e.target.closest || !e.target.closest('#regInfoIcon')) return;
+      infoIconJustClicked = true;
+      try { e.stopPropagation(); } catch(_) {}
+
+      const html = `
+        <div class="info-title">IP adresą sužinoti galite:</div>
+        <div class="info-line"><span class="info-bullet">•</span> prisijungiant prie WIFI tinklo <span class="info-strong">„EJ3“</span></div>
+        <div class="info-line"><span class="info-bullet">•</span> prisijungiant prie EJ3 įrenginio su <span class="info-strong">NFC</span></div>
+      `;
+      showInfoToast(html, 6000);
+    }
+
+    // Registruojame abu – info handler'is pirmas, fullscreen – antras
+    document.addEventListener('click', handleInfoIconClick, true);
+    document.addEventListener('touchend', handleInfoIconClick, true);
+
+    document.addEventListener('click', tryFullscreen, true);
+    document.addEventListener('touchend', tryFullscreen, true);
 
     // ============================================================
     // KLIENTO REGISTRACIJOS PATIKRINIMAS
@@ -1468,9 +1453,6 @@
       if (offline) offline.style.display = 'flex';
     }
 
-    // ============================================================
-    // OFFLINE ALERT – dengia VISĄ raudoną rėmelį (šiek tiek didesnis)
-    // ============================================================
     function showOfflineAlert() {
       const alert = document.getElementById('offlineAlert');
       if (!alert) return;
