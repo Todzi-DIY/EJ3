@@ -83,6 +83,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
   }
   #telemetryBox.disconnected {
     border-color: #E91E63 !important;
@@ -109,6 +110,7 @@
     transition: transform 0.15s ease;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
+    position: relative;
   }
   #telemetryOffline:active {
     transform: scale(0.96);
@@ -151,6 +153,35 @@
       transform: scale(0.94);
       box-shadow: 0 0 3px rgba(233, 30, 99, 0.3);
     }
+  }
+
+  /* Offline pranešimas – rodomas ANT raudono lango (uždengia jį) */
+  #offlineAlert {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #B0003A;
+    color: white;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+    white-space: nowrap;
+    z-index: 5;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.7), 0 0 8px rgba(255, 64, 129, 0.7);
+    border: 2px solid #ff4081;
+    pointer-events: none;
+    animation: alertPop 0.2s ease-out;
+  }
+  #offlineAlert.show {
+    display: block;
+  }
+  @keyframes alertPop {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   }
   
   .wifi-icon { 
@@ -855,7 +886,7 @@
   #regSaveBtn:active { transform: scale(0.98); }
   #regSaveBtn:disabled { background: #333; cursor: not-allowed; opacity: 0.6; }
 
-  /* Registracijos modalо IP eilutė su info ikonėle */
+  /* Registracijos modalo IP eilutė su info ikonėle */
   .reg-ip-row {
     display: flex;
     align-items: center;
@@ -872,8 +903,8 @@
   }
   .reg-info-icon {
     flex-shrink: 0;
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     background-color: rgba(33, 150, 243, 0.2);
     border: 2px solid #2196F3;
@@ -886,11 +917,15 @@
     cursor: pointer;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
+    position: relative;
+    z-index: 10;
+    pointer-events: auto;
+    touch-action: manipulation;
     animation: pulseInfo 1.2s ease-in-out infinite;
-    transition: transform 0.15s;
   }
   .reg-info-icon:active {
     transform: scale(0.9);
+    background-color: rgba(33, 150, 243, 0.4);
   }
   @keyframes pulseInfo {
     0%, 100% { 
@@ -939,7 +974,7 @@
 
       <div class="reg-ip-row">
         <div class="reg-ip-label">Įveskite EJ3 įrenginio IP adresą:</div>
-        <div id="regInfoIcon" class="reg-info-icon" title="Kaip sužinoti IP?">i</div>
+        <div id="regInfoIcon" class="reg-info-icon" role="button" aria-label="Kaip sužinoti IP?">i</div>
       </div>
 
       <input type="text" id="regIpInput" placeholder="pvz. 192.168.1.50" autocomplete="off" inputmode="decimal">
@@ -981,6 +1016,8 @@
         <div class="offline-title">EJ3 telemetrija</div>
         <div class="offline-status">Offline</div>
       </div>
+      <!-- Pranešimas, rodomas ANT raudono lango -->
+      <div id="offlineAlert">Įjunkite EJ3 įrenginį!</div>
     </div>
   </div>
 
@@ -1157,6 +1194,7 @@
     let ocrWorker = null;
     let toastTimer = null;
     let infoToastTimer = null;
+    let offlineAlertTimer = null;
 
     let originalImageElement = null;
     let originalUnblurredCanvas = null;
@@ -1254,14 +1292,18 @@
     const regInfoIcon = document.getElementById('regInfoIcon');
 
     // Info ikonėlės paspaudimas – 5 s pranešimas
-    regInfoIcon.addEventListener('click', () => {
+    // Naudojame ir click, ir touchend, kad veiktų visose platformose
+    function openInfoToast(e) {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
       const html = `
         <div class="info-title">IP adresą sužinoti galite:</div>
         <div class="info-line"><span class="info-bullet">•</span> prisijungiant prie WIFI tinklo <span class="info-strong">„EJ3“</span></div>
         <div class="info-line"><span class="info-bullet">•</span> prisijungiant prie EJ3 įrenginio su <span class="info-strong">NFC</span></div>
       `;
       showInfoToast(html, 5000);
-    });
+    }
+    regInfoIcon.addEventListener('click', openInfoToast);
+    regInfoIcon.addEventListener('touchend', openInfoToast, { passive: false });
 
     function normalizeDeviceUrl(input) {
       let v = input.trim();
@@ -1385,6 +1427,8 @@
         online.style.display = 'flex';
       }
       if (offline) offline.style.display = 'none';
+      // Paslepiame offline alert
+      hideOfflineAlert();
     }
 
     function setTelemetryOffline() {
@@ -1405,9 +1449,28 @@
       if (offline) offline.style.display = 'flex';
     }
 
-    // Paspaudus ant offline langelio – 4 s pranešimas
+    // ============================================================
+    // OFFLINE ALERT – rodomas ANT raudono lango
+    // ============================================================
+    function showOfflineAlert() {
+      const alert = document.getElementById('offlineAlert');
+      if (!alert) return;
+      alert.classList.add('show');
+      if (offlineAlertTimer) clearTimeout(offlineAlertTimer);
+      offlineAlertTimer = setTimeout(() => {
+        alert.classList.remove('show');
+      }, 4000);
+    }
+
+    function hideOfflineAlert() {
+      const alert = document.getElementById('offlineAlert');
+      if (alert) alert.classList.remove('show');
+      if (offlineAlertTimer) { clearTimeout(offlineAlertTimer); offlineAlertTimer = null; }
+    }
+
+    // Paspaudus ant offline langelio – pranešimas ANT jo (uždengia)
     document.getElementById('telemetryOffline').addEventListener('click', () => {
-      showToast('Įjunkite EJ3 įrenginį!', 4000);
+      showOfflineAlert();
     });
 
     function pollTrigger() {
