@@ -651,6 +651,97 @@
     display: none;
   }
 
+  /* ============================================================
+     PRIVALOMAS REGISTRACIJOS MODALAS
+     ============================================================ */
+  #registrationModal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.98);
+    z-index: 2000;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  #registrationModal .reg-box {
+    width: 100%;
+    max-width: 420px;
+    background: #1a1a1a;
+    border: 2px solid #2196F3;
+    border-radius: 12px;
+    padding: 30px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    box-shadow: 0 10px 30px rgba(33, 150, 243, 0.25);
+  }
+  #registrationModal h2 {
+    color: #2196F3;
+    margin: 0 0 5px 0;
+    font-size: 20px;
+    letter-spacing: 1px;
+    text-align: center;
+    text-transform: uppercase;
+  }
+  #registrationModal p {
+    color: #aaa;
+    font-size: 13px;
+    margin: 0;
+    line-height: 1.5;
+    text-align: center;
+  }
+  #registrationModal label {
+    color: #ccc;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: left;
+    margin-bottom: -8px;
+  }
+  #registrationModal input {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    background: #222;
+    color: white;
+    border: 2px solid #444;
+    border-radius: 8px;
+    outline: none;
+    text-align: center;
+    font-family: monospace;
+    letter-spacing: 1px;
+  }
+  #registrationModal input:focus {
+    border-color: #2196F3;
+  }
+  #regStatusMsg {
+    color: #FF9800;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+    min-height: 16px;
+  }
+  #regSaveBtn {
+    background: #2196F3;
+    color: white;
+    width: 100%;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  #regSaveBtn:active { transform: scale(0.98); }
+  #regSaveBtn:disabled { background: #333; cursor: not-allowed; opacity: 0.6; }
+
   @media (max-width: 768px) {
     .title { font-size: 22px; letter-spacing: 2px; margin-bottom: 30px; }
     .action-btn { padding: 16px 12px; font-size: 15px; }
@@ -676,6 +767,23 @@
 <body>
 
   <div id="toastMsg"></div>
+
+  <!-- ============================================================
+       PRIVALOMAS REGISTRACIJOS MODALAS (rodomas pirmą kartą)
+       ============================================================ -->
+  <div id="registrationModal">
+    <div class="reg-box">
+      <h2>REGISTRUOTI ĮRENGINĮ</h2>
+      <p>Įveskite <b>EJ3 įrenginio</b> adresą, kad būtų galima gauti gyvą telemetriją (WiFi, baterija) ir valdyti nustatymus.</p>
+      
+      <label for="regIpInput">EJ3 ĮRENGINIO ADRESAS:</label>
+      <input type="text" id="regIpInput" placeholder="pvz. 192.168.1.50" autocomplete="off" inputmode="decimal">
+      
+      <div id="regStatusMsg"></div>
+      
+      <button id="regSaveBtn">IŠSAUGOTI IR TĘSTI</button>
+    </div>
+  </div>
   
   <!-- ============================================================
        TELEMETRIJOS BLOKAS
@@ -807,7 +915,8 @@
        ============================================================ -->
   <div id="settingsModal">
     <h2 style="color:white; letter-spacing:2px; margin-bottom: 30px;">NUSTATYMAI</h2>
-    <button id="openWifiBtn" class="modal-btn" style="background-color: #2196F3; padding: 15px 30px; margin-bottom: 20px; width: 80%; max-width: 300px;">📶 Išsaugoti WIFI tinklai</button>
+    <button id="changeDeviceBtn" class="modal-btn" style="background-color: #2196F3; padding: 15px 30px; margin-bottom: 20px; width: 80%; max-width: 300px;">📡 KEISTI EJ3 ĮRENGINĮ</button>
+    <button id="openWifiBtn" class="modal-btn" style="background-color: #9C27B0; padding: 15px 30px; margin-bottom: 20px; width: 80%; max-width: 300px;">📶 Išsaugoti WIFI tinklai</button>
     <button id="otaUpdateBtn" class="modal-btn" style="background-color: #00796B; padding: 15px 30px; margin-bottom: 30px; width: 80%; max-width: 300px;">🛠 Sistemos atnaujinimas</button>
     <button id="closeSettingsBtn" class="close-modal-btn" style="width: 80%; max-width: 300px;">UŽDARYTI</button>
   </div>
@@ -940,6 +1049,91 @@
     });
 
     // ============================================================
+    // PRIVALOMAS REGISTRACIJOS MODALAS
+    // ============================================================
+    const registrationModal = document.getElementById('registrationModal');
+    const regIpInput = document.getElementById('regIpInput');
+    const regSaveBtn = document.getElementById('regSaveBtn');
+    const regStatusMsg = document.getElementById('regStatusMsg');
+
+    function normalizeDeviceUrl(input) {
+      let v = input.trim();
+      if (!v) return '';
+      // Jei vartotojas įvedė be protokolo – pridedame http://
+      if (!/^https?:\/\//i.test(v)) {
+        v = 'http://' + v;
+      }
+      // Pašaliname galinį /
+      v = v.replace(/\/+$/, '');
+      return v;
+    }
+
+    async function testDeviceConnection(baseUrl) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const res = await fetch(baseUrl + '/check_trigger?t=' + Date.now(), {
+          cache: 'no-store',
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (!res.ok) return false;
+        const data = await res.json();
+        return data && (data.bat !== undefined || data.rssi !== undefined);
+      } catch (e) {
+        return false;
+      }
+    }
+
+    async function saveRegistration() {
+      const raw = regIpInput.value.trim();
+      if (!raw) {
+        regStatusMsg.style.color = '#E91E63';
+        regStatusMsg.innerText = 'Įveskite EJ3 įrenginio adresą';
+        return;
+      }
+      const baseUrl = normalizeDeviceUrl(raw);
+      regSaveBtn.disabled = true;
+      regStatusMsg.style.color = '#FF9800';
+      regStatusMsg.innerText = 'Tikrinamas ryšys su EJ3 įrenginiu...';
+
+      const ok = await testDeviceConnection(baseUrl);
+
+      if (!ok) {
+        regStatusMsg.style.color = '#E91E63';
+        regStatusMsg.innerText = 'Nepavyksta prisijungti. Patikrinkite adresą ir ar EJ3 įrenginys įjungtas.';
+        regSaveBtn.disabled = false;
+        return;
+      }
+
+      localStorage.setItem('esp32_url', baseUrl);
+      ESP32_BASE = baseUrl;
+      regStatusMsg.style.color = '#4CAF50';
+      regStatusMsg.innerText = '✅ EJ3 įrenginys prijungtas!';
+
+      setTimeout(() => {
+        registrationModal.style.display = 'none';
+        pollTrigger();
+      }, 600);
+    }
+
+    regSaveBtn.addEventListener('click', saveRegistration);
+    regIpInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') saveRegistration();
+    });
+
+    // Jei jau turime išsaugotą EJ3 adresą – parodome pagrindinį puslapį
+    // (bet vis tiek trumpai patikriname ryšį fone)
+    function initApp() {
+      if (ESP32_BASE) {
+        registrationModal.style.display = 'none';
+        pollTrigger();
+      } else {
+        registrationModal.style.display = 'flex';
+      }
+    }
+
+    // ============================================================
     // TELEMETRIJOS POLLING
     // ============================================================
     function pollTrigger() {
@@ -986,7 +1180,6 @@
             }
         }).catch(e => { }).finally(() => { setTimeout(pollTrigger, 1000); });
     }
-    setTimeout(pollTrigger, 500);
 
     // ============================================================
     // NUSTATYMŲ VALDYMAS
@@ -999,10 +1192,20 @@
       document.getElementById('settingsModal').style.display = 'none';
       document.getElementById('mainContainer').style.display = 'flex';
     });
-    
+
+    // Keisti EJ3 įrenginį – atidaro registracijos modalą iš naujo
+    document.getElementById('changeDeviceBtn').addEventListener('click', () => {
+      document.getElementById('settingsModal').style.display = 'none';
+      regIpInput.value = ESP32_BASE ? ESP32_BASE : '';
+      regStatusMsg.innerText = '';
+      regSaveBtn.disabled = false;
+      registrationModal.style.display = 'flex';
+      setTimeout(() => regIpInput.focus(), 100);
+    });
+
     // WiFi nustatymai
     document.getElementById('openWifiBtn').addEventListener('click', () => {
-      if (!ESP32_BASE) { showToast("Nustatykite ESP32 IP"); return; }
+      if (!ESP32_BASE) { showToast("Pirmiausia užregistruokite EJ3 įrenginį"); return; }
       document.getElementById('settingsModal').style.display = 'none';
       document.getElementById('wifiModal').style.display = 'flex';
       loadWifiList();
@@ -1055,7 +1258,7 @@
     // ============================================================
     let selectedOtaFile = null;
     document.getElementById('otaUpdateBtn').addEventListener('click', () => {
-        if (!ESP32_BASE) { showToast("Nustatykite ESP32 IP"); return; }
+        if (!ESP32_BASE) { showToast("Pirmiausia užregistruokite EJ3 įrenginį"); return; }
         document.getElementById('settingsModal').style.display = 'none';
         document.getElementById('otaOverlay').style.display = 'flex';
         document.getElementById('otaSelectFileBtn').style.display = 'inline-block';
@@ -2786,6 +2989,9 @@
     if (typeof cv !== 'undefined' && cv.Mat) {
         onOpenCvReady();
     }
+
+    // Inicializuojame registracijos modalą / pagrindinį puslapį
+    initApp();
     
   </script>
 </body>
