@@ -148,13 +148,10 @@
     }
   }
 
-  /* ============================================================
-     „Įjunkite EJ3 įrenginį!" – ANT raudono rėmelio, ŠIEK TIEK DIDESNIS
-     ============================================================ */
+  /* „Įjunkite EJ3 įrenginį!" – ANT raudono rėmelio, didesnis už jį */
   #offlineAlert {
     display: none;
     position: absolute;
-    /* neigiami offset'ai, kad būtų didesnis už rėmelį */
     top: -8px;
     left: -8px;
     right: -8px;
@@ -267,14 +264,9 @@
     animation: chargeAnim 1.5s infinite ease-in-out; 
   }
   
+  /* Pagrindinio puslapio antraštė – PAŠALINTA (buvo "V E R T Ė J A S", dabar nieko) */
   .title { 
-    font-size: 28px; 
-    margin-bottom: 40px; 
-    letter-spacing: 3px; 
-    font-weight: bold; 
-    color: #4CAF50; 
-    text-transform: uppercase; 
-    text-align: center;
+    display: none;
   }
   
   .action-btn { 
@@ -725,6 +717,7 @@
     word-wrap: break-word;
   }
 
+  /* INFO TOAST – 6 sekundžių pranešimas */
   #infoToast {
     position: fixed; 
     top: 80px; 
@@ -932,7 +925,6 @@
   }
 
   @media (max-width: 768px) {
-    .title { font-size: 22px; letter-spacing: 2px; margin-bottom: 30px; }
     .action-btn { padding: 16px 12px; font-size: 15px; }
     #translationModal .modal-box { padding: 50px 15px 15px 15px; }
     .image-frame { height: min(65vh, 700px); max-width: 98vw; }
@@ -942,7 +934,6 @@
 
   @media (max-width: 480px) {
     .container { padding: 90px 12px 30px 12px; }
-    .title { font-size: 20px; }
     #telemetryBox { padding: 4px 10px; gap: 10px; }
     .image-frame { height: min(60vh, 600px); }
   }
@@ -1024,10 +1015,9 @@
   </div>
   
   <!-- ============================================================
-       PAGRINDINIS PUSLAPIS
+       PAGRINDINIS PUSLAPIS (be "VERTĖJAS" antraštės)
        ============================================================ -->
   <div class="container" id="mainContainer">
-    <div class="title">E J 3</div>
     <button id="addFileBtnMain" class="action-btn">📁 Pridėkite failą</button>
     <button id="cameraBtnMain" class="action-btn" style="background-color: #4CAF50;">📷 FOTOGRAFUOTI</button>
     <input type="file" id="modalFileInput" accept="image/*" style="display:none;">
@@ -1221,7 +1211,7 @@
         toast.innerHTML = html;
         toast.style.display = 'block';
         if(infoToastTimer) clearTimeout(infoToastTimer);
-        infoToastTimer = setTimeout(() => { toast.style.display = 'none'; }, duration || 5000);
+        infoToastTimer = setTimeout(() => { toast.style.display = 'none'; }, duration || 6000);
     }
 
     function log(msg) {
@@ -1251,6 +1241,39 @@
     }
 
     // ============================================================
+    // FULLSCREEN – GRIEŽTAS NUO PIRMO PRILIETIMO
+    // ============================================================
+    // Strategija:
+    //  - Fullscreen įjungiamas ant PIRMO vartotojo gesto (touchstart arba click)
+    //  - BET: jei gestas yra ant info ikonėlės – fullscreen NEJUNGiamas
+    //    (sonic, kad info ikonėlė suveiktų)
+    //  - Po pirmo sėkmingo fullscreen – listener'is pašalinamas
+    // ============================================================
+    let fullscreenActivated = false;
+    let fullscreenAttempted = false;
+
+    function tryActivateFullscreen(e) {
+      if (fullscreenActivated || fullscreenAttempted) return;
+      // NIEKADA nejungti fullscreen, jei paspaudimas ant info ikonėlės
+      if (e && e.target && e.target.closest && e.target.closest('#regInfoIcon')) {
+        return;  // leisti info ikonėlei suveikti
+      }
+      fullscreenAttempted = true;
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen()
+          .then(() => { fullscreenActivated = true; })
+          .catch(err => {
+            // Jei naršyklė atmeta – bandysime dar kartą kitame geste
+            fullscreenAttempted = false;
+          });
+      }
+    }
+
+    // Fullscreen – ant PIRMO touchstart arba click
+    document.addEventListener('touchstart', tryActivateFullscreen, {capture: true, passive: true});
+    document.addEventListener('click', tryActivateFullscreen, {capture: true});
+
+    // ============================================================
     // KLIENTO REGISTRACIJOS PATIKRINIMAS
     // ============================================================
     function isClientRegistered() {
@@ -1277,17 +1300,24 @@
     const regStatusMsg = document.getElementById('regStatusMsg');
     const regInfoIcon = document.getElementById('regInfoIcon');
 
-    // INFO IKONĖLĖ – paprastas click, be jokių trukdžių
-    regInfoIcon.addEventListener('click', function(e) {
+    // INFO IKONĖLĖ – paprastas click, 6 sekundžių pranešimas
+    // Listener'is uždėtas capture fazėje ant document, kad įvyktų
+    // PRIEŠ tryActivateFullscreen
+    function handleInfoIconClick(e) {
+      if (!e.target || !e.target.closest || !e.target.closest('#regInfoIcon')) return;
       e.preventDefault();
       e.stopPropagation();
+      e.stopImmediatePropagation();
       const html = `
         <div class="info-title">IP adresą sužinoti galite:</div>
         <div class="info-line"><span class="info-bullet">•</span> prisijungiant prie WIFI tinklo <span class="info-strong">„EJ3“</span></div>
         <div class="info-line"><span class="info-bullet">•</span> prisijungiant prie EJ3 įrenginio su <span class="info-strong">NFC</span></div>
       `;
-      showInfoToast(html, 5000);
-    });
+      showInfoToast(html, 6000);
+    }
+    // capture: true – suveikia PRIEŠ tryActivateFullscreen (kuris irgi capture, bet pridėtas vėliau)
+    document.addEventListener('click', handleInfoIconClick, {capture: true});
+    document.addEventListener('touchstart', handleInfoIconClick, {capture: true, passive: false});
 
     function normalizeDeviceUrl(input) {
       let v = input.trim();
@@ -1444,7 +1474,7 @@
     }
 
     // ============================================================
-    // OFFLINE ALERT – DIDESNIS UŽ RAUDONĄ RĖMELĮ, ANT JO
+    // OFFLINE ALERT – dengia VISĄ raudoną rėmelį (šiek tiek didesnis)
     // ============================================================
     function showOfflineAlert() {
       const alert = document.getElementById('offlineAlert');
