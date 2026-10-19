@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>VERTĖJAS PRO</title>
+<title>EJ3</title>
 
 <script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady();"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -97,7 +97,6 @@
     width: 100%;
   }
   
-  /* Offline telemetrijos turinys */
   #telemetryOffline {
     display: none;
     flex-direction: column;
@@ -107,10 +106,8 @@
     cursor: pointer;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
-    position: relative;
   }
   
-  /* Raudonas langelis */
   #telemetryOffline .offline-box {
     display: flex;
     flex-direction: column;
@@ -118,15 +115,12 @@
     justify-content: center;
     background-color: #E91E63;
     color: white;
-    padding: 10px 22px;
+    padding: 8px 18px;
     border-radius: 8px;
     text-align: center;
     animation: pulseOffline 1.2s ease-in-out infinite;
     box-shadow: 0 0 10px rgba(233, 30, 99, 0.9);
     gap: 1px;
-    position: relative;
-    min-height: 44px;
-    min-width: 160px;
   }
   #telemetryOffline .offline-box .offline-title {
     font-size: 11px;
@@ -154,30 +148,32 @@
     }
   }
 
-  /* „Įjunkite EJ3 įrenginį!" – VISIŠKAI dengia raudoną langelį */
+  /* ============================================================
+     „Įjunkite EJ3 įrenginį!" – ANT raudono rėmelio, ŠIEK TIEK DIDESNIS
+     ============================================================ */
   #offlineAlert {
     display: none;
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    /* neigiami offset'ai, kad būtų didesnis už rėmelį */
+    top: -8px;
+    left: -8px;
+    right: -8px;
+    bottom: -8px;
     background-color: #B0003A;
     color: white;
-    border-radius: 8px;
-    font-size: 13px;
+    border-radius: 12px;
+    font-size: 15px;
     font-weight: bold;
     text-align: center;
-    z-index: 20;
+    z-index: 200;
     box-shadow: 0 0 25px rgba(255, 64, 129, 1);
     border: 2px solid #ff4081;
     pointer-events: none;
     letter-spacing: 0.3px;
     align-items: center;
     justify-content: center;
-    padding: 6px;
-    line-height: 1.15;
-    box-sizing: border-box;
+    padding: 8px;
+    line-height: 1.2;
   }
   #offlineAlert.show {
     display: flex;
@@ -794,7 +790,7 @@
   }
 
   /* ============================================================
-     PRIVALOMAS REGISTRACIJOS MODALAS su GRIEŽTA APSAUGA
+     PRIVALOMAS REGISTRACIJOS MODALAS
      ============================================================ */
   #registrationModal {
     display: none;
@@ -830,7 +826,6 @@
     letter-spacing: 1px;
     text-align: center;
     text-transform: uppercase;
-    padding-right: 20px;
   }
   #registrationModal input {
     width: 100%;
@@ -926,7 +921,7 @@
     }
   }
 
-  /* Paslėpti pagrindinį turinį, kol nebaigta registracija (apsauga) */
+  /* Paslėpti pagrindinį turinį, kol nebaigta registracija */
   body.locked .container,
   body.locked #telemetryBox,
   body.locked #settingsIcon {
@@ -962,7 +957,6 @@
 
   <div id="toastMsg"></div>
   <div id="infoToast"></div>
-  <div id="offlineAlert">Įjunkite EJ3 įrenginį!</div>
 
   <!-- ============================================================
        PRIVALOMAS REGISTRACIJOS MODALAS
@@ -1014,6 +1008,9 @@
         <div class="offline-status">Offline</div>
       </div>
     </div>
+
+    <!-- Pranešimas, dengiantis VISĄ raudoną rėmelį (šiek tiek didesnis) -->
+    <div id="offlineAlert">Įjunkite EJ3 įrenginį!</div>
   </div>
 
   <!-- ============================================================
@@ -1030,7 +1027,7 @@
        PAGRINDINIS PUSLAPIS
        ============================================================ -->
   <div class="container" id="mainContainer">
-    <div class="title">V E R T Ė J A S</div>
+    <div class="title">E J 3</div>
     <button id="addFileBtnMain" class="action-btn">📁 Pridėkite failą</button>
     <button id="cameraBtnMain" class="action-btn" style="background-color: #4CAF50;">📷 FOTOGRAFUOTI</button>
     <input type="file" id="modalFileInput" accept="image/*" style="display:none;">
@@ -1228,7 +1225,7 @@
     }
 
     function log(msg) {
-        console.log('[VERTĖJAS]', msg);
+        console.log('[EJ3]', msg);
     }
 
     function setProgress(percent, text) {
@@ -1254,26 +1251,6 @@
     }
 
     // ============================================================
-    // APSAUGA: FULLSCREEN TIK KAI NE REGISTRACIJOS MODALE
-    // ============================================================
-    function activateFullscreen(e) {
-      // NIEKADA nejungti fullscreen, jei registracijos modalas matomas
-      const regModal = document.getElementById('registrationModal');
-      if (regModal && regModal.style.display === 'flex') {
-        return;
-      }
-      // NIEKADA nejungti, jei paspausta ant info ikonėlės
-      if (e && e.target && e.target.closest && e.target.closest('#regInfoIcon')) {
-        return;
-      }
-      if (!document.fullscreenElement && document.documentElement.requestFullscreen) { 
-        document.documentElement.requestFullscreen().catch(err => {}); 
-      } 
-    }
-    // TIK 'click' – jokio 'touchstart'
-    document.addEventListener('click', activateFullscreen, {capture: true});
-
-    // ============================================================
     // KLIENTO REGISTRACIJOS PATIKRINIMAS
     // ============================================================
     function isClientRegistered() {
@@ -1284,9 +1261,6 @@
       localStorage.setItem(CLIENT_REGISTERED_KEY, '1');
     }
 
-    // ============================================================
-    // GRIEŽTA APSAUGA – BLOKUOJA PUSLAPĮ, KOL NĖRA REGISTRACIJOS
-    // ============================================================
     function lockBody() {
       document.body.classList.add('locked');
     }
@@ -1313,12 +1287,6 @@
         <div class="info-line"><span class="info-bullet">•</span> prisijungiant prie EJ3 įrenginio su <span class="info-strong">NFC</span></div>
       `;
       showInfoToast(html, 5000);
-    });
-    regInfoIcon.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        regInfoIcon.click();
-      }
     });
 
     function normalizeDeviceUrl(input) {
@@ -1389,29 +1357,24 @@
     });
 
     async function initApp() {
-      // GRIEŽTA APSAUGA: visada rodom registracijos modalą, jei nėra
-      // teisingo ESP32 IP. Niekada neleidžiame patekti į puslapį be jo.
       const registered = isClientRegistered();
       const hasIp = !!ESP32_BASE;
 
       if (registered && hasIp) {
-        // Patikriname, ar IP tikrai atsako (online)
         const ok = await testDeviceConnection(ESP32_BASE);
         if (ok) {
-          lockBody();  // laikinai užrakiname kol rodom
+          lockBody();
           registrationModal.style.display = 'none';
           unlockBody();
           pollTrigger();
           return;
         } else {
-          // IP neatsako – ištriname ir reikalaujame iš naujo
           localStorage.removeItem('esp32_url');
           localStorage.removeItem(CLIENT_REGISTERED_KEY);
           ESP32_BASE = '';
         }
       }
 
-      // Rodome registracijos modalą ir BLOKUOJAME puslapį
       lockBody();
       registrationModal.style.display = 'flex';
       setTelemetryOffline();
@@ -1481,7 +1444,7 @@
     }
 
     // ============================================================
-    // OFFLINE ALERT – dengia VISĄ raudoną langelį (100% × 100%)
+    // OFFLINE ALERT – DIDESNIS UŽ RAUDONĄ RĖMELĮ, ANT JO
     // ============================================================
     function showOfflineAlert() {
       const alert = document.getElementById('offlineAlert');
