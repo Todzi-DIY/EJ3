@@ -264,7 +264,7 @@
     animation: chargeAnim 1.5s infinite ease-in-out; 
   }
   
-  /* Pagrindinio puslapio antraštė – PAŠALINTA (buvo "V E R T Ė J A S", dabar nieko) */
+  /* Pagrindinio puslapio antraštė – PAŠALINTA */
   .title { 
     display: none;
   }
@@ -1241,37 +1241,52 @@
     }
 
     // ============================================================
-    // FULLSCREEN – GRIEŽTAS NUO PIRMO PRILIETIMO
+    // FULLSCREEN + INFO IKONĖLĖ – VIENAS BENDRAS HANDLER'IS
     // ============================================================
-    // Strategija:
-    //  - Fullscreen įjungiamas ant PIRMO vartotojo gesto (touchstart arba click)
-    //  - BET: jei gestas yra ant info ikonėlės – fullscreen NEJUNGiamas
-    //    (sonic, kad info ikonėlė suveiktų)
-    //  - Po pirmo sėkmingo fullscreen – listener'is pašalinamas
+    // Šis handler'is iškviečiamas ant PIRMO touchstart ir click.
+    // 1. Patikrina, ar target yra #regInfoIcon.
+    // 2. Jei TAIP → rodo info pranešimą, NEJUNGIA fullscreen.
+    // 3. Jei NE → jungia fullscreen (griežtas nuo pirmo prisilietimo).
     // ============================================================
     let fullscreenActivated = false;
-    let fullscreenAttempted = false;
+    let firstGestureHandled = false;
 
-    function tryActivateFullscreen(e) {
-      if (fullscreenActivated || fullscreenAttempted) return;
-      // NIEKADA nejungti fullscreen, jei paspaudimas ant info ikonėlės
-      if (e && e.target && e.target.closest && e.target.closest('#regInfoIcon')) {
-        return;  // leisti info ikonėlei suveikti
+    function handleFirstGesture(e) {
+      // Jei jau apdorota – nieko nedarom
+      if (firstGestureHandled) return;
+
+      const target = e.target;
+
+      // 1. INFO IKONĖLĖ – rodom pranešimą, NEJUNGiam fullscreen
+      if (target && target.closest && target.closest('#regInfoIcon')) {
+        firstGestureHandled = true;
+        try { e.preventDefault(); } catch(_) {}
+        try { e.stopPropagation(); } catch(_) {}
+        try { e.stopImmediatePropagation(); } catch(_) {}
+
+        const html = `
+          <div class="info-title">IP adresą sužinoti galite:</div>
+          <div class="info-line"><span class="info-bullet">•</span> prisijungiant prie WIFI tinklo <span class="info-strong">„EJ3“</span></div>
+          <div class="info-line"><span class="info-bullet">•</span> prisijungiant prie EJ3 įrenginio su <span class="info-strong">NFC</span></div>
+        `;
+        showInfoToast(html, 6000);
+        return;
       }
-      fullscreenAttempted = true;
-      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+
+      // 2. FULLSCREEN – griežtas nuo pirmo prisilietimo
+      firstGestureHandled = true;
+      if (!fullscreenActivated && document.documentElement.requestFullscreen) {
         document.documentElement.requestFullscreen()
           .then(() => { fullscreenActivated = true; })
           .catch(err => {
-            // Jei naršyklė atmeta – bandysime dar kartą kitame geste
-            fullscreenAttempted = false;
+            // Jei naršyklė atmeta – leidžiame bandyti dar kartą
+            firstGestureHandled = false;
           });
       }
     }
 
-    // Fullscreen – ant PIRMO touchstart arba click
-    document.addEventListener('touchstart', tryActivateFullscreen, {capture: true, passive: true});
-    document.addEventListener('click', tryActivateFullscreen, {capture: true});
+    document.addEventListener('touchstart', handleFirstGesture, {capture: true, passive: false});
+    document.addEventListener('click', handleFirstGesture, {capture: true});
 
     // ============================================================
     // KLIENTO REGISTRACIJOS PATIKRINIMAS
@@ -1298,26 +1313,6 @@
     const regIpInput = document.getElementById('regIpInput');
     const regSaveBtn = document.getElementById('regSaveBtn');
     const regStatusMsg = document.getElementById('regStatusMsg');
-    const regInfoIcon = document.getElementById('regInfoIcon');
-
-    // INFO IKONĖLĖ – paprastas click, 6 sekundžių pranešimas
-    // Listener'is uždėtas capture fazėje ant document, kad įvyktų
-    // PRIEŠ tryActivateFullscreen
-    function handleInfoIconClick(e) {
-      if (!e.target || !e.target.closest || !e.target.closest('#regInfoIcon')) return;
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      const html = `
-        <div class="info-title">IP adresą sužinoti galite:</div>
-        <div class="info-line"><span class="info-bullet">•</span> prisijungiant prie WIFI tinklo <span class="info-strong">„EJ3“</span></div>
-        <div class="info-line"><span class="info-bullet">•</span> prisijungiant prie EJ3 įrenginio su <span class="info-strong">NFC</span></div>
-      `;
-      showInfoToast(html, 6000);
-    }
-    // capture: true – suveikia PRIEŠ tryActivateFullscreen (kuris irgi capture, bet pridėtas vėliau)
-    document.addEventListener('click', handleInfoIconClick, {capture: true});
-    document.addEventListener('touchstart', handleInfoIconClick, {capture: true, passive: false});
 
     function normalizeDeviceUrl(input) {
       let v = input.trim();
