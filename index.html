@@ -96,6 +96,10 @@
     align-items: center;
     justify-content: center;
     width: 100%;
+    transition: opacity 0.3s;
+  }
+  #telemetryOnline.dimmed {
+    opacity: 0.35;
   }
   
   /* Offline telemetrijos turinys */
@@ -105,26 +109,38 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    gap: 2px;
+    gap: 3px;
   }
   #telemetryOffline .offline-title {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: bold;
-    color: #E91E63;
+    color: #888;
     text-transform: uppercase;
     letter-spacing: 1px;
     text-align: center;
   }
   #telemetryOffline .offline-blink {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background-color: #E91E63;
+    color: white;
     font-size: 10px;
     font-weight: bold;
-    color: #ff4081;
     text-align: center;
-    animation: blinkOffline 1s infinite;
+    animation: pulseOffline 1.2s ease-in-out infinite;
   }
-  @keyframes blinkOffline {
-    0%, 49% { opacity: 1; }
-    50%, 100% { opacity: 0.15; }
+  @keyframes pulseOffline {
+    0%, 100% { 
+      opacity: 1; 
+      transform: scale(1);
+      box-shadow: 0 0 6px rgba(233, 30, 99, 0.9);
+    }
+    50% { 
+      opacity: 0.25; 
+      transform: scale(0.92);
+      box-shadow: 0 0 2px rgba(233, 30, 99, 0.3);
+    }
   }
   
   .wifi-icon { 
@@ -198,13 +214,6 @@
     font-size: 14px; 
     color: #fff; 
     font-weight: bold; 
-    text-align: center; 
-    margin-bottom: 2px; 
-  }
-  .bat-volt { 
-    font-size: 11px; 
-    color: #aaa; 
-    font-weight: normal; 
     text-align: center; 
   }
 
@@ -854,7 +863,6 @@
         </div>
         <div class="bat-info">
           <span id="batText" class="bat-pct">--%</span>
-          <span id="batVolt" class="bat-volt">--V</span>
         </div>
       </div>
     </div>
@@ -1030,6 +1038,7 @@
     const OCR_LANG = 'lit+eng';
 
     let ESP32_BASE = localStorage.getItem('esp32_url') || '';
+    const CLIENT_REGISTERED_KEY = 'client_registered';
 
     // ============================================================
     // BŪSENOS KINTAMIEJI
@@ -1102,6 +1111,21 @@
     });
 
     // ============================================================
+    // KLIENTO REGISTRACIJOS PATIKRINIMAS
+    // ============================================================
+    // Jei klientas (šis įrenginys / naršyklė) NĖRA išsaugojęs
+    // CLIENT_REGISTERED_KEY = '1' → visada rodom registracijos modalą,
+    // net jei ESP32_BASE jau yra localStorage.
+    // ============================================================
+    function isClientRegistered() {
+      return localStorage.getItem(CLIENT_REGISTERED_KEY) === '1';
+    }
+
+    function markClientRegistered() {
+      localStorage.setItem(CLIENT_REGISTERED_KEY, '1');
+    }
+
+    // ============================================================
     // PRIVALOMAS REGISTRACIJOS MODALAS
     // ============================================================
     const registrationModal = document.getElementById('registrationModal');
@@ -1159,6 +1183,8 @@
 
       localStorage.setItem('esp32_url', baseUrl);
       ESP32_BASE = baseUrl;
+      markClientRegistered();  // <-- klientas pažymimas kaip registruotas
+
       regStatusMsg.style.color = '#4CAF50';
       regStatusMsg.innerText = '✅ EJ3 įrenginys prijungtas!';
 
@@ -1174,32 +1200,27 @@
     });
 
     function initApp() {
-      if (ESP32_BASE) {
-        registrationModal.style.display = 'none';
-        pollTrigger();
-      } else {
+      // Rodyti registracijos modalą, jei:
+      //  1) klientas dar nebuvo užregistruotas ARBA
+      //  2) nėra išsaugoto ESP32 adreso
+      if (!isClientRegistered() || !ESP32_BASE) {
         registrationModal.style.display = 'flex';
         setTelemetryOffline();
+      } else {
+        registrationModal.style.display = 'none';
+        pollTrigger();
       }
     }
 
     // ============================================================
     // TELEMETRIJOS POLLING – GREITAS OFFLINE/ONLINE APTIKIMAS
     // ============================================================
-    // Strategija:
-    //  - Timeout 800 ms (ESP32 turi atsakyti per 800 ms, kitu atveju laikoma OFFLINE)
-    //  - Poll intervalas:
-    //      * jei ONLINE: 1000 ms
-    //      * jei OFFLINE: 300 ms (greitai atsinaujina, kai ESP32 grįžta)
-    //  - Po 2 klaidų IŠ EILĖS → rodomas OFFLINE blokas
-    //  - Po pirmos sėkmės → IŠKART rodomas ONLINE blokas
-    // ============================================================
     let telemetryFailCount = 0;
-    let telemetryIsOnline = false; // dabartinė būsena
+    let telemetryIsOnline = false;
     const TELEMETRY_OK_INTERVAL = 1000;
     const TELEMETRY_FAIL_INTERVAL = 300;
     const TELEMETRY_TIMEOUT = 800;
-    const TELEMETRY_FAIL_THRESHOLD = 2; // po 2 klaidų → OFFLINE
+    const TELEMETRY_FAIL_THRESHOLD = 2;
 
     function setTelemetryOnline() {
       if (telemetryIsOnline) return;
@@ -1208,18 +1229,26 @@
       const online = document.getElementById('telemetryOnline');
       const offline = document.getElementById('telemetryOffline');
       if (box) box.classList.remove('disconnected');
-      if (online) online.style.display = 'flex';
+      if (online) {
+        online.style.display = 'flex';
+        online.classList.remove('dimmed');
+      }
       if (offline) offline.style.display = 'none';
     }
 
     function setTelemetryOffline() {
-      if (!telemetryIsOnline) return;
+      if (!telemetryIsOnline && document.getElementById('telemetryOffline').style.display === 'flex') {
+        return;
+      }
       telemetryIsOnline = false;
       const box = document.getElementById('telemetryBox');
       const online = document.getElementById('telemetryOnline');
       const offline = document.getElementById('telemetryOffline');
       if (box) box.classList.add('disconnected');
-      if (online) online.style.display = 'none';
+      if (online) {
+        online.style.display = 'flex';
+        online.classList.add('dimmed');
+      }
       if (offline) offline.style.display = 'flex';
     }
 
@@ -1243,7 +1272,6 @@
           return res.json();
         })
         .then(data => {
-            // Sėkmė – atstatome skaitliuką
             telemetryFailCount = 0;
             setTelemetryOnline();
 
@@ -1263,10 +1291,8 @@
                 if (data.bat !== undefined) {
                     let batLevel = document.getElementById('batFill');
                     let batText = document.getElementById('batText');
-                    let batVolt = document.getElementById('batVolt');
                     let chargeIcon = document.getElementById('charging-icon');
                     if (batText) batText.innerText = data.bat + '%';
-                    if (data.volt !== undefined && batVolt) batVolt.innerText = data.volt + 'V';
                     if (batLevel) {
                       if (data.charging) {
                          if (chargeIcon) chargeIcon.style.display = 'block';
