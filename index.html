@@ -98,7 +98,7 @@
     width: 100%;
   }
   
-  /* Offline telemetrijos turinys – TIK raudonas langelis */
+  /* Offline telemetrijos turinys – TIK raudonas langelis, jokių ikonų */
   #telemetryOffline {
     display: none;
     flex-direction: column;
@@ -1227,6 +1227,27 @@
     const TELEMETRY_TIMEOUT = 800;
     const TELEMETRY_FAIL_THRESHOLD = 2;
 
+    // Online telemetrijos HTML šablonas (atkuriamas po offline)
+    const ONLINE_TELEMETRY_HTML = `
+      <div class="wifi-icon" title="Wi-Fi ryšys">
+        <div class="wifi-bar" style="height: 4px;"></div>
+        <div class="wifi-bar" style="height: 8px;"></div>
+        <div class="wifi-bar" style="height: 12px;"></div>
+        <div class="wifi-bar" style="height: 16px;"></div>
+      </div>
+      <div style="width: 2px; height: 30px; background: #333; margin: 0 5px;"></div>
+      <div class="bat-container" title="Baterijos lygis">
+        <div class="bat-icon">
+          <div id="batFill" class="bat-fill"></div>
+          <div class="bat-tip"></div>
+          <div id="charging-icon" class="charging-icon">⚡</div>
+        </div>
+        <div class="bat-info">
+          <span id="batText" class="bat-pct">--%</span>
+        </div>
+      </div>
+    `;
+
     function setTelemetryOnline() {
       if (telemetryIsOnline) return;
       telemetryIsOnline = true;
@@ -1234,7 +1255,13 @@
       const online = document.getElementById('telemetryOnline');
       const offline = document.getElementById('telemetryOffline');
       if (box) box.classList.remove('disconnected');
-      if (online) online.style.display = 'flex';
+      if (online) {
+        // Atkuriame online HTML, jei buvo ištrintas
+        if (!online.querySelector('.wifi-icon')) {
+          online.innerHTML = ONLINE_TELEMETRY_HTML;
+        }
+        online.style.display = 'flex';
+      }
       if (offline) offline.style.display = 'none';
     }
 
@@ -1247,8 +1274,13 @@
       const online = document.getElementById('telemetryOnline');
       const offline = document.getElementById('telemetryOffline');
       if (box) box.classList.add('disconnected');
-      if (online) online.style.display = 'none';  // Ikonos PASLEPiamos
-      if (offline) offline.style.display = 'flex'; // Raudonas langelis rodomas
+      // VISIŠKAI paslepiame ir išvalome online bloką – jokių ikonų, jokių duomenų
+      if (online) {
+        online.style.display = 'none';
+        online.innerHTML = '';
+      }
+      // Rodome TIK raudoną langelį su "EJ3 telemetrija" + "Offline"
+      if (offline) offline.style.display = 'flex';
     }
 
     // Paspaudus ant offline langelio – 4 s pranešimas
