@@ -96,50 +96,60 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    transition: opacity 0.3s;
-  }
-  #telemetryOnline.dimmed {
-    opacity: 0.35;
   }
   
-  /* Offline telemetrijos turinys */
+  /* Offline telemetrijos turinys – TIK raudonas langelis */
   #telemetryOffline {
     display: none;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     width: 100%;
-    gap: 3px;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
   }
-  #telemetryOffline .offline-title {
-    font-size: 12px;
-    font-weight: bold;
-    color: #888;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    text-align: center;
+  #telemetryOffline:active {
+    transform: scale(0.96);
   }
-  #telemetryOffline .offline-blink {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 4px;
+  #telemetryOffline .offline-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     background-color: #E91E63;
     color: white;
-    font-size: 10px;
-    font-weight: bold;
+    padding: 8px 18px;
+    border-radius: 8px;
     text-align: center;
     animation: pulseOffline 1.2s ease-in-out infinite;
+    box-shadow: 0 0 10px rgba(233, 30, 99, 0.9);
+    gap: 1px;
+  }
+  #telemetryOffline .offline-box .offline-title {
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    line-height: 1.1;
+  }
+  #telemetryOffline .offline-box .offline-status {
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    line-height: 1.1;
   }
   @keyframes pulseOffline {
     0%, 100% { 
       opacity: 1; 
       transform: scale(1);
-      box-shadow: 0 0 6px rgba(233, 30, 99, 0.9);
+      box-shadow: 0 0 10px rgba(233, 30, 99, 0.9);
     }
     50% { 
-      opacity: 0.25; 
-      transform: scale(0.92);
-      box-shadow: 0 0 2px rgba(233, 30, 99, 0.3);
+      opacity: 0.3; 
+      transform: scale(0.94);
+      box-shadow: 0 0 3px rgba(233, 30, 99, 0.3);
     }
   }
   
@@ -867,10 +877,12 @@
       </div>
     </div>
     
-    <!-- Offline turinys -->
-    <div id="telemetryOffline">
-      <div class="offline-title">EJ3 telemetrija</div>
-      <div class="offline-blink">Offline</div>
+    <!-- Offline turinys – TIK raudonas langelis su "EJ3 telemetrija" + "Offline" -->
+    <div id="telemetryOffline" title="Paspauskite, jei norite daugiau informacijos">
+      <div class="offline-box">
+        <div class="offline-title">EJ3 telemetrija</div>
+        <div class="offline-status">Offline</div>
+      </div>
     </div>
   </div>
 
@@ -1067,12 +1079,12 @@
     // ============================================================
     // UTILITY
     // ============================================================
-    function showToast(msg) {
+    function showToast(msg, duration) {
         const toast = document.getElementById('toastMsg');
         toast.innerText = msg;
         toast.style.display = 'block';
         if(toastTimer) clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => { toast.style.display = 'none'; }, 7000);
+        toastTimer = setTimeout(() => { toast.style.display = 'none'; }, duration || 7000);
     }
 
     function log(msg) {
@@ -1112,10 +1124,6 @@
 
     // ============================================================
     // KLIENTO REGISTRACIJOS PATIKRINIMAS
-    // ============================================================
-    // Jei klientas (šis įrenginys / naršyklė) NĖRA išsaugojęs
-    // CLIENT_REGISTERED_KEY = '1' → visada rodom registracijos modalą,
-    // net jei ESP32_BASE jau yra localStorage.
     // ============================================================
     function isClientRegistered() {
       return localStorage.getItem(CLIENT_REGISTERED_KEY) === '1';
@@ -1183,7 +1191,7 @@
 
       localStorage.setItem('esp32_url', baseUrl);
       ESP32_BASE = baseUrl;
-      markClientRegistered();  // <-- klientas pažymimas kaip registruotas
+      markClientRegistered();
 
       regStatusMsg.style.color = '#4CAF50';
       regStatusMsg.innerText = '✅ EJ3 įrenginys prijungtas!';
@@ -1200,9 +1208,6 @@
     });
 
     function initApp() {
-      // Rodyti registracijos modalą, jei:
-      //  1) klientas dar nebuvo užregistruotas ARBA
-      //  2) nėra išsaugoto ESP32 adreso
       if (!isClientRegistered() || !ESP32_BASE) {
         registrationModal.style.display = 'flex';
         setTelemetryOffline();
@@ -1229,10 +1234,7 @@
       const online = document.getElementById('telemetryOnline');
       const offline = document.getElementById('telemetryOffline');
       if (box) box.classList.remove('disconnected');
-      if (online) {
-        online.style.display = 'flex';
-        online.classList.remove('dimmed');
-      }
+      if (online) online.style.display = 'flex';
       if (offline) offline.style.display = 'none';
     }
 
@@ -1245,12 +1247,14 @@
       const online = document.getElementById('telemetryOnline');
       const offline = document.getElementById('telemetryOffline');
       if (box) box.classList.add('disconnected');
-      if (online) {
-        online.style.display = 'flex';
-        online.classList.add('dimmed');
-      }
-      if (offline) offline.style.display = 'flex';
+      if (online) online.style.display = 'none';  // Ikonos PASLEPiamos
+      if (offline) offline.style.display = 'flex'; // Raudonas langelis rodomas
     }
+
+    // Paspaudus ant offline langelio – 4 s pranešimas
+    document.getElementById('telemetryOffline').addEventListener('click', () => {
+      showToast('Įjunkite EJ3 įrenginį!', 4000);
+    });
 
     function pollTrigger() {
       if (!ESP32_BASE) {
