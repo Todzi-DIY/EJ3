@@ -89,7 +89,6 @@
     box-shadow: 0 0 12px rgba(233, 30, 99, 0.6) !important;
   }
   
-  /* Online telemetrijos turinys */
   #telemetryOnline {
     display: flex;
     gap: 15px;
@@ -98,7 +97,6 @@
     width: 100%;
   }
   
-  /* Offline telemetrijos turinys – TIK raudonas langelis, jokių ikonų */
   #telemetryOffline {
     display: none;
     flex-direction: column;
@@ -154,37 +152,37 @@
     }
   }
 
-  /* „Įjunkite EJ3 įrenginį!" – rodomas ANT viso raudono langelio (uždengia jį) */
+  /* ============================================================
+     OFFLINE PRANEŠIMAS – DIDESNIS už raudoną langelį, centre virš jo
+     ============================================================ */
   #offlineAlert {
     display: none;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     background-color: #B0003A;
     color: white;
-    border-radius: 8px;
-    font-size: 13px;
+    padding: 22px 34px;
+    border-radius: 14px;
+    font-size: 20px;
     font-weight: bold;
     text-align: center;
-    z-index: 10;
-    box-shadow: 0 0 20px rgba(255, 64, 129, 0.9);
-    border: 2px solid #ff4081;
+    white-space: nowrap;
+    z-index: 3000;
+    box-shadow: 0 12px 50px rgba(0,0,0,0.95), 0 0 30px rgba(255, 64, 129, 1);
+    border: 3px solid #ff4081;
     pointer-events: none;
-    letter-spacing: 0.3px;
-    align-items: center;
-    justify-content: center;
-    padding: 4px;
+    letter-spacing: 0.5px;
     line-height: 1.2;
   }
   #offlineAlert.show {
-    display: flex;
+    display: block;
     animation: alertPop 0.25s ease-out;
   }
   @keyframes alertPop {
-    from { opacity: 0; transform: scale(0.7); }
-    to   { opacity: 1; transform: scale(1); }
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   }
   
   .wifi-icon { 
@@ -826,6 +824,7 @@
     flex-direction: column;
     gap: 15px;
     box-shadow: 0 10px 30px rgba(33, 150, 243, 0.25);
+    position: relative;
   }
   #registrationModal h2 {
     color: #2196F3;
@@ -834,6 +833,7 @@
     letter-spacing: 1px;
     text-align: center;
     text-transform: uppercase;
+    padding-right: 20px;
   }
   #registrationModal input {
     width: 100%;
@@ -875,6 +875,28 @@
   #regSaveBtn:active { transform: scale(0.98); }
   #regSaveBtn:disabled { background: #333; cursor: not-allowed; opacity: 0.6; }
 
+  /* Registracijos modalо „UŽDARYTI" mygtukas (mažas, viršuje dešinėje) */
+  #regCloseBtn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: transparent;
+    color: #888;
+    border: 1px solid #555;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: bold;
+    border-radius: 6px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+  }
+  #regCloseBtn:hover {
+    color: #E91E63;
+    border-color: #E91E63;
+  }
+
   /* Registracijos modalo IP eilutė su info ikonėle */
   .reg-ip-row {
     display: flex;
@@ -912,7 +934,6 @@
     position: relative;
     z-index: 10;
     pointer-events: auto;
-    touch-action: manipulation;
     animation: pulseInfo 1.2s ease-in-out infinite;
   }
   .reg-info-icon:active {
@@ -956,12 +977,14 @@
 
   <div id="toastMsg"></div>
   <div id="infoToast"></div>
+  <div id="offlineAlert">Įjunkite EJ3 įrenginį!</div>
 
   <!-- ============================================================
        PRIVALOMAS REGISTRACIJOS MODALAS
        ============================================================ -->
   <div id="registrationModal">
     <div class="reg-box">
+      <button id="regCloseBtn" type="button">UŽDARYTI</button>
       <h2>REGISTRUOTI ĮRENGINĮ</h2>
 
       <div class="reg-ip-row">
@@ -981,7 +1004,6 @@
        TELEMETRIJOS BLOKAS
        ============================================================ -->
   <div id="telemetryBox" class="disconnected">
-    <!-- Online turinys -->
     <div id="telemetryOnline">
       <div class="wifi-icon" title="Wi-Fi ryšys">
         <div class="wifi-bar" style="height: 4px;"></div>
@@ -1002,14 +1024,11 @@
       </div>
     </div>
     
-    <!-- Offline turinys – raudonas langelis + ant jo esantis pranešimas -->
     <div id="telemetryOffline" title="Paspauskite, jei norite daugiau informacijos">
       <div class="offline-box">
         <div class="offline-title">EJ3 telemetrija</div>
         <div class="offline-status">Offline</div>
       </div>
-      <!-- Pranešimas, dengiantis VISĄ raudoną langelį -->
-      <div id="offlineAlert">Įjunkite EJ3 įrenginį!</div>
     </div>
   </div>
 
@@ -1220,7 +1239,6 @@
         const toast = document.getElementById('infoToast');
         toast.innerHTML = html;
         toast.style.display = 'block';
-        // restart animation
         toast.style.animation = 'none';
         void toast.offsetWidth;
         toast.style.animation = 'infoSlideIn 0.25s ease-out';
@@ -1254,14 +1272,20 @@
         if (textEl) textEl.style.display = 'none';
     }
 
-    function activateFullscreen() { 
+    // ============================================================
+    // FULLSCREEN – TIK ant click (ne touchstart), kad netrukdytų info ikonėlei
+    // ============================================================
+    function activateFullscreen(e) {
+      // Jei paspaudimas ant info ikonėlės – NEJUNGTI fullscreen
+      if (e && e.target && e.target.closest && e.target.closest('#regInfoIcon')) {
+        return;
+      }
       if (!document.fullscreenElement && document.documentElement.requestFullscreen) { 
         document.documentElement.requestFullscreen().catch(err => {}); 
       } 
     }
-    ['touchstart', 'click'].forEach(evt => { 
-      document.addEventListener(evt, activateFullscreen, {capture: true}); 
-    });
+    // NAUDOJAME TIK 'click' – NE 'touchstart'
+    document.addEventListener('click', activateFullscreen, {capture: true});
 
     // ============================================================
     // KLIENTO REGISTRACIJOS PATIKRINIMAS
@@ -1282,19 +1306,14 @@
     const regSaveBtn = document.getElementById('regSaveBtn');
     const regStatusMsg = document.getElementById('regStatusMsg');
     const regInfoIcon = document.getElementById('regInfoIcon');
+    const regCloseBtn = document.getElementById('regCloseBtn');
 
     // Info ikonėlės paspaudimas – 5 s pranešimas
-    // Naudojame mousedown + touchstart (patikimiausia)
-    let infoIconCooldown = false;
     function openInfoToast(e) {
       if (e) { 
         try { e.preventDefault(); } catch(_) {}
         try { e.stopPropagation(); } catch(_) {}
       }
-      if (infoIconCooldown) return;
-      infoIconCooldown = true;
-      setTimeout(() => { infoIconCooldown = false; }, 300);
-
       const html = `
         <div class="info-title">IP adresą sužinoti galite:</div>
         <div class="info-line"><span class="info-bullet">•</span> prisijungiant prie WIFI tinklo <span class="info-strong">„EJ3“</span></div>
@@ -1302,11 +1321,20 @@
       `;
       showInfoToast(html, 5000);
     }
-
-    // Naudojame visus įmanomus įvykius, kad tikrai suveiktų
-    regInfoIcon.addEventListener('mousedown', openInfoToast);
-    regInfoIcon.addEventListener('touchstart', openInfoToast, { passive: false });
+    // Naudojame click – dabar activateFullscreen nebetrukdys, nes jis tikrina target
     regInfoIcon.addEventListener('click', openInfoToast);
+    regInfoIcon.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') openInfoToast(e);
+    });
+
+    // Registracijos modalo „UŽDARYTI" mygtukas – grįžta į pagrindinį puslapį
+    regCloseBtn.addEventListener('click', () => {
+      registrationModal.style.display = 'none';
+      document.getElementById('mainContainer').style.display = 'flex';
+      if (ESP32_BASE) {
+        pollTrigger();
+      }
+    });
 
     function normalizeDeviceUrl(input) {
       let v = input.trim();
@@ -1385,7 +1413,7 @@
     }
 
     // ============================================================
-    // TELEMETRIJOS POLLING – GREITAS OFFLINE/ONLINE APTIKIMAS
+    // TELEMETRIJOS POLLING
     // ============================================================
     let telemetryFailCount = 0;
     let telemetryIsOnline = false;
@@ -1394,7 +1422,6 @@
     const TELEMETRY_TIMEOUT = 800;
     const TELEMETRY_FAIL_THRESHOLD = 2;
 
-    // Online telemetrijos HTML šablonas (atkuriamas po offline)
     const ONLINE_TELEMETRY_HTML = `
       <div class="wifi-icon" title="Wi-Fi ryšys">
         <div class="wifi-bar" style="height: 4px;"></div>
@@ -1423,14 +1450,12 @@
       const offline = document.getElementById('telemetryOffline');
       if (box) box.classList.remove('disconnected');
       if (online) {
-        // Atkuriame online HTML, jei buvo ištrintas
         if (!online.querySelector('.wifi-icon')) {
           online.innerHTML = ONLINE_TELEMETRY_HTML;
         }
         online.style.display = 'flex';
       }
       if (offline) offline.style.display = 'none';
-      // Paslepiame offline alert
       hideOfflineAlert();
     }
 
@@ -1443,17 +1468,15 @@
       const online = document.getElementById('telemetryOnline');
       const offline = document.getElementById('telemetryOffline');
       if (box) box.classList.add('disconnected');
-      // VISIŠKAI paslepiame ir išvalome online bloką – jokių ikonų, jokių duomenų
       if (online) {
         online.style.display = 'none';
         online.innerHTML = '';
       }
-      // Rodome TIK raudoną langelį su "EJ3 telemetrija" + "Offline"
       if (offline) offline.style.display = 'flex';
     }
 
     // ============================================================
-    // OFFLINE ALERT – dengia VISĄ raudoną langelį
+    // OFFLINE ALERT – didesnis už raudoną langą, centre ekrano
     // ============================================================
     function showOfflineAlert() {
       const alert = document.getElementById('offlineAlert');
@@ -1471,17 +1494,11 @@
       if (offlineAlertTimer) { clearTimeout(offlineAlertTimer); offlineAlertTimer = null; }
     }
 
-    // Paspaudus ant offline langelio – pranešimas dengia jį
     const telemetryOfflineEl = document.getElementById('telemetryOffline');
-    function onOfflineClick(e) {
-      if (e) {
-        try { e.preventDefault(); } catch(_) {}
-        try { e.stopPropagation(); } catch(_) {}
-      }
+    telemetryOfflineEl.addEventListener('click', (e) => {
+      e.stopPropagation();
       showOfflineAlert();
-    }
-    telemetryOfflineEl.addEventListener('click', onOfflineClick);
-    telemetryOfflineEl.addEventListener('touchend', onOfflineClick, { passive: false });
+    });
 
     function pollTrigger() {
       if (!ESP32_BASE) {
