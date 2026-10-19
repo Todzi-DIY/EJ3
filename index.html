@@ -694,6 +694,52 @@
     word-wrap: break-word;
   }
 
+  /* Info toast – didesnis, su paryškinimu */
+  #infoToast {
+    position: fixed; 
+    top: 80px; 
+    left: 50%; 
+    transform: translateX(-50%);
+    background-color: rgba(33, 150, 243, 0.97); 
+    color: white; 
+    padding: 18px 22px;
+    border-radius: 10px; 
+    z-index: 1100; 
+    box-shadow: 0 8px 25px rgba(0,0,0,0.7); 
+    display: none; 
+    text-align: left;
+    width: 90%; 
+    max-width: 420px; 
+    border: 2px solid #64B5F6; 
+    word-wrap: break-word;
+    animation: infoSlideIn 0.25s ease-out;
+  }
+  @keyframes infoSlideIn {
+    from { opacity: 0; transform: translate(-50%, -12px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
+  }
+  #infoToast .info-title {
+    font-size: 17px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+    line-height: 1.25;
+  }
+  #infoToast .info-line {
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 4px 0;
+  }
+  #infoToast .info-line .info-bullet {
+    color: #BBDEFB;
+    font-weight: bold;
+    margin-right: 4px;
+  }
+  #infoToast .info-line .info-strong {
+    color: #fff;
+    font-weight: bold;
+  }
+
   #progressBarContainer {
     width: 100%;
     max-width: 750px;
@@ -809,6 +855,54 @@
   #regSaveBtn:active { transform: scale(0.98); }
   #regSaveBtn:disabled { background: #333; cursor: not-allowed; opacity: 0.6; }
 
+  /* Registracijos modalо IP eilutė su info ikonėle */
+  .reg-ip-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+  }
+  .reg-ip-row .reg-ip-label {
+    color: #ccc;
+    font-size: 13px;
+    font-weight: bold;
+    text-align: center;
+    flex: 0 1 auto;
+  }
+  .reg-info-icon {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background-color: rgba(33, 150, 243, 0.2);
+    border: 2px solid #2196F3;
+    color: #2196F3;
+    font-weight: bold;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    animation: pulseInfo 1.2s ease-in-out infinite;
+    transition: transform 0.15s;
+  }
+  .reg-info-icon:active {
+    transform: scale(0.9);
+  }
+  @keyframes pulseInfo {
+    0%, 100% { 
+      box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.7);
+      transform: scale(1);
+    }
+    50% { 
+      box-shadow: 0 0 0 8px rgba(33, 150, 243, 0);
+      transform: scale(1.06);
+    }
+  }
+
   @media (max-width: 768px) {
     .title { font-size: 22px; letter-spacing: 2px; margin-bottom: 30px; }
     .action-btn { padding: 16px 12px; font-size: 15px; }
@@ -834,6 +928,7 @@
 <body>
 
   <div id="toastMsg"></div>
+  <div id="infoToast"></div>
 
   <!-- ============================================================
        PRIVALOMAS REGISTRACIJOS MODALAS
@@ -841,9 +936,12 @@
   <div id="registrationModal">
     <div class="reg-box">
       <h2>REGISTRUOTI ĮRENGINĮ</h2>
-      <p>Įveskite <b>EJ3 įrenginio</b> adresą, kad būtų galima gauti gyvą telemetriją (WiFi, baterija) ir valdyti nustatymus.</p>
-      
-      <label for="regIpInput">EJ3 ĮRENGINIO ADRESAS:</label>
+
+      <div class="reg-ip-row">
+        <div class="reg-ip-label">Įveskite EJ3 įrenginio IP adresą:</div>
+        <div id="regInfoIcon" class="reg-info-icon" title="Kaip sužinoti IP?">i</div>
+      </div>
+
       <input type="text" id="regIpInput" placeholder="pvz. 192.168.1.50" autocomplete="off" inputmode="decimal">
       
       <div id="regStatusMsg"></div>
@@ -1058,6 +1156,7 @@
     let cvReady = false;
     let ocrWorker = null;
     let toastTimer = null;
+    let infoToastTimer = null;
 
     let originalImageElement = null;
     let originalUnblurredCanvas = null;
@@ -1085,6 +1184,18 @@
         toast.style.display = 'block';
         if(toastTimer) clearTimeout(toastTimer);
         toastTimer = setTimeout(() => { toast.style.display = 'none'; }, duration || 7000);
+    }
+
+    function showInfoToast(html, duration) {
+        const toast = document.getElementById('infoToast');
+        toast.innerHTML = html;
+        toast.style.display = 'block';
+        // restart animation
+        toast.style.animation = 'none';
+        void toast.offsetWidth;
+        toast.style.animation = 'infoSlideIn 0.25s ease-out';
+        if(infoToastTimer) clearTimeout(infoToastTimer);
+        infoToastTimer = setTimeout(() => { toast.style.display = 'none'; }, duration || 5000);
     }
 
     function log(msg) {
@@ -1140,6 +1251,17 @@
     const regIpInput = document.getElementById('regIpInput');
     const regSaveBtn = document.getElementById('regSaveBtn');
     const regStatusMsg = document.getElementById('regStatusMsg');
+    const regInfoIcon = document.getElementById('regInfoIcon');
+
+    // Info ikonėlės paspaudimas – 5 s pranešimas
+    regInfoIcon.addEventListener('click', () => {
+      const html = `
+        <div class="info-title">IP adresą sužinoti galite:</div>
+        <div class="info-line"><span class="info-bullet">•</span> prisijungiant prie WIFI tinklo <span class="info-strong">„EJ3“</span></div>
+        <div class="info-line"><span class="info-bullet">•</span> prisijungiant prie EJ3 įrenginio su <span class="info-strong">NFC</span></div>
+      `;
+      showInfoToast(html, 5000);
+    });
 
     function normalizeDeviceUrl(input) {
       let v = input.trim();
@@ -1172,7 +1294,7 @@
       const raw = regIpInput.value.trim();
       if (!raw) {
         regStatusMsg.style.color = '#E91E63';
-        regStatusMsg.innerText = 'Įveskite EJ3 įrenginio adresą';
+        regStatusMsg.innerText = 'Įveskite EJ3 įrenginio IP adresą';
         return;
       }
       const baseUrl = normalizeDeviceUrl(raw);
