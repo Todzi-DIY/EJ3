@@ -154,34 +154,37 @@
     }
   }
 
-  /* Offline pranešimas – DIDESNIS už raudoną langą, rodomas centre virš jo */
+  /* „Įjunkite EJ3 įrenginį!" – rodomas ANT viso raudono langelio (uždengia jį) */
   #offlineAlert {
     display: none;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background-color: #B0003A;
     color: white;
-    padding: 18px 28px;
-    border-radius: 12px;
-    font-size: 17px;
+    border-radius: 8px;
+    font-size: 13px;
     font-weight: bold;
     text-align: center;
-    white-space: nowrap;
-    z-index: 3000;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.9), 0 0 20px rgba(255, 64, 129, 0.9);
-    border: 3px solid #ff4081;
+    z-index: 10;
+    box-shadow: 0 0 20px rgba(255, 64, 129, 0.9);
+    border: 2px solid #ff4081;
     pointer-events: none;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    line-height: 1.2;
   }
   #offlineAlert.show {
-    display: block;
+    display: flex;
     animation: alertPop 0.25s ease-out;
   }
   @keyframes alertPop {
-    from { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
-    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    from { opacity: 0; transform: scale(0.7); }
+    to   { opacity: 1; transform: scale(1); }
   }
   
   .wifi-icon { 
@@ -953,7 +956,6 @@
 
   <div id="toastMsg"></div>
   <div id="infoToast"></div>
-  <div id="offlineAlert">Įjunkite EJ3 įrenginį!</div>
 
   <!-- ============================================================
        PRIVALOMAS REGISTRACIJOS MODALAS
@@ -1000,12 +1002,14 @@
       </div>
     </div>
     
-    <!-- Offline turinys – TIK raudonas langelis su "EJ3 telemetrija" + "Offline" -->
+    <!-- Offline turinys – raudonas langelis + ant jo esantis pranešimas -->
     <div id="telemetryOffline" title="Paspauskite, jei norite daugiau informacijos">
       <div class="offline-box">
         <div class="offline-title">EJ3 telemetrija</div>
         <div class="offline-status">Offline</div>
       </div>
+      <!-- Pranešimas, dengiantis VISĄ raudoną langelį -->
+      <div id="offlineAlert">Įjunkite EJ3 įrenginį!</div>
     </div>
   </div>
 
@@ -1280,12 +1284,17 @@
     const regInfoIcon = document.getElementById('regInfoIcon');
 
     // Info ikonėlės paspaudimas – 5 s pranešimas
-    // Naudojame pointerdown (patikimiausias visose platformose)
+    // Naudojame mousedown + touchstart (patikimiausia)
+    let infoIconCooldown = false;
     function openInfoToast(e) {
       if (e) { 
         try { e.preventDefault(); } catch(_) {}
         try { e.stopPropagation(); } catch(_) {}
       }
+      if (infoIconCooldown) return;
+      infoIconCooldown = true;
+      setTimeout(() => { infoIconCooldown = false; }, 300);
+
       const html = `
         <div class="info-title">IP adresą sužinoti galite:</div>
         <div class="info-line"><span class="info-bullet">•</span> prisijungiant prie WIFI tinklo <span class="info-strong">„EJ3“</span></div>
@@ -1293,11 +1302,11 @@
       `;
       showInfoToast(html, 5000);
     }
-    // pointerdown – patikimiausias (veikia ir touch, ir mouse)
-    regInfoIcon.addEventListener('pointerdown', openInfoToast);
-    // papildomi, jei pointerdown nepalaikomas
+
+    // Naudojame visus įmanomus įvykius, kad tikrai suveiktų
+    regInfoIcon.addEventListener('mousedown', openInfoToast);
+    regInfoIcon.addEventListener('touchstart', openInfoToast, { passive: false });
     regInfoIcon.addEventListener('click', openInfoToast);
-    regInfoIcon.addEventListener('touchend', openInfoToast, { passive: false });
 
     function normalizeDeviceUrl(input) {
       let v = input.trim();
@@ -1444,7 +1453,7 @@
     }
 
     // ============================================================
-    // OFFLINE ALERT – DIDESNIS, rodomas centre virš raudono lango
+    // OFFLINE ALERT – dengia VISĄ raudoną langelį
     // ============================================================
     function showOfflineAlert() {
       const alert = document.getElementById('offlineAlert');
@@ -1462,15 +1471,17 @@
       if (offlineAlertTimer) { clearTimeout(offlineAlertTimer); offlineAlertTimer = null; }
     }
 
-    // Paspaudus ant offline langelio – pranešimas virš jo
+    // Paspaudus ant offline langelio – pranešimas dengia jį
     const telemetryOfflineEl = document.getElementById('telemetryOffline');
-    telemetryOfflineEl.addEventListener('click', () => {
+    function onOfflineClick(e) {
+      if (e) {
+        try { e.preventDefault(); } catch(_) {}
+        try { e.stopPropagation(); } catch(_) {}
+      }
       showOfflineAlert();
-    });
-    telemetryOfflineEl.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      showOfflineAlert();
-    }, { passive: false });
+    }
+    telemetryOfflineEl.addEventListener('click', onOfflineClick);
+    telemetryOfflineEl.addEventListener('touchend', onOfflineClick, { passive: false });
 
     function pollTrigger() {
       if (!ESP32_BASE) {
