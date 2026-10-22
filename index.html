@@ -36,7 +36,7 @@
   }
   
   /* ============================================================
-     NUSTATYMŲ IKONA – VIENAS DANTRATIS (su rėmeliu)
+     NUSTATYMŲ IKONA – VIENAS DANTRATIS
      ============================================================ */
   .settings-icon {
     position: fixed; 
@@ -67,7 +67,7 @@
   }
 
   /* ============================================================
-     KALBOS PASIRINKIMO IKONA (su rėmeliu – toks pat kaip nustatymų)
+     KALBOS PASIRINKIMO IKONA – DEŠINIAJAME VIRŠUTINIAME KAMPE
      ============================================================ */
   .lang-icon {
     position: fixed; 
@@ -165,32 +165,6 @@
     cursor: pointer;
     font-size: 14px;
     font-family: Arial, sans-serif;
-  }
-
-  /* ============================================================
-     FULLSCREEN PRANEŠIMAS – jei fullscreen išjungtas
-     ============================================================ */
-  #fsHint {
-    display: none;
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(33, 150, 243, 0.95);
-    color: white;
-    padding: 12px 20px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: bold;
-    z-index: 9999;
-    border: 2px solid #64B5F6;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.7);
-    cursor: pointer;
-    text-align: center;
-    max-width: 90%;
-  }
-  #fsHint.show {
-    display: block;
   }
 
   /* ============================================================
@@ -1104,8 +1078,10 @@
 
   <div id="toastMsg"></div>
   <div id="infoToast"></div>
-  <div id="fsHint">👆 Palieskite ekraną, kad grįžtumėte į viso ekrano režimą</div>
 
+  <!-- ============================================================
+       PRIVALOMAS REGISTRACIJOS MODALAS
+       ============================================================ -->
   <div id="registrationModal">
     <div class="reg-box">
       <h2>REGISTRUOTI ĮRENGINĮ</h2>
@@ -1125,6 +1101,9 @@
     </div>
   </div>
   
+  <!-- ============================================================
+       TELEMETRIJOS BLOKAS
+       ============================================================ -->
   <div id="telemetryBox" class="disconnected">
     <div id="telemetryOnline">
       <div class="wifi-icon" title="Wi-Fi ryšys">
@@ -1156,7 +1135,9 @@
     <div id="offlineAlert">Įjunkite EJ3 įrenginį!</div>
   </div>
 
-  <!-- NUSTATYMŲ IKONA – VIENAS DANTRATIS -->
+  <!-- ============================================================
+       NUSTATYMŲ IKONA – VIENAS DANTRATIS
+       ============================================================ -->
   <div id="settingsIcon" class="settings-icon">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="3"></circle>
@@ -1165,7 +1146,9 @@
     </svg>
   </div>
 
-  <!-- KALBOS IKONA -->
+  <!-- ============================================================
+       KALBOS PASIRINKIMO IKONA – DEŠINIAJAME VIRŠUTINIAME KAMPE
+       ============================================================ -->
   <div id="langIcon" class="lang-icon" title="Kalba">
     <span id="langCode" class="lang-code">LT</span>
   </div>
@@ -1291,6 +1274,9 @@
     </div>
   </div>
 
+  <!-- ============================================================
+       KALBŲ PASIRINKIMO MODALAS
+       ============================================================ -->
   <div id="langModal">
     <div class="lang-box">
       <h3>PASIRINKITE KALBĄ</h3>
@@ -1395,37 +1381,28 @@
     // ============================================================
     // FULLSCREEN – VISADA IR VISUR
     // ============================================================
-    let fsHintShown = false;
-
     function requestFsNow() {
       if (!document.documentElement.requestFullscreen) return;
       try {
         const p = document.documentElement.requestFullscreen();
         if (p && p.catch) {
-          p.catch(err => { /* ignore */ });
+          p.catch(err => {});
         }
       } catch (err) {}
     }
 
-    // Fullscreen būsenos sekimas
     document.addEventListener('fullscreenchange', () => {
       if (document.fullscreenElement) {
         log('✅ Fullscreen aktyvus');
-        fsHintShown = false;
-        document.getElementById('fsHint').classList.remove('show');
       } else {
         log('ℹ️ Fullscreen išjungtas');
-        // Nerodyti hint iš karto (vartotojas gal pats išjungė)
       }
     });
 
-    // Bendras handler'is – click ir touchend
     function handleGlobalTap(e) {
-      // Niekada nejungti ant info ikonėlės
       if (e && e.target && e.target.closest && e.target.closest('#regInfoIcon')) {
         return;
       }
-      // VISADA bandyti iš naujo, jei nėra fullscreen
       if (!document.fullscreenElement) {
         requestFsNow();
       }
