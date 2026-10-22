@@ -644,19 +644,77 @@
   }
   .pdf-btn:active { transform: scale(0.98); }
 
+  /* ============================================================
+     NUSTATYMŲ MODALAS – DABAR LENTELĖJE (KAIP KALBŲ MODALAS)
+     ============================================================ */
   #settingsModal { 
     display: none; 
     position: fixed; 
     top: 0; 
     left: 0; 
     width: 100vw; 
-    min-height: 100vh; 
-    background-color: black; 
+    height: 100vh; 
+    background-color: rgba(0, 0, 0, 0.95); 
     z-index: 100; 
     flex-direction: column; 
     align-items: center; 
-    justify-content: flex-start;
-    padding: 40px 20px; 
+    justify-content: center;
+    padding: 20px; 
+    overflow-y: auto;
+  }
+  
+  #settingsModal .settings-box {
+    width: 100%;
+    max-width: 400px;
+    background: #1a1a1a;
+    border: 2px solid #4CAF50;
+    border-radius: 12px;
+    padding: 25px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 10px 30px rgba(76, 175, 80, 0.25);
+  }
+  
+  #settingsModal h3 {
+    color: #4CAF50;
+    margin: 0 0 10px 0;
+    font-size: 18px;
+    letter-spacing: 1px;
+    text-align: center;
+    text-transform: uppercase;
+  }
+  
+  #settingsModal .settings-option {
+    width: 100%;
+    padding: 14px;
+    background: #222;
+    color: white;
+    border: 2px solid #444;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    transition: all 0.2s;
+    font-family: Arial, sans-serif;
+  }
+  
+  #settingsModal .settings-option:hover {
+    border-color: #4CAF50;
+    background: #2a2a2a;
+  }
+  
+  #settingsModal .settings-close {
+    margin-top: 15px;
+    background: transparent;
+    color: #888;
+    border: 1px solid #444;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: Arial, sans-serif;
   }
   
   #wifiModal { 
@@ -993,18 +1051,21 @@
     flex: 0 1 auto;
   }
 
+  /* ============================================================
+     INFO IKONĖLĖ – VISADA PASPAUDŽIAMA, ATSKIRTA ZONA
+     ============================================================ */
   .reg-info-icon {
     flex-shrink: 0;
-    width: 48px;
-    height: 48px;
-    min-width: 48px;
-    min-height: 48px;
+    width: 52px;
+    height: 52px;
+    min-width: 52px;
+    min-height: 52px;
     border-radius: 50%;
-    background-color: rgba(33, 150, 243, 0.25);
+    background-color: rgba(33, 150, 243, 0.35);
     border: 2px solid #2196F3;
     color: #2196F3;
     font-weight: bold;
-    font-size: 20px;
+    font-size: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1013,7 +1074,7 @@
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
     position: relative;
-    z-index: 10;
+    z-index: 20;
     pointer-events: auto;
     touch-action: manipulation;
     padding: 0;
@@ -1021,9 +1082,19 @@
     animation: pulseInfo 1.2s ease-in-out infinite;
     outline: none;
   }
+  .reg-info-icon::before {
+    content: '';
+    position: absolute;
+    top: -14px;
+    left: -14px;
+    right: -14px;
+    bottom: -14px;
+    border-radius: 50%;
+    pointer-events: auto;
+  }
   .reg-info-icon:active {
     transform: scale(0.9);
-    background-color: rgba(33, 150, 243, 0.5);
+    background-color: rgba(33, 150, 243, 0.6);
   }
   @keyframes pulseInfo {
     0%, 100% { 
@@ -1231,12 +1302,17 @@
       </div>
   </div>
 
+  <!-- ============================================================
+       NUSTATYMŲ MODALAS – LENTELĖ (KAIP KALBŲ MODALAS)
+       ============================================================ -->
   <div id="settingsModal">
-    <h2 style="color:white; letter-spacing:2px; margin-bottom: 30px;">NUSTATYMAI</h2>
-    <button id="changeDeviceBtn" class="modal-btn" style="background-color: #2196F3; padding: 15px 30px; margin-bottom: 20px; width: 80%; max-width: 300px;">📡 PRIDĖTI EJ3 ĮRENGINĮ</button>
-    <button id="openWifiBtn" class="modal-btn" style="background-color: #9C27B0; padding: 15px 30px; margin-bottom: 20px; width: 80%; max-width: 300px;">📶 Išsaugoti WIFI tinklai</button>
-    <button id="otaUpdateBtn" class="modal-btn" style="background-color: #00796B; padding: 15px 30px; margin-bottom: 30px; width: 80%; max-width: 300px;">🛠 Sistemos atnaujinimas</button>
-    <button id="closeSettingsBtn" class="close-modal-btn" style="width: 80%; max-width: 300px;">UŽDARYTI</button>
+    <div class="settings-box">
+      <h3>NUSTATYMAI</h3>
+      <button id="changeDeviceBtn" class="settings-option">📡 PRIDĖTI EJ3 ĮRENGINĮ</button>
+      <button id="openWifiBtn" class="settings-option">📶 Išsaugoti WIFI tinklai</button>
+      <button id="otaUpdateBtn" class="settings-option">🛠 Sistemos atnaujinimas</button>
+      <button id="closeSettingsBtn" class="settings-close">UŽDARYTI</button>
+    </div>
   </div>
 
   <div id="wifiModal">
@@ -1294,10 +1370,10 @@
     // KONFIGŪRACIJA
     // ============================================================
     const WORKER_URL = 'https://deepl-proxy.t-jasukaitis.workers.dev';
-    const TARGET_LANG = 'EN-GB';
     const DEEPL_DELAY = 250;
     const MAX_IMAGE_DIM = 1400;
     const OCR_LANG = 'lit+eng';
+    const DEEPL_BATCH_SIZE = 15;
 
     let ESP32_BASE = localStorage.getItem('esp32_url') || '';
     const CLIENT_REGISTERED_KEY = 'client_registered';
@@ -1315,12 +1391,12 @@
     let infoToastTimer = null;
     let offlineAlertTimer = null;
     let telemetryActive = false;
+    let telemetryPollingStopped = false;
 
     let originalImageElement = null;
     let originalUnblurredCanvas = null;
     let warpedCanvas = null;
     let deskewedCanvas = null;
-    let binaryCanvas = null;
     let ocrResult = null;
     let documentAiData = null;
     let warpedColorCanvas = null;
@@ -1331,7 +1407,6 @@
     let activeDragPoint = -1;
     let isProcessing = false;
     let extractedTextGlobal = '';
-    let scannedImageData = null;
 
     // ============================================================
     // UTILITY
@@ -1350,6 +1425,12 @@
         toast.style.display = 'block';
         if(infoToastTimer) clearTimeout(infoToastTimer);
         infoToastTimer = setTimeout(() => { toast.style.display = 'none'; }, duration || 6000);
+    }
+
+    function hideInfoToast() {
+        const toast = document.getElementById('infoToast');
+        if (toast) toast.style.display = 'none';
+        if (infoToastTimer) { clearTimeout(infoToastTimer); infoToastTimer = null; }
     }
 
     function log(msg) {
@@ -1485,21 +1566,34 @@
     const regSaveBtn = document.getElementById('regSaveBtn');
     const regStatusMsg = document.getElementById('regStatusMsg');
     const regSkipBtn = document.getElementById('regSkipBtn');
+    const regInfoIcon = document.getElementById('regInfoIcon');
 
-    document.getElementById('regInfoIcon').addEventListener('click', (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      openInfoToast();
-    });
-
-    function openInfoToast() {
+    // INFO IKONĖLĖ – VISADA PASPAUDŽIAMA
+    // Naudojame tiek click, tiek touchend, kad veiktų visuose įrenginiuose
+    function handleInfoIconActivate(e) {
+      if (e) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+      hideInfoToast();
       const html = `
-        <div class="info-title">IP adresą sužinoti galite:</div>
-        <div class="info-line"><span class="info-bullet">•</span> prisijungiant prie WIFI tinklo <span class="info-strong">„EJ3“</span></div>
-        <div class="info-line"><span class="info-bullet">•</span> prisijungiant prie EJ3 įrenginio su <span class="info-strong">NFC</span></div>
+        <div class="info-title">EJ3 įrenginio IP adreso gavimas:</div>
+        <div class="info-line">1. Įjunkite EJ3 įrenginį ir telefone NFC funkciją.</div>
+        <div class="info-line">2. Priglauskite EJ3 įrenginį NFC ženkleliu prie telefono.</div>
+        <div class="info-line">3. Telefone atsidarys registracijos puslapis (arba atidarykite rankiniu būdu "EJ3" wifi tinklą.</div>
       `;
-      showInfoToast(html, 6000);
+      showInfoToast(html, 5000);
     }
+
+    regInfoIcon.addEventListener('click', handleInfoIconActivate);
+    regInfoIcon.addEventListener('touchend', handleInfoIconActivate, { passive: false });
+
+    // Sustabdome globalų tap, kad info ikonėlė nebūtų "nuryta" fullscreen
+    ['mousedown', 'touchstart', 'pointerdown'].forEach(evt => {
+      regInfoIcon.addEventListener(evt, (e) => {
+        e.stopPropagation();
+      }, { passive: true });
+    });
 
     regSkipBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -1510,6 +1604,7 @@
       localStorage.removeItem('esp32_url');
       ESP32_BASE = '';
       telemetryActive = false;
+      telemetryPollingStopped = true;
 
       document.body.classList.add('no-telemetry');
       goToMainPage();
@@ -1570,6 +1665,7 @@
 
       document.body.classList.remove('no-telemetry');
       telemetryActive = true;
+      telemetryPollingStopped = false;
 
       regStatusMsg.style.color = '#4CAF50';
       regStatusMsg.innerText = '✅ EJ3 įrenginys prijungtas!';
@@ -1591,6 +1687,7 @@
       if (isSkipRegistration()) {
         document.body.classList.add('no-telemetry');
         telemetryActive = false;
+        telemetryPollingStopped = true;
         goToMainPage();
         return;
       }
@@ -1603,6 +1700,7 @@
         if (ok) {
           document.body.classList.remove('no-telemetry');
           telemetryActive = true;
+          telemetryPollingStopped = false;
           goToMainPage();
           pollTrigger();
           return;
@@ -1703,8 +1801,13 @@
       showOfflineAlert();
     });
 
+    function stopTelemetryPolling() {
+      telemetryPollingStopped = true;
+      telemetryActive = false;
+    }
+
     function pollTrigger() {
-      if (!telemetryActive) {
+      if (!telemetryActive || telemetryPollingStopped) {
         return;
       }
       if (!ESP32_BASE) {
@@ -1772,12 +1875,11 @@
             }
         })
         .finally(() => {
+            if (!telemetryActive || telemetryPollingStopped) return;
             const interval = telemetryIsOnline
                 ? TELEMETRY_OK_INTERVAL
                 : TELEMETRY_FAIL_INTERVAL;
-            if (telemetryActive) {
-                setTimeout(pollTrigger, interval);
-            }
+            setTimeout(pollTrigger, interval);
         });
     }
 
@@ -1958,9 +2060,24 @@
     let lastDetectTime = 0;
     let currentCamPoly = null;
     let focusRingObj = {x: 0, y: 0, alpha: 0}; 
+    let cameraAnimationFrameId = null;
 
     function applyCameraAspectRatio() {
-        document.querySelector('#cameraModal .image-frame').style.aspectRatio = "1 / 1.4142";
+        const frame = document.querySelector('#cameraModal .image-frame');
+        if (frame) frame.style.aspectRatio = "1 / 1.4142";
+    }
+
+    function stopCameraStream() {
+        if (liveStream) {
+            liveStream.getTracks().forEach(t => t.stop());
+            liveStream = null;
+        }
+        isCameraActive = false;
+        if (cameraAnimationFrameId) {
+            cancelAnimationFrame(cameraAnimationFrameId);
+            cameraAnimationFrameId = null;
+        }
+        window.removeEventListener('resize', applyCameraAspectRatio);
     }
 
     cameraBtnMain.addEventListener('click', async () => {
@@ -1997,9 +2114,11 @@
                         }
                     } catch(e) {}
                 }, 500);
-                requestAnimationFrame(detectLiveDocument);
+                detectLiveDocument(performance.now());
             };
         } catch (err) {
+            stopCameraStream();
+            cameraModal.style.display = 'none';
             document.getElementById('cameraBlockedModal').style.display = 'flex';
         }
     });
@@ -2014,14 +2133,13 @@
 
     document.getElementById('closeCameraBlockedBtn').addEventListener('click', () => {
         document.getElementById('cameraBlockedModal').style.display = 'none';
+        document.getElementById('mainContainer').style.display = 'flex';
         setTimeout(() => { requestFsNow(); }, 100);
     });
 
     closeCameraModalX.addEventListener('click', () => {
-        if(liveStream) { liveStream.getTracks().forEach(t => t.stop()); liveStream = null; }
-        isCameraActive = false;
+        stopCameraStream();
         cameraModal.style.display = 'none';
-        window.removeEventListener('resize', applyCameraAspectRatio);
         document.getElementById('mainContainer').style.display = 'flex';
         setTimeout(() => { requestFsNow(); }, 100);
     });
@@ -2035,6 +2153,7 @@
 
     function detectLiveDocument(timestamp) {
         if(!isCameraActive) return;
+        cameraAnimationFrameId = requestAnimationFrame(detectLiveDocument);
         if (liveVideo.videoWidth && liveVideo.videoHeight) {
             if (liveOverlay.width !== liveVideo.clientWidth) {
                 liveOverlay.width = liveVideo.clientWidth;
@@ -2155,19 +2274,21 @@
                 focusRingObj.alpha -= 0.04; 
             }
         }
-        requestAnimationFrame(detectLiveDocument);
     }
 
     captureBtn.addEventListener('click', async () => {
         if(!isCameraActive) return;
+        if (!liveVideo.videoWidth || !liveVideo.videoHeight) {
+            showToast("Kamera dar neparuošta. Palaukite sekundę.");
+            return;
+        }
         const captureCanvas = document.createElement('canvas');
         captureCanvas.width = liveVideo.videoWidth;
         captureCanvas.height = liveVideo.videoHeight;
         const ctx = captureCanvas.getContext('2d');
         ctx.drawImage(liveVideo, 0, 0, captureCanvas.width, captureCanvas.height);
         
-        if(liveStream) { liveStream.getTracks().forEach(t => t.stop()); liveStream = null; }
-        isCameraActive = false;
+        stopCameraStream();
         cameraModal.style.display = 'none';
 
         let dataUrl = captureCanvas.toDataURL('image/jpeg', 0.95);
@@ -2236,6 +2357,8 @@
             processExtractedImage(img);
         } catch (err) {
             showToast("Klaida įkeliant nuotrauką.");
+        } finally {
+            modalFileInput.value = '';
         }
     });
 
@@ -2526,8 +2649,6 @@
             canvasW: canvasW, canvasH: canvasH
         };
         
-        scannedImageData = ctx.getImageData(0, 0, canvasW, canvasH);
-        
         deskewedCanvas = document.createElement('canvas');
         deskewedCanvas.width = canvasW;
         deskewedCanvas.height = canvasH;
@@ -2641,6 +2762,9 @@
             const dilated = new cv.Mat();
             cv.dilate(cleaned, dilated, kernel2, new cv.Point(-1, -1), 1);
             
+            if (window.textMaskMat) {
+                window.textMaskMat.delete();
+            }
             window.textMaskMat = dilated.clone();
             
             const displayCanvas = document.createElement('canvas');
@@ -2751,10 +2875,10 @@
         }
         
         for (const word of words) {
-            const x1 = Math.max(0, word.bbox.x);
-            const y1 = Math.max(0, word.bbox.y);
-            const x2 = Math.min(mask.cols, word.bbox.x + word.bbox.width);
-            const y2 = Math.min(mask.rows, word.bbox.y + word.bbox.height);
+            const x1 = Math.max(0, Math.min(mask.cols, word.bbox.x));
+            const y1 = Math.max(0, Math.min(mask.rows, word.bbox.y));
+            const x2 = Math.max(0, Math.min(mask.cols, word.bbox.x + word.bbox.width));
+            const y2 = Math.max(0, Math.min(mask.rows, word.bbox.y + word.bbox.height));
             
             if (x2 <= x1 || y2 <= y1) {
                 word.isBold = false;
@@ -2793,6 +2917,12 @@
     async function processExtractedImage(img) {
         if (isProcessing) return;
         isProcessing = true;
+        
+        // Resetuojame seną kaukę, kad nebūtų naudojama sena informacija
+        if (window.textMaskMat) {
+            try { window.textMaskMat.delete(); } catch (e) {}
+            window.textMaskMat = null;
+        }
         
         document.getElementById('mainContainer').style.display = 'none';
         translationModal.style.display = 'flex';
@@ -3037,7 +3167,7 @@
     function pointerDown(e) {
         if(!isAlignMode) return;
         let pos = getPointerPos(e);
-        let touchRadius = resultCanvas.width * 0.15; 
+        let touchRadius = Math.min(resultCanvas.width, resultCanvas.height) * 0.08; 
         for(let i=0; i<4; i++) {
             let dx = pos.x - currentDocPoly[i].x; 
             let dy = pos.y - currentDocPoly[i].y;
@@ -3275,13 +3405,15 @@
                 const idx = y * smallW + x;
                 
                 if (colorMask[idx] === 1 && visited[idx] === 0) {
+                    // BFS su pointer'iu – O(n), ne O(n²)
                     const queue = [{x, y}];
+                    let head = 0;
                     let minX = x, maxX = x, minY = y, maxY = y;
                     let pixelCount = 0;
                     visited[idx] = 1;
                     
-                    while (queue.length > 0) {
-                        const p = queue.shift();
+                    while (head < queue.length) {
+                        const p = queue[head++];
                         pixelCount++;
                         
                         if (p.x < minX) minX = p.x;
@@ -3348,38 +3480,58 @@
     }
 
     // ============================================================
-    // VERČIAME IR PIEŠIAME PASTRAIPAS
+    // VERČIAME IR PIEŠIAME PASTRAIPAS – SU BATCH'INIMU
     // ============================================================
     async function translateAndDrawParagraphs(paragraphs, targetLang, ctx) {
-        const translations = [];
+        const translations = new Array(paragraphs.length).fill(null);
         const total = paragraphs.length;
         
-        for (let i = 0; i < paragraphs.length; i++) {
-            const para = paragraphs[i];
+        // Batch'iname po DEEPL_BATCH_SIZE pastraipų
+        for (let batchStart = 0; batchStart < total; batchStart += DEEPL_BATCH_SIZE) {
+            const batchEnd = Math.min(batchStart + DEEPL_BATCH_SIZE, total);
+            const progress = 60 + Math.floor((batchStart / total) * 30);
+            setProgress(progress, `Verčiama ${batchStart + 1}-${batchEnd}/${total}...`);
             
-            const progress = 60 + Math.floor((i / total) * 30);
-            setProgress(progress, `Verčiama ${i+1}/${total}...`);
+            // DeepL leidžia siųsti kelis tekstus vienu metu per parametrą "text" (multiple values)
+            const params = new URLSearchParams();
+            params.append('source_lang', 'LT');
+            params.append('target_lang', targetLang);
+            for (let i = batchStart; i < batchEnd; i++) {
+                params.append('text', paragraphs[i].text);
+            }
             
             try {
-                let bodyData = `text=${encodeURIComponent(para.text)}&source_lang=LT&target_lang=${targetLang}`;
                 let res = await fetch(WORKER_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: bodyData
+                    body: params.toString()
                 });
                 
                 if (res.ok) {
                     let data = await res.json();
-                    translations.push(data.translations[0].text);
+                    if (data.translations && data.translations.length === (batchEnd - batchStart)) {
+                        for (let i = 0; i < data.translations.length; i++) {
+                            translations[batchStart + i] = data.translations[i].text;
+                        }
+                    } else {
+                        // Fallback – verčiame po vieną
+                        for (let i = batchStart; i < batchEnd; i++) {
+                            translations[i] = await translateSingle(paragraphs[i].text, targetLang) || paragraphs[i].text;
+                        }
+                    }
                 } else {
-                    translations.push(para.text);
+                    for (let i = batchStart; i < batchEnd; i++) {
+                        translations[i] = await translateSingle(paragraphs[i].text, targetLang) || paragraphs[i].text;
+                    }
                 }
             } catch(e) {
-                console.error("Vertimo klaida:", e);
-                translations.push(para.text);
+                console.error("Vertimo batch klaida:", e);
+                for (let i = batchStart; i < batchEnd; i++) {
+                    if (!translations[i]) translations[i] = paragraphs[i].text;
+                }
             }
             
-            if (i < paragraphs.length - 1) {
+            if (batchEnd < total) {
                 await new Promise(r => setTimeout(r, DEEPL_DELAY));
             }
         }
@@ -3428,9 +3580,25 @@
             }
         }
     }
+    
+    async function translateSingle(text, targetLang) {
+        try {
+            let bodyData = `text=${encodeURIComponent(text)}&source_lang=LT&target_lang=${targetLang}`;
+            let res = await fetch(WORKER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: bodyData
+            });
+            if (res.ok) {
+                let data = await res.json();
+                return data.translations[0].text;
+            }
+        } catch(e) {}
+        return null;
+    }
 
     // ============================================================
-    // TEKSTO SKAIDYMAS Į EILUTES
+    // TEKSTO SKAIDYMAS Į EILUTES – SU ILGŲ ŽODŽIŲ APDOROJIMU
     // ============================================================
     function wrapTextToLines(ctx, text, maxWidth) {
         const words = text.split(/\s+/);
@@ -3448,6 +3616,21 @@
                 currentLine = word;
             } else {
                 currentLine = testLine;
+            }
+            
+            // Jei žodis vis dar per ilgas – skaidome po simbolį
+            if (!currentLine && ctx.measureText(word).width > maxWidth) {
+                let chunk = '';
+                for (const ch of word) {
+                    const testChunk = chunk + ch;
+                    if (ctx.measureText(testChunk).width > maxWidth && chunk) {
+                        lines.push(chunk);
+                        chunk = ch;
+                    } else {
+                        chunk = testChunk;
+                    }
+                }
+                currentLine = chunk;
             }
         }
         
