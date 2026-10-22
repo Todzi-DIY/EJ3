@@ -36,7 +36,7 @@
   }
   
   /* ============================================================
-     NUSTATYMŲ IKONA – VIENAS DANTRATIS
+     NUSTATYMŲ IKONA – VIENAS DANTRATIS (su rėmeliu)
      ============================================================ */
   .settings-icon {
     position: fixed; 
@@ -67,7 +67,7 @@
   }
 
   /* ============================================================
-     KALBOS PASIRINKIMO IKONA – DEŠINIAJAME VIRŠUTINIAME KAMPE
+     KALBOS PASIRINKIMO IKONA (su rėmeliu – toks pat kaip nustatymų)
      ============================================================ */
   .lang-icon {
     position: fixed; 
@@ -165,6 +165,32 @@
     cursor: pointer;
     font-size: 14px;
     font-family: Arial, sans-serif;
+  }
+
+  /* ============================================================
+     FULLSCREEN PRANEŠIMAS – jei fullscreen išjungtas
+     ============================================================ */
+  #fsHint {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(33, 150, 243, 0.95);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: bold;
+    z-index: 9999;
+    border: 2px solid #64B5F6;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.7);
+    cursor: pointer;
+    text-align: center;
+    max-width: 90%;
+  }
+  #fsHint.show {
+    display: block;
   }
 
   /* ============================================================
@@ -1078,6 +1104,7 @@
 
   <div id="toastMsg"></div>
   <div id="infoToast"></div>
+  <div id="fsHint">👆 Palieskite ekraną, kad grįžtumėte į viso ekrano režimą</div>
 
   <div id="registrationModal">
     <div class="reg-box">
@@ -1129,21 +1156,16 @@
     <div id="offlineAlert">Įjunkite EJ3 įrenginį!</div>
   </div>
 
-  <!-- ============================================================
-       NUSTATYMŲ IKONA – VIENAS DANTRATIS
-       ============================================================ -->
+  <!-- NUSTATYMŲ IKONA – VIENAS DANTRATIS -->
   <div id="settingsIcon" class="settings-icon">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <!-- vienas dantratis -->
       <circle cx="12" cy="12" r="3"></circle>
       <path d="M12 2 L12 4 M12 20 L12 22 M2 12 L4 12 M20 12 L22 12 M4.93 4.93 L6.34 6.34 M17.66 17.66 L19.07 19.07 M4.93 19.07 L6.34 17.66 M17.66 6.34 L19.07 4.93"></path>
       <circle cx="12" cy="12" r="8" stroke-dasharray="2 3"></circle>
     </svg>
   </div>
 
-  <!-- ============================================================
-       KALBOS PASIRINKIMO IKONA – DEŠINIAJAME VIRŠUTINIAME KAMPE
-       ============================================================ -->
+  <!-- KALBOS IKONA -->
   <div id="langIcon" class="lang-icon" title="Kalba">
     <span id="langCode" class="lang-code">LT</span>
   </div>
@@ -1269,9 +1291,6 @@
     </div>
   </div>
 
-  <!-- ============================================================
-       KALBŲ PASIRINKIMO MODALAS
-       ============================================================ -->
   <div id="langModal">
     <div class="lang-box">
       <h3>PASIRINKITE KALBĄ</h3>
@@ -1376,24 +1395,14 @@
     // ============================================================
     // FULLSCREEN – VISADA IR VISUR
     // ============================================================
-    // Strategija:
-    //  - requestFullscreen() bandomas ant KIEKVIENO click/touchend
-    //  - Jei fullscreen jau aktyvus – nieko nedarom
-    //  - Jei fullscreen uždarytas (Esc, F11) – fullscreenchange listener'is
-    //    atnaujina būseną, kad vėl būtų galima jungti
-    //  - Niekada nejungiama ant #regInfoIcon
-    // ============================================================
-    let fullscreenSupported = !!(document.documentElement.requestFullscreen);
+    let fsHintShown = false;
 
     function requestFsNow() {
-      if (!fullscreenSupported) return;
-      if (document.fullscreenElement) return;
+      if (!document.documentElement.requestFullscreen) return;
       try {
         const p = document.documentElement.requestFullscreen();
         if (p && p.catch) {
-          p.catch(err => {
-            // Nepavyksta – nieko nedarom, bandysim kitą kartą
-          });
+          p.catch(err => { /* ignore */ });
         }
       } catch (err) {}
     }
@@ -1402,8 +1411,11 @@
     document.addEventListener('fullscreenchange', () => {
       if (document.fullscreenElement) {
         log('✅ Fullscreen aktyvus');
+        fsHintShown = false;
+        document.getElementById('fsHint').classList.remove('show');
       } else {
         log('ℹ️ Fullscreen išjungtas');
+        // Nerodyti hint iš karto (vartotojas gal pats išjungė)
       }
     });
 
@@ -1413,18 +1425,14 @@
       if (e && e.target && e.target.closest && e.target.closest('#regInfoIcon')) {
         return;
       }
-      // Jei jau fullscreen – nieko
-      if (document.fullscreenElement) return;
-      // Kviečiame sinchroniškai
-      requestFsNow();
+      // VISADA bandyti iš naujo, jei nėra fullscreen
+      if (!document.fullscreenElement) {
+        requestFsNow();
+      }
     }
 
     document.addEventListener('click', handleGlobalTap, true);
     document.addEventListener('touchend', handleGlobalTap, true);
-
-    // Papildomai – kai atsidaro / užsidaro modalai, irgi bandome fullscreen
-    // (per MutationObserver arba per konkrečius modalų atidarymo metu)
-    // Paprastesnis būdas – iškviesti requestFsNow() po modalų atidarymo
 
     // ============================================================
     // KALBOS VALDYMAS
@@ -1478,7 +1486,6 @@
     // GRĮŽIMAS Į PAGRINDINĮ PUSLAPĮ
     // ============================================================
     function goToMainPage() {
-      // Paslėpti visus modalinius langus
       document.getElementById('registrationModal').style.display = 'none';
       document.getElementById('settingsModal').style.display = 'none';
       document.getElementById('wifiModal').style.display = 'none';
@@ -1488,9 +1495,9 @@
       document.getElementById('translationModal').style.display = 'none';
       document.getElementById('cameraBlockedModal').style.display = 'none';
 
-      // Rodyti pagrindinį
       document.getElementById('mainContainer').style.display = 'flex';
       unlockBody();
+      setTimeout(() => { requestFsNow(); }, 100);
     }
 
     // ============================================================
@@ -1517,27 +1524,18 @@
       showInfoToast(html, 6000);
     }
 
-    // TĘSTI BE REGISTRACIJOS – VISADA Į PAGRINDINĮ PUSLAPĮ
     regSkipBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
 
-      // Išsaugome, kad daugiau neberodytų registracijos
       localStorage.setItem(SKIP_REGISTRATION_KEY, '1');
       localStorage.removeItem(CLIENT_REGISTERED_KEY);
       localStorage.removeItem('esp32_url');
       ESP32_BASE = '';
       telemetryActive = false;
 
-      // Paslėpti telemetrijos langelį
       document.body.classList.add('no-telemetry');
-
-      // Grįžti į pagrindinį puslapį
       goToMainPage();
-
-      // Bandyti fullscreen
-      setTimeout(() => { requestFsNow(); }, 100);
-
       log('⏭️ Tęsiama be registracijos – pagrindinis puslapis');
     });
 
@@ -1638,7 +1636,6 @@
         }
       }
 
-      // Registracijos modalas
       lockBody();
       registrationModal.style.display = 'flex';
       setTelemetryOffline();
@@ -1821,18 +1818,20 @@
       setTimeout(() => { requestFsNow(); }, 100);
     });
 
-    // KALBOS IKONA
     document.getElementById('langIcon').addEventListener('click', () => {
       document.getElementById('langModal').style.display = 'flex';
+      setTimeout(() => { requestFsNow(); }, 100);
     });
     document.getElementById('langCloseBtn').addEventListener('click', () => {
       document.getElementById('langModal').style.display = 'none';
+      setTimeout(() => { requestFsNow(); }, 100);
     });
     document.querySelectorAll('.lang-option').forEach(btn => {
       btn.addEventListener('click', () => {
         const lang = btn.dataset.lang;
         setUiLang(lang);
         document.getElementById('langModal').style.display = 'none';
+        setTimeout(() => { requestFsNow(); }, 100);
       });
     });
 
