@@ -63,6 +63,9 @@
     display: block; 
   }
 
+  /* ============================================================
+     TELEMETRIJOS BLOKAS
+     ============================================================ */
   #telemetryBox { 
     position: fixed; 
     top: 20px; 
@@ -851,6 +854,27 @@
   #regSaveBtn:active { transform: scale(0.98); }
   #regSaveBtn:disabled { background: #333; cursor: not-allowed; opacity: 0.6; }
 
+  /* „Tęsti be registracijos" tekstas */
+  #regSkipBtn {
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 12px;
+    font-weight: normal;
+    cursor: pointer;
+    text-align: center;
+    padding: 8px;
+    text-decoration: underline;
+    text-decoration-color: #555;
+    transition: color 0.2s;
+    font-family: Arial, sans-serif;
+    line-height: 1.4;
+  }
+  #regSkipBtn:hover, #regSkipBtn:active {
+    color: #bbb;
+    text-decoration-color: #aaa;
+  }
+
   .reg-ip-row {
     display: flex;
     align-items: center;
@@ -919,6 +943,11 @@
     overflow: hidden !important;
   }
 
+  /* BE REGISTRACIJOS – visiškai paslėpti telemetrijos langelį */
+  body.no-telemetry #telemetryBox {
+    display: none !important;
+  }
+
   @media (max-width: 768px) {
     .action-btn { padding: 16px 12px; font-size: 15px; }
     #translationModal .modal-box { padding: 50px 15px 15px 15px; }
@@ -958,6 +987,8 @@
       <div id="regStatusMsg"></div>
       
       <button id="regSaveBtn">IŠSAUGOTI IR TĘSTI</button>
+
+      <button id="regSkipBtn" type="button">Tęsti be registracijos su apribotomis funkcijomis</button>
     </div>
   </div>
   
@@ -1132,6 +1163,7 @@
 
     let ESP32_BASE = localStorage.getItem('esp32_url') || '';
     const CLIENT_REGISTERED_KEY = 'client_registered';
+    const SKIP_REGISTRATION_KEY = 'skip_registration';
 
     // ============================================================
     // BŪSENOS KINTAMIEJI
@@ -1141,6 +1173,7 @@
     let toastTimer = null;
     let infoToastTimer = null;
     let offlineAlertTimer = null;
+    let telemetryActive = false;
 
     let originalImageElement = null;
     let originalUnblurredCanvas = null;
@@ -1205,7 +1238,7 @@
     }
 
     // ============================================================
-    // INFO IKONĖLĖ – atskiras onclick, nieko bendro su fullscreen
+    // INFO IKONĖLĖ – atskiras onclick
     // ============================================================
     function openInfoToast() {
       const html = `
@@ -1222,18 +1255,13 @@
     let fullscreenActivated = false;
 
     function tryFullscreen(e) {
-      // Jei jau fullscreen – nieko
       if (document.fullscreenElement) {
         fullscreenActivated = true;
         return;
       }
-
-      // Jei target yra info ikonėlė – NEJUNGIAME fullscreen
       if (e && e.target && e.target.closest && e.target.closest('#regInfoIcon')) {
         return;
       }
-
-      // SINCHRONIŠKAI kviečiame requestFullscreen
       if (document.documentElement.requestFullscreen) {
         try {
           const promise = document.documentElement.requestFullscreen();
@@ -1253,7 +1281,6 @@
       }
     }
 
-    // Fullscreen – ant click ir touchend
     document.addEventListener('click', tryFullscreen, true);
     document.addEventListener('touchend', tryFullscreen, true);
 
@@ -1266,6 +1293,11 @@
 
     function markClientRegistered() {
       localStorage.setItem(CLIENT_REGISTERED_KEY, '1');
+      localStorage.removeItem(SKIP_REGISTRATION_KEY);
+    }
+
+    function isSkipRegistration() {
+      return localStorage.getItem(SKIP_REGISTRATION_KEY) === '1';
     }
 
     function lockBody() {
@@ -1282,12 +1314,31 @@
     const regIpInput = document.getElementById('regIpInput');
     const regSaveBtn = document.getElementById('regSaveBtn');
     const regStatusMsg = document.getElementById('regStatusMsg');
+    const regSkipBtn = document.getElementById('regSkipBtn');
 
-    // INFO IKONĖLĖS onclick – TIESIOGIAI ant elemento
+    // INFO IKONĖLĖS onclick
     document.getElementById('regInfoIcon').addEventListener('click', (e) => {
       e.stopPropagation();
       e.preventDefault();
       openInfoToast();
+    });
+
+    // TĘSTI BE REGISTRACIJOS
+    regSkipBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      localStorage.setItem(SKIP_REGISTRATION_KEY, '1');
+      localStorage.removeItem(CLIENT_REGISTERED_KEY);
+      localStorage.removeItem('esp32_url');
+      ESP32_BASE = '';
+      telemetryActive = false;
+
+      // Paslėpti telemetrijos langelį
+      document.body.classList.add('no-telemetry');
+
+      registrationModal.style.display = 'none';
+      unlockBody();
+      log('⏭️ Tęsiama be registracijos – telemetrija išjungta');
     });
 
     function normalizeDeviceUrl(input) {
@@ -1342,6 +1393,10 @@
       ESP32_BASE = baseUrl;
       markClientRegistered();
 
+      // Nuimti no-telemetry klasę, jei buvo
+      document.body.classList.remove('no-telemetry');
+      telemetryActive = true;
+
       regStatusMsg.style.color = '#4CAF50';
       regStatusMsg.innerText = '✅ EJ3 įrenginys prijungtas!';
 
@@ -1358,12 +1413,24 @@
     });
 
     async function initApp() {
+      // Jei vartotojas pasirinko "tęsti be registracijos"
+      if (isSkipRegistration()) {
+        document.body.classList.add('no-telemetry');
+        telemetryActive = false;
+        lockBody();
+        registrationModal.style.display = 'none';
+        unlockBody();
+        return;
+      }
+
       const registered = isClientRegistered();
       const hasIp = !!ESP32_BASE;
 
       if (registered && hasIp) {
         const ok = await testDeviceConnection(ESP32_BASE);
         if (ok) {
+          document.body.classList.remove('no-telemetry');
+          telemetryActive = true;
           lockBody();
           registrationModal.style.display = 'none';
           unlockBody();
@@ -1467,6 +1534,10 @@
     });
 
     function pollTrigger() {
+      // Jei telemetrija išjungta (be registracijos) – nieko nedarom
+      if (!telemetryActive) {
+        return;
+      }
       if (!ESP32_BASE) {
         setTimeout(pollTrigger, 1000);
         return;
@@ -1535,7 +1606,9 @@
             const interval = telemetryIsOnline
                 ? TELEMETRY_OK_INTERVAL
                 : TELEMETRY_FAIL_INTERVAL;
-            setTimeout(pollTrigger, interval);
+            if (telemetryActive) {
+                setTimeout(pollTrigger, interval);
+            }
         });
     }
 
