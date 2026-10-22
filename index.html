@@ -35,6 +35,9 @@
     margin: 0 auto;
   }
   
+  /* ============================================================
+     NUSTATYMŲ IKONA – TRYS DANTRAČIAI
+     ============================================================ */
   .settings-icon {
     position: fixed; 
     top: 20px; 
@@ -58,9 +61,111 @@
     transform: scale(1.05); 
   }
   .settings-icon svg { 
-    width: 22px; 
-    height: 22px; 
+    width: 24px; 
+    height: 24px; 
     display: block; 
+  }
+
+  /* ============================================================
+     KALBOS PASIRINKIMO IKONA – DEŠINIAJAME VIRŠUTINIAME KAMPE
+     ============================================================ */
+  .lang-icon {
+    position: fixed; 
+    top: 20px; 
+    right: 20px; 
+    cursor: pointer; 
+    background-color: #1a1a1a;
+    width: 44px; 
+    height: 44px; 
+    border-radius: 10px; 
+    border: 2px solid #333; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    transition: all 0.3s ease; 
+    z-index: 100;
+  }
+  .lang-icon:hover { 
+    background-color: #252525; 
+    border-color: #2196F3; 
+    transform: scale(1.05); 
+  }
+  .lang-icon .lang-code {
+    font-size: 14px;
+    font-weight: bold;
+    color: #2196F3;
+    letter-spacing: 0.5px;
+  }
+
+  /* Kalbų modalas */
+  #langModal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0,0,0,0.95);
+    z-index: 500;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  #langModal .lang-box {
+    width: 100%;
+    max-width: 400px;
+    background: #1a1a1a;
+    border: 2px solid #2196F3;
+    border-radius: 12px;
+    padding: 25px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 10px 30px rgba(33, 150, 243, 0.25);
+  }
+  #langModal h3 {
+    color: #2196F3;
+    margin: 0 0 10px 0;
+    font-size: 18px;
+    letter-spacing: 1px;
+    text-align: center;
+    text-transform: uppercase;
+  }
+  #langModal .lang-option {
+    width: 100%;
+    padding: 14px;
+    background: #222;
+    color: white;
+    border: 2px solid #444;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    transition: all 0.2s;
+    font-family: Arial, sans-serif;
+  }
+  #langModal .lang-option:hover {
+    border-color: #2196F3;
+    background: #2a2a2a;
+  }
+  #langModal .lang-option.active {
+    background: rgba(33, 150, 243, 0.25);
+    border-color: #2196F3;
+    color: #64B5F6;
+  }
+  #langModal .lang-close {
+    margin-top: 15px;
+    background: transparent;
+    color: #888;
+    border: 1px solid #444;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: Arial, sans-serif;
   }
 
   /* ============================================================
@@ -854,7 +959,6 @@
   #regSaveBtn:active { transform: scale(0.98); }
   #regSaveBtn:disabled { background: #333; cursor: not-allowed; opacity: 0.6; }
 
-  /* „Tęsti be registracijos" tekstas */
   #regSkipBtn {
     background: transparent;
     border: none;
@@ -890,7 +994,6 @@
     flex: 0 1 auto;
   }
 
-  /* INFO IKONĖLĖ – <button>, didesnė zona */
   .reg-info-icon {
     flex-shrink: 0;
     width: 48px;
@@ -936,15 +1039,20 @@
 
   body.locked .container,
   body.locked #telemetryBox,
-  body.locked #settingsIcon {
+  body.locked #settingsIcon,
+  body.locked #langIcon {
     display: none !important;
   }
   body.locked {
     overflow: hidden !important;
   }
 
-  /* BE REGISTRACIJOS – visiškai paslėpti telemetrijos langelį */
   body.no-telemetry #telemetryBox {
+    display: none !important;
+  }
+
+  /* Be registracijos – paslėpti WIFI mygtuką */
+  body.no-telemetry #openWifiBtn {
     display: none !important;
   }
 
@@ -1023,13 +1131,29 @@
     <div id="offlineAlert">Įjunkite EJ3 įrenginį!</div>
   </div>
 
+  <!-- ============================================================
+       NUSTATYMŲ IKONA – TRYS DANTRAČIAI
+       ============================================================ -->
   <div id="settingsIcon" class="settings-icon">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="3"></circle>
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <!-- 3 dantračiai -->
+      <circle cx="7" cy="7" r="2.5"></circle>
+      <circle cx="17" cy="17" r="2.5"></circle>
+      <circle cx="17" cy="7" r="2"></circle>
+      <!-- dantračių "dantukai" (maži apskritimai) -->
+      <circle cx="7" cy="7" r="4.2" stroke-dasharray="1.5 2"></circle>
+      <circle cx="17" cy="17" r="4.2" stroke-dasharray="1.5 2"></circle>
+      <circle cx="17" cy="7" r="3.5" stroke-dasharray="1.2 1.8"></circle>
     </svg>
   </div>
-  
+
+  <!-- ============================================================
+       KALBOS PASIRINKIMO IKONA – DEŠINIAJAME VIRŠUTINIAME KAMPE
+       ============================================================ -->
+  <div id="langIcon" class="lang-icon" title="Kalba">
+    <span id="langCode" class="lang-code">LT</span>
+  </div>
+
   <div class="container" id="mainContainer">
     <button id="addFileBtnMain" class="action-btn">📁 Pridėkite failą</button>
     <button id="cameraBtnMain" class="action-btn" style="background-color: #4CAF50;">📷 FOTOGRAFUOTI</button>
@@ -1110,7 +1234,7 @@
 
   <div id="settingsModal">
     <h2 style="color:white; letter-spacing:2px; margin-bottom: 30px;">NUSTATYMAI</h2>
-    <button id="changeDeviceBtn" class="modal-btn" style="background-color: #2196F3; padding: 15px 30px; margin-bottom: 20px; width: 80%; max-width: 300px;">📡 KEISTI EJ3 ĮRENGINĮ</button>
+    <button id="changeDeviceBtn" class="modal-btn" style="background-color: #2196F3; padding: 15px 30px; margin-bottom: 20px; width: 80%; max-width: 300px;">📡 PRIDĖTI EJ3 ĮRENGINĮ</button>
     <button id="openWifiBtn" class="modal-btn" style="background-color: #9C27B0; padding: 15px 30px; margin-bottom: 20px; width: 80%; max-width: 300px;">📶 Išsaugoti WIFI tinklai</button>
     <button id="otaUpdateBtn" class="modal-btn" style="background-color: #00796B; padding: 15px 30px; margin-bottom: 30px; width: 80%; max-width: 300px;">🛠 Sistemos atnaujinimas</button>
     <button id="closeSettingsBtn" class="close-modal-btn" style="width: 80%; max-width: 300px;">UŽDARYTI</button>
@@ -1151,6 +1275,21 @@
     </div>
   </div>
 
+  <!-- ============================================================
+       KALBŲ PASIRINKIMO MODALAS
+       ============================================================ -->
+  <div id="langModal">
+    <div class="lang-box">
+      <h3>PASIRINKITE KALBĄ</h3>
+      <button class="lang-option" data-lang="LT">🇱🇹 Lietuvių</button>
+      <button class="lang-option" data-lang="EN">🇬🇧 English</button>
+      <button class="lang-option" data-lang="DE">🇩🇪 Deutsch</button>
+      <button class="lang-option" data-lang="PL">🇵🇱 Polski</button>
+      <button class="lang-option" data-lang="RU">🇷🇺 Русский</button>
+      <button class="lang-close" id="langCloseBtn">UŽDARYTI</button>
+    </div>
+  </div>
+
     <script>
     // ============================================================
     // KONFIGŪRACIJA
@@ -1164,6 +1303,9 @@
     let ESP32_BASE = localStorage.getItem('esp32_url') || '';
     const CLIENT_REGISTERED_KEY = 'client_registered';
     const SKIP_REGISTRATION_KEY = 'skip_registration';
+    const UI_LANG_KEY = 'ui_language';
+
+    let currentUiLang = localStorage.getItem(UI_LANG_KEY) || 'LT';
 
     // ============================================================
     // BŪSENOS KINTAMIEJI
@@ -1238,7 +1380,7 @@
     }
 
     // ============================================================
-    // INFO IKONĖLĖ – atskiras onclick
+    // INFO IKONĖLĖ
     // ============================================================
     function openInfoToast() {
       const html = `
@@ -1250,7 +1392,7 @@
     }
 
     // ============================================================
-    // FULLSCREEN – atskirai, target patikra tiesioginė
+    // FULLSCREEN
     // ============================================================
     let fullscreenActivated = false;
 
@@ -1285,6 +1427,32 @@
     document.addEventListener('touchend', tryFullscreen, true);
 
     // ============================================================
+    // KALBOS VALDYMAS
+    // ============================================================
+    function updateLangIcon() {
+      const langCodeEl = document.getElementById('langCode');
+      if (langCodeEl) {
+        const labels = { LT: 'LT', EN: 'EN', DE: 'DE', PL: 'PL', RU: 'RU' };
+        langCodeEl.innerText = labels[currentUiLang] || 'LT';
+      }
+      // Pažymėti aktyvų kalbos mygtuką
+      document.querySelectorAll('.lang-option').forEach(btn => {
+        if (btn.dataset.lang === currentUiLang) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
+
+    function setUiLang(lang) {
+      currentUiLang = lang;
+      localStorage.setItem(UI_LANG_KEY, lang);
+      updateLangIcon();
+      log('UI kalba: ' + lang);
+    }
+
+    // ============================================================
     // KLIENTO REGISTRACIJOS PATIKRINIMAS
     // ============================================================
     function isClientRegistered() {
@@ -1316,14 +1484,12 @@
     const regStatusMsg = document.getElementById('regStatusMsg');
     const regSkipBtn = document.getElementById('regSkipBtn');
 
-    // INFO IKONĖLĖS onclick
     document.getElementById('regInfoIcon').addEventListener('click', (e) => {
       e.stopPropagation();
       e.preventDefault();
       openInfoToast();
     });
 
-    // TĘSTI BE REGISTRACIJOS
     regSkipBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -1333,7 +1499,6 @@
       ESP32_BASE = '';
       telemetryActive = false;
 
-      // Paslėpti telemetrijos langelį
       document.body.classList.add('no-telemetry');
 
       registrationModal.style.display = 'none';
@@ -1393,7 +1558,6 @@
       ESP32_BASE = baseUrl;
       markClientRegistered();
 
-      // Nuimti no-telemetry klasę, jei buvo
       document.body.classList.remove('no-telemetry');
       telemetryActive = true;
 
@@ -1413,13 +1577,13 @@
     });
 
     async function initApp() {
-      // Jei vartotojas pasirinko "tęsti be registracijos"
       if (isSkipRegistration()) {
         document.body.classList.add('no-telemetry');
         telemetryActive = false;
         lockBody();
         registrationModal.style.display = 'none';
         unlockBody();
+        updateLangIcon();
         return;
       }
 
@@ -1435,6 +1599,7 @@
           registrationModal.style.display = 'none';
           unlockBody();
           pollTrigger();
+          updateLangIcon();
           return;
         } else {
           localStorage.removeItem('esp32_url');
@@ -1446,6 +1611,7 @@
       lockBody();
       registrationModal.style.display = 'flex';
       setTelemetryOffline();
+      updateLangIcon();
     }
 
     // ============================================================
@@ -1534,7 +1700,6 @@
     });
 
     function pollTrigger() {
-      // Jei telemetrija išjungta (be registracijos) – nieko nedarom
       if (!telemetryActive) {
         return;
       }
@@ -1624,6 +1789,21 @@
       document.getElementById('mainContainer').style.display = 'flex';
     });
 
+    // KALBOS IKONA
+    document.getElementById('langIcon').addEventListener('click', () => {
+      document.getElementById('langModal').style.display = 'flex';
+    });
+    document.getElementById('langCloseBtn').addEventListener('click', () => {
+      document.getElementById('langModal').style.display = 'none';
+    });
+    document.querySelectorAll('.lang-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const lang = btn.dataset.lang;
+        setUiLang(lang);
+        document.getElementById('langModal').style.display = 'none';
+      });
+    });
+
     document.getElementById('changeDeviceBtn').addEventListener('click', () => {
       document.getElementById('settingsModal').style.display = 'none';
       regIpInput.value = ESP32_BASE ? ESP32_BASE : '';
@@ -1635,7 +1815,7 @@
     });
 
     document.getElementById('openWifiBtn').addEventListener('click', () => {
-      if (!ESP32_BASE) { showToast("Pirmiausia užregistruokite EJ3 įrenginį"); return; }
+      if (!ESP32_BASE) { showToast("Pirmiausia pridėkite EJ3 įrenginį"); return; }
       document.getElementById('settingsModal').style.display = 'none';
       document.getElementById('wifiModal').style.display = 'flex';
       loadWifiList();
@@ -1688,7 +1868,7 @@
     // ============================================================
     let selectedOtaFile = null;
     document.getElementById('otaUpdateBtn').addEventListener('click', () => {
-        if (!ESP32_BASE) { showToast("Pirmiausia užregistruokite EJ3 įrenginį"); return; }
+        if (!ESP32_BASE) { showToast("Pirmiausia pridėkite EJ3 įrenginį"); return; }
         document.getElementById('settingsModal').style.display = 'none';
         document.getElementById('otaOverlay').style.display = 'flex';
         document.getElementById('otaSelectFileBtn').style.display = 'inline-block';
