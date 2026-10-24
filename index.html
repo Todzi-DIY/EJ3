@@ -998,9 +998,11 @@
     text-align: center;
     font-family: monospace;
     letter-spacing: 1px;
+    cursor: pointer;
   }
   #registrationModal input:focus {
     border-color: #2196F3;
+    cursor: text;
   }
   #regStatusMsg {
     color: #FF9800;
@@ -1174,8 +1176,9 @@
         <button id="regInfoIcon" type="button" class="reg-info-icon" aria-label="Kaip sužinoti IP?" onclick="handleInfoIconActivate(event);">i</button>
       </div>
 
-      <input type="text" id="regIpInput" placeholder="pvz. 192.168.1.50" autocomplete="off" inputmode="decimal">
-      
+      <!-- PRIDĖTAS readonly ATRIBUTAS – klaviatūra neatsidarys automatiškai -->
+      <input type="text" id="regIpInput" placeholder="pvz. 192.168.1.50" autocomplete="off" inputmode="decimal" readonly>
+
       <div id="regStatusMsg"></div>
       
       <button id="regSaveBtn">IŠSAUGOTI IR TĘSTI</button>
@@ -1436,7 +1439,7 @@
         toast.innerHTML = html;
         toast.style.display = 'block';
         if(infoToastTimer) clearTimeout(infoToastTimer);
-        infoToastTimer = setTimeout(() => { toast.style.display = 'none'; }, duration || 8000);
+        infoToastTimer = setTimeout(() => { toast.style.display = 'none'; }, duration || 10000);
     }
 
     function hideInfoToast() {
@@ -1484,11 +1487,34 @@
       } catch (err) {}
     }
 
+    // Bandome įjungti fullscreen iškart įkėlus
+    requestFsNow();
+
+    // Jei nepavyko (naršyklė blokuoja be vartotojo veiksmo), įjungiame po pirmo paspaudimo
+    document.body.addEventListener('click', function onFirstClick() {
+      if (!document.fullscreenElement) {
+        requestFsNow();
+      }
+    }, { once: true });
+
+    // Taip pat bandome po touch
+    document.body.addEventListener('touchend', function onFirstTouch() {
+      if (!document.fullscreenElement) {
+        requestFsNow();
+      }
+    }, { once: true });
+
     document.addEventListener('fullscreenchange', () => {
       if (document.fullscreenElement) {
         log('✅ Fullscreen aktyvus');
       } else {
         log('ℹ️ Fullscreen išjungtas');
+        // Jei vartotojas išjungė fullscreen – bandome vėl įjungti po kito paspaudimo
+        document.body.addEventListener('click', function onReClick() {
+          if (!document.fullscreenElement) {
+            requestFsNow();
+          }
+        }, { once: true });
       }
     });
 
@@ -1581,8 +1607,29 @@
     const regStatusMsg = document.getElementById('regStatusMsg');
     const regSkipBtn = document.getElementById('regSkipBtn');
 
+    // KLAVIATŪROS VALDYMAS – klaviatūra atsiras tik paspaudus ant lauko
+    // readOnly neleidžia klaviatūrai atsidaryti automatiškai
+    regIpInput.addEventListener('pointerdown', function() {
+      // Nuimame readonly, kad klaviatūra galėtų atsidaryti
+      if (this.hasAttribute('readonly')) {
+        this.removeAttribute('readonly');
+      }
+    });
+    regIpInput.addEventListener('touchstart', function() {
+      if (this.hasAttribute('readonly')) {
+        this.removeAttribute('readonly');
+      }
+    }, { passive: true });
+    regIpInput.addEventListener('click', function() {
+      if (this.hasAttribute('readonly')) {
+        this.removeAttribute('readonly');
+      }
+      // Užtikriname fokusą
+      this.focus();
+    });
+
     // INFO IKONĖLĖS FUNKCIJA – IŠKVIEČIAMA TIESIOGIAI IŠ HTML (onclick)
-    // Pranešimas rodomas 8 sekundes
+    // Pranešimas rodomas 10 sekundžių
     window.handleInfoIconActivate = function(e) {
       if (e) {
         e.stopPropagation();
@@ -1596,7 +1643,7 @@
         <div class="info-line">3. Telefone atsidarys EJ3 registracijos puslapis.</div>
         <div class="info-line-small">* Arba jį galite atidarykiti rankiniu būdu prisijunge prie "EJ3" wifi tinklo.</div>
       `;
-      showInfoToast(html, 8000);
+      showInfoToast(html, 10000);
     };
 
     regSkipBtn.addEventListener('click', (e) => {
@@ -1921,11 +1968,11 @@
     document.getElementById('changeDeviceBtn').addEventListener('click', () => {
       document.getElementById('settingsModal').style.display = 'none';
       regIpInput.value = ESP32_BASE ? ESP32_BASE : '';
+      regIpInput.setAttribute('readonly', 'readonly');
       regStatusMsg.innerText = '';
       regSaveBtn.disabled = false;
       lockBody();
       registrationModal.style.display = 'flex';
-      setTimeout(() => regIpInput.focus(), 100);
     });
 
     document.getElementById('openWifiBtn').addEventListener('click', () => {
