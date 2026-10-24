@@ -910,6 +910,13 @@
     line-height: 1.5;
     margin: 4px 0;
   }
+  #infoToast .info-line-small {
+    font-size: 12px;
+    line-height: 1.5;
+    margin: 8px 0 0 0;
+    color: #BBDEFB;
+    font-style: italic;
+  }
   #infoToast .info-line .info-bullet {
     color: #BBDEFB;
     font-weight: bold;
@@ -1429,7 +1436,7 @@
         toast.innerHTML = html;
         toast.style.display = 'block';
         if(infoToastTimer) clearTimeout(infoToastTimer);
-        infoToastTimer = setTimeout(() => { toast.style.display = 'none'; }, duration || 6000);
+        infoToastTimer = setTimeout(() => { toast.style.display = 'none'; }, duration || 8000);
     }
 
     function hideInfoToast() {
@@ -1575,7 +1582,7 @@
     const regSkipBtn = document.getElementById('regSkipBtn');
 
     // INFO IKONĖLĖS FUNKCIJA – IŠKVIEČIAMA TIESIOGIAI IŠ HTML (onclick)
-    // Pranešimas rodomas 6 sekundes virš visko (z-index 99999999)
+    // Pranešimas rodomas 8 sekundes
     window.handleInfoIconActivate = function(e) {
       if (e) {
         e.stopPropagation();
@@ -1584,11 +1591,12 @@
       hideInfoToast();
       const html = `
         <div class="info-title">EJ3 įrenginio IP adreso gavimas:</div>
-        <div class="info-line">1. Įjunkite EJ3 įrenginį ir telefone NFC funkciją.</div>
-        <div class="info-line">2. Priglauskite EJ3 įrenginį NFC ženkleliu prie telefono.</div>
-        <div class="info-line">3. Telefone atsidarys registracijos puslapis (arba atidarykite rankiniu būdu "EJ3" wifi tinklą.</div>
+        <div class="info-line">1. Įjunkite EJ3 įrenginį ir NFC funkciją telefone.</div>
+        <div class="info-line">2. Priglauskite EJ3 įrenginio NFC ženklelį prie telefono nugarėlės.</div>
+        <div class="info-line">3. Telefone atsidarys EJ3 registracijos puslapis.</div>
+        <div class="info-line-small">* Arba jį galite atidarykiti rankiniu būdu prisijunge prie "EJ3" wifi tinklo.</div>
       `;
-      showInfoToast(html, 6000);
+      showInfoToast(html, 8000);
     };
 
     regSkipBtn.addEventListener('click', (e) => {
