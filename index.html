@@ -856,6 +856,9 @@
     box-shadow: 0 4px 15px rgba(0,0,0,0.8); 
   }
 
+  /* ============================================================
+     TOAST PRANEŠIMAI – Z-INDEX PAKELTAS AUKŠČIAUSIAI
+     ============================================================ */
   #toastMsg {
     position: fixed; 
     top: 80px; 
@@ -866,7 +869,7 @@
     padding: 15px 25px;
     border-radius: 8px; 
     font-weight: bold; 
-    z-index: 10000; 
+    z-index: 99999999; 
     font-size: 14px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.6); 
     display: none; 
@@ -886,7 +889,7 @@
     color: white; 
     padding: 18px 22px;
     border-radius: 10px; 
-    z-index: 11000; 
+    z-index: 99999999; 
     box-shadow: 0 8px 25px rgba(0,0,0,0.7); 
     display: none; 
     text-align: left;
@@ -1074,7 +1077,7 @@
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
     position: relative;
-    z-index: 9999;
+    z-index: 9999999;
     pointer-events: auto;
     touch-action: manipulation;
     padding: 0;
@@ -1483,8 +1486,9 @@
     });
 
     function handleGlobalTap(e) {
-      // Jei paspaudimas buvo ant info ikonėlės – nieko nedarome (neatima fullscreen)
-      if (e && e.target && e.target.closest && e.target.closest('#regInfoIcon')) {
+      // Jei registracijos modalas atidarytas – NIEKO NEDAROME, kad neiššauktume fullscreen ir nesugadintume registro lango.
+      const regModal = document.getElementById('registrationModal');
+      if (regModal && regModal.style.display === 'flex') {
         return;
       }
       if (!document.fullscreenElement) {
@@ -1492,8 +1496,8 @@
       }
     }
 
-    document.addEventListener('click', handleGlobalTap, true);
-    document.addEventListener('touchend', handleGlobalTap, true);
+    // SVARBU: Naudojame tik 'click', kad išvengtume dvigubo suveikimo ir konfliktų su touchend
+    document.addEventListener('click', handleGlobalTap, false);
 
     // ============================================================
     // KALBOS VALDYMAS
@@ -1571,6 +1575,7 @@
     const regSkipBtn = document.getElementById('regSkipBtn');
 
     // INFO IKONĖLĖS FUNKCIJA – IŠKVIEČIAMA TIESIOGIAI IŠ HTML (onclick)
+    // Pranešimas rodomas 6 sekundes virš visko (z-index 99999999)
     window.handleInfoIconActivate = function(e) {
       if (e) {
         e.stopPropagation();
@@ -1583,7 +1588,7 @@
         <div class="info-line">2. Priglauskite EJ3 įrenginį NFC ženkleliu prie telefono.</div>
         <div class="info-line">3. Telefone atsidarys registracijos puslapis (arba atidarykite rankiniu būdu "EJ3" wifi tinklą.</div>
       `;
-      showInfoToast(html, 5000);
+      showInfoToast(html, 6000);
     };
 
     regSkipBtn.addEventListener('click', (e) => {
