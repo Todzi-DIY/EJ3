@@ -645,7 +645,7 @@
   .pdf-btn:active { transform: scale(0.98); }
 
   /* ============================================================
-     NUSTATYMŲ MODALAS – DABAR LENTELĖJE (KAIP KALBŲ MODALAS)
+     NUSTATYMŲ MODALAS – LENTELĖ (KAIP KALBŲ MODALAS)
      ============================================================ */
   #settingsModal { 
     display: none; 
@@ -1074,7 +1074,7 @@
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
     position: relative;
-    z-index: 20;
+    z-index: 9999;
     pointer-events: auto;
     touch-action: manipulation;
     padding: 0;
@@ -1091,6 +1091,7 @@
     bottom: -14px;
     border-radius: 50%;
     pointer-events: auto;
+    z-index: 1;
   }
   .reg-info-icon:active {
     transform: scale(0.9);
@@ -1159,7 +1160,8 @@
 
       <div class="reg-ip-row">
         <div class="reg-ip-label">Įveskite EJ3 įrenginio IP adresą:</div>
-        <button id="regInfoIcon" type="button" class="reg-info-icon" aria-label="Kaip sužinoti IP?">i</button>
+        <!-- PRIDĖTAS onclick ATRIBUTAS TIESIOGIAI -->
+        <button id="regInfoIcon" type="button" class="reg-info-icon" aria-label="Kaip sužinoti IP?" onclick="handleInfoIconActivate(event);">i</button>
       </div>
 
       <input type="text" id="regIpInput" placeholder="pvz. 192.168.1.50" autocomplete="off" inputmode="decimal">
@@ -1481,6 +1483,7 @@
     });
 
     function handleGlobalTap(e) {
+      // Jei paspaudimas buvo ant info ikonėlės – nieko nedarome (neatima fullscreen)
       if (e && e.target && e.target.closest && e.target.closest('#regInfoIcon')) {
         return;
       }
@@ -1566,11 +1569,9 @@
     const regSaveBtn = document.getElementById('regSaveBtn');
     const regStatusMsg = document.getElementById('regStatusMsg');
     const regSkipBtn = document.getElementById('regSkipBtn');
-    const regInfoIcon = document.getElementById('regInfoIcon');
 
-    // INFO IKONĖLĖ – VISADA PASPAUDŽIAMA
-    // Naudojame tiek click, tiek touchend, kad veiktų visuose įrenginiuose
-    function handleInfoIconActivate(e) {
+    // INFO IKONĖLĖS FUNKCIJA – IŠKVIEČIAMA TIESIOGIAI IŠ HTML (onclick)
+    window.handleInfoIconActivate = function(e) {
       if (e) {
         e.stopPropagation();
         e.preventDefault();
@@ -1583,17 +1584,7 @@
         <div class="info-line">3. Telefone atsidarys registracijos puslapis (arba atidarykite rankiniu būdu "EJ3" wifi tinklą.</div>
       `;
       showInfoToast(html, 5000);
-    }
-
-    regInfoIcon.addEventListener('click', handleInfoIconActivate);
-    regInfoIcon.addEventListener('touchend', handleInfoIconActivate, { passive: false });
-
-    // Sustabdome globalų tap, kad info ikonėlė nebūtų "nuryta" fullscreen
-    ['mousedown', 'touchstart', 'pointerdown'].forEach(evt => {
-      regInfoIcon.addEventListener(evt, (e) => {
-        e.stopPropagation();
-      }, { passive: true });
-    });
+    };
 
     regSkipBtn.addEventListener('click', (e) => {
       e.preventDefault();
