@@ -371,6 +371,9 @@
     display: none;
   }
   
+  /* ============================================================
+     ACTION MYGTUKAI
+     ============================================================ */
   .action-btn { 
     background-color: #2196F3; 
     color: white; 
@@ -386,9 +389,43 @@
     transition: all 0.3s; 
     box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     margin: 10px 0;
+    position: relative;
   }
   .action-btn:active { transform: scale(0.98); }
   .action-btn:disabled { background: #333; cursor: not-allowed; opacity: 0.6; }
+
+  /* Mygtukas, kuris neaktyvus be registracijos */
+  #cameraBtnMain.camera-disabled {
+    background-color: #444 !important;
+    color: #888 !important;
+    cursor: pointer;
+    opacity: 0.5;
+    filter: grayscale(100%);
+    box-shadow: none;
+    transition: opacity 0.2s;
+  }
+  #cameraBtnMain.camera-disabled:hover {
+    opacity: 0.6;
+  }
+
+  /* Pranešimas, rodomas mygtuko vietoje */
+  #cameraBtnMain.camera-warning-shown {
+    background-color: #E91E63 !important;
+    color: white !important;
+    opacity: 1 !important;
+    filter: none !important;
+    cursor: default;
+    box-shadow: 0 4px 10px rgba(233, 30, 99, 0.5) !important;
+    animation: pulseWarning 0.6s ease-in-out infinite;
+  }
+  #cameraBtnMain.camera-warning-shown:hover {
+    opacity: 1;
+  }
+
+  @keyframes pulseWarning {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(0.97); }
+  }
 
   .modal-overlay { 
     display: none; 
@@ -1407,6 +1444,7 @@
     let offlineAlertTimer = null;
     let telemetryActive = false;
     let telemetryPollingStopped = false;
+    let cameraWarningTimer = null;
 
     let originalImageElement = null;
     let originalUnblurredCanvas = null;
@@ -1581,6 +1619,49 @@
     }
 
     // ============================================================
+    // KAMEROS MYGTUKO BŪSENA (PAGAL REGISTRACIJĄ)
+    // ============================================================
+    function updateCameraBtnState() {
+      const cameraBtn = document.getElementById('cameraBtnMain');
+      if (!cameraBtn) return;
+
+      if (document.body.classList.contains('no-telemetry')) {
+        // Be registracijos – mygtukas pilkas ir neaktyvus
+        cameraBtn.classList.add('camera-disabled');
+        cameraBtn.classList.remove('camera-warning-shown');
+        cameraBtn.textContent = '📷 FOTOGRAFUOTI';
+        cameraBtn.style.backgroundColor = '';
+      } else {
+        // Su registracija – mygtukas aktyvus
+        cameraBtn.classList.remove('camera-disabled');
+        cameraBtn.classList.remove('camera-warning-shown');
+        cameraBtn.textContent = '📷 FOTOGRAFUOTI';
+        cameraBtn.style.backgroundColor = '#4CAF50';
+      }
+    }
+
+    function showCameraWarning() {
+      const cameraBtn = document.getElementById('cameraBtnMain');
+      if (!cameraBtn) return;
+
+      // Pakeičiame mygtuko tekstą į įspėjimą
+      cameraBtn.textContent = 'Priregistruokite EJ3 įrenginį';
+      cameraBtn.classList.add('camera-warning-shown');
+
+      if (cameraWarningTimer) clearTimeout(cameraWarningTimer);
+      cameraWarningTimer = setTimeout(() => {
+        // Grąžiname mygtuką į pradinę būseną
+        cameraBtn.classList.remove('camera-warning-shown');
+        cameraBtn.textContent = '📷 FOTOGRAFUOTI';
+        cameraBtn.style.backgroundColor = '';
+        // Jei vis dar no-telemetry, vėl pridedame disabled
+        if (document.body.classList.contains('no-telemetry')) {
+          cameraBtn.classList.add('camera-disabled');
+        }
+      }, 3000);
+    }
+
+    // ============================================================
     // GRĮŽIMAS Į PAGRINDINĮ PUSLAPĮ
     // ============================================================
     function goToMainPage() {
@@ -1595,6 +1676,7 @@
 
       document.getElementById('mainContainer').style.display = 'flex';
       unlockBody();
+      updateCameraBtnState();
       setTimeout(() => { requestFsNow(); }, 100);
     }
 
@@ -1608,9 +1690,7 @@
     const regSkipBtn = document.getElementById('regSkipBtn');
 
     // KLAVIATŪROS VALDYMAS – klaviatūra atsiras tik paspaudus ant lauko
-    // readOnly neleidžia klaviatūrai atsidaryti automatiškai
     regIpInput.addEventListener('pointerdown', function() {
-      // Nuimame readonly, kad klaviatūra galėtų atsidaryti
       if (this.hasAttribute('readonly')) {
         this.removeAttribute('readonly');
       }
@@ -1624,7 +1704,6 @@
       if (this.hasAttribute('readonly')) {
         this.removeAttribute('readonly');
       }
-      // Užtikriname fokusą
       this.focus();
     });
 
@@ -1765,6 +1844,7 @@
       lockBody();
       registrationModal.style.display = 'flex';
       setTelemetryOffline();
+      updateCameraBtnState();
     }
 
     // ============================================================
@@ -2113,25 +2193,17 @@
     let focusRingObj = {x: 0, y: 0, alpha: 0}; 
     let cameraAnimationFrameId = null;
 
-    function applyCameraAspectRatio() {
-        const frame = document.querySelector('#cameraModal .image-frame');
-        if (frame) frame.style.aspectRatio = "1 / 1.4142";
-    }
-
-    function stopCameraStream() {
-        if (liveStream) {
-            liveStream.getTracks().forEach(t => t.stop());
-            liveStream = null;
+    // KAMEROS MYGTUKO PASPAUDIMAS
+    // Jei be registracijos – rodomas įspėjimas mygtuko vietoje
+    cameraBtnMain.addEventListener('click', async (e) => {
+        // Jei mygtukas neaktyvus (no-telemetry) – rodome įspėjimą
+        if (document.body.classList.contains('no-telemetry') || cameraBtnMain.classList.contains('camera-disabled')) {
+            e.preventDefault();
+            e.stopPropagation();
+            showCameraWarning();
+            return;
         }
-        isCameraActive = false;
-        if (cameraAnimationFrameId) {
-            cancelAnimationFrame(cameraAnimationFrameId);
-            cameraAnimationFrameId = null;
-        }
-        window.removeEventListener('resize', applyCameraAspectRatio);
-    }
 
-    cameraBtnMain.addEventListener('click', async () => {
         try {
             applyCameraAspectRatio();
             window.addEventListener('resize', applyCameraAspectRatio);
@@ -2173,6 +2245,24 @@
             document.getElementById('cameraBlockedModal').style.display = 'flex';
         }
     });
+
+    function applyCameraAspectRatio() {
+        const frame = document.querySelector('#cameraModal .image-frame');
+        if (frame) frame.style.aspectRatio = "1 / 1.4142";
+    }
+
+    function stopCameraStream() {
+        if (liveStream) {
+            liveStream.getTracks().forEach(t => t.stop());
+            liveStream = null;
+        }
+        isCameraActive = false;
+        if (cameraAnimationFrameId) {
+            cancelAnimationFrame(cameraAnimationFrameId);
+            cameraAnimationFrameId = null;
+        }
+        window.removeEventListener('resize', applyCameraAspectRatio);
+    }
 
     liveOverlay.addEventListener('click', async (e) => {
         if(!isCameraActive || !liveStream) return;
