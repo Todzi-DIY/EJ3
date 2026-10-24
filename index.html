@@ -358,10 +358,6 @@
     animation: chargeAnim 1.5s infinite ease-in-out; 
   }
   
-  .title { 
-    display: none;
-  }
-  
   .action-btn { 
     background-color: #2196F3; 
     color: white; 
@@ -1295,6 +1291,136 @@
   <div id="toastMsg"></div>
   <div id="infoToast"></div>
 
+  <!-- ============================================================
+       EJ3 AUTO-DETECTION SCRIPT (paleidžiamas pirmas)
+       ============================================================ -->
+  <script>
+    (function() {
+      const EJ3_DEVICES_KEY = 'ej3_registered_devices';
+      const EJ3_CHANNEL_NAME = 'ej3_registration';
+      const DEFAULT_EJ3_IP = '192.168.4.1';
+      let discoveryInterval = null;
+      let redirectInProgress = false;
+
+      function getRegisteredDevices() {
+        try {
+          const raw = localStorage.getItem(EJ3_DEVICES_KEY);
+          return raw ? JSON.parse(raw) : [];
+        } catch (e) { return []; }
+      }
+
+      function isRegistered() {
+        return localStorage.getItem('client_registered') === '1';
+      }
+
+      function redirectToRegisteredDevice(ip) {
+        if (!ip || redirectInProgress) return;
+        try {
+          const currentHost = window.location.hostname;
+          const targetHost = ip.replace(/^https?:\/\//, '').split('/')[0].split(':')[0];
+          if (currentHost === targetHost) return;
+        } catch (e) {}
+
+        redirectInProgress = true;
+        console.log('[EJ3] ⚡ Nukreipiama į priregistruotą įrenginį:', ip);
+        window.location.href = ip.startsWith('http') ? ip : 'http://' + ip;
+      }
+
+      async function probeEj3Device(ip) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 1500);
+          const res = await fetch('http://' + ip + '/check_trigger?t=' + Date.now(), {
+            cache: 'no-store',
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          if (!res.ok) return false;
+          const data = await res.json();
+          return data && (data.bat !== undefined || data.rssi !== undefined);
+        } catch (e) { return false; }
+      }
+
+      // Klausomės BroadcastChannel – jei kitas tab'as priregistravo įrenginį
+      try {
+        const channel = new BroadcastChannel(EJ3_CHANNEL_NAME);
+        channel.onmessage = (e) => {
+          if (e.data && e.data.type === 'device_added' && e.data.device && e.data.device.ip) {
+            console.log('[EJ3] ⚡ BroadcastChannel pranešimas:', e.data.device.ip);
+            redirectToRegisteredDevice(e.data.device.ip);
+          }
+        };
+      } catch (e) {}
+
+      // Klausomės localStorage `storage` event
+      window.addEventListener('storage', (e) => {
+        if (e.key === EJ3_DEVICES_KEY && e.newValue) {
+          try {
+            const devices = JSON.parse(e.newValue);
+            if (devices.length > 0 && devices[devices.length - 1].ip) {
+              console.log('[EJ3] ⚡ localStorage pasikeitė:', devices[devices.length - 1].ip);
+              redirectToRegisteredDevice(devices[devices.length - 1].ip);
+            }
+          } catch (err) {}
+        }
+      });
+
+      async function tryDiscover() {
+        if (redirectInProgress) return;
+
+        // Jei jau priregistruotas – stabdome
+        if (isRegistered()) {
+          stopAutoDiscovery();
+          return;
+        }
+
+        // 1) Patikriname localStorage – gal jau kas nors priregistravo
+        const devices = getRegisteredDevices();
+        if (devices.length > 0 && devices[0].ip) {
+          const alive = await probeEj3Device(devices[0].ip.replace(/^https?:\/\//, ''));
+          if (alive) {
+            console.log('[EJ3] ⚡ Rastas priregistruotas įrenginys localStorage:', devices[0].ip);
+            redirectToRegisteredDevice(devices[0].ip);
+            return;
+          }
+        }
+
+        // 2) Bandome numatytą EJ3 AP IP
+        const alive = await probeEj3Device(DEFAULT_EJ3_IP);
+        if (alive) {
+          console.log('[EJ3] ⚡ Rastas EJ3 įrenginys:', DEFAULT_EJ3_IP);
+          redirectToRegisteredDevice('http://' + DEFAULT_EJ3_IP);
+        }
+      }
+
+      function startAutoDiscovery() {
+        if (discoveryInterval) return;
+        console.log('[EJ3] 🔍 Auto-discovery paleistas');
+        tryDiscover();
+        discoveryInterval = setInterval(tryDiscover, 1000);
+      }
+
+      function stopAutoDiscovery() {
+        if (discoveryInterval) {
+          clearInterval(discoveryInterval);
+          discoveryInterval = null;
+          console.log('[EJ3] ⏹️ Auto-discovery sustabdytas');
+        }
+      }
+
+      // Paleidžiame iškart, jei nepriregistruota
+      if (!isRegistered()) {
+        startAutoDiscovery();
+      }
+
+      // Expose globaliai, kad kiti script'ai galėtų naudoti
+      window.ej3AutoDiscovery = { start: startAutoDiscovery, stop: stopAutoDiscovery };
+    })();
+  </script>
+
+  <!-- ============================================================
+       PRIVALOMAS REGISTRACIJOS MODALAS
+       ============================================================ -->
   <div id="registrationModal">
     <div class="reg-box">
       <h2>REGISTRUOTI ĮRENGINĮ</h2>
@@ -1314,6 +1440,9 @@
     </div>
   </div>
   
+  <!-- ============================================================
+       TELEMETRIJOS BLOKAS
+       ============================================================ -->
   <div id="telemetryBox" class="disconnected">
     <div id="telemetryOnline">
       <div class="wifi-icon" title="Wi-Fi ryšys">
@@ -1512,9 +1641,6 @@
     const OCR_LANG = 'lit+eng';
     const DEEPL_BATCH_SIZE = 15;
 
-    // Numatytoji EJ3 IP – naudojama automatiniam aptikimui iš nepriregistruoto puslapio
-    const DEFAULT_EJ3_IP = '192.168.4.1';
-
     let ESP32_BASE = localStorage.getItem('esp32_url') || '';
     const CLIENT_REGISTERED_KEY = 'client_registered';
     const SKIP_REGISTRATION_KEY = 'skip_registration';
@@ -1533,7 +1659,6 @@
     let telemetryActive = false;
     let telemetryPollingStopped = false;
     let cameraWarningTimer = null;
-    let autoDiscoveryInterval = null;
 
     let originalImageElement = null;
     let originalUnblurredCanvas = null;
@@ -1747,9 +1872,6 @@
       }
     }
 
-    // Rodomas pranešimas priklausomai nuo būsenos:
-    //  - no-telemetry → "Priregistruokite EJ3 įrenginį"
-    //  - telemetry-offline → "Įjunkite EJ3 įrenginį"
     function showCameraWarning() {
       const cameraBtn = document.getElementById('cameraBtnMain');
       if (!cameraBtn) return;
@@ -1854,8 +1976,7 @@
       document.body.classList.add('no-telemetry');
       document.body.classList.remove('telemetry-offline');
       goToMainPage();
-      startAutoDiscovery();
-      log('⏭️ Tęsiama be registracijos – pagrindinis puslapis (auto-discovery paleistas)');
+      log('⏭️ Tęsiama be registracijos – pagrindinis puslapis');
     });
 
     function normalizeDeviceUrl(input) {
@@ -1915,9 +2036,6 @@
       telemetryActive = true;
       telemetryPollingStopped = false;
 
-      // Stabdome auto-discovery, nes jau priregistruota
-      stopAutoDiscovery();
-
       regStatusMsg.style.color = '#4CAF50';
       regStatusMsg.innerText = '✅ EJ3 įrenginys prijungtas!';
 
@@ -1932,57 +2050,6 @@
       if (e.key === 'Enter') saveRegistration();
     });
 
-    // ============================================================
-    // AUTO-DISCOVERY – nepriregistruotame puslapyje ieškome EJ3
-    // ============================================================
-    function startAutoDiscovery() {
-      if (autoDiscoveryInterval) return;
-      log('🔍 Auto-discovery paleistas – ieškoma EJ3 įrenginio');
-
-      const tryDiscover = async () => {
-        // Jei jau priregistruota – sustabdome
-        if (isClientRegistered() && ESP32_BASE) {
-          stopAutoDiscovery();
-          return;
-        }
-        // Jei vartotojas dabar registruojasi – nestabdome, bet ir netrukdome
-        // Bandome prisijungti prie numatyto EJ3 IP
-        const candidate = 'http://' + DEFAULT_EJ3_IP;
-        const ok = await testDeviceConnection(candidate);
-        if (ok) {
-          log('✅ Auto-discovery rado EJ3: ' + candidate);
-          localStorage.setItem('esp32_url', candidate);
-          localStorage.setItem(CLIENT_REGISTERED_KEY, '1');
-          localStorage.removeItem(SKIP_REGISTRATION_KEY);
-          ESP32_BASE = candidate;
-          stopAutoDiscovery();
-
-          // Pereiname į priregistruotą režimą
-          document.body.classList.remove('no-telemetry');
-          document.body.classList.remove('telemetry-offline');
-          telemetryActive = true;
-          telemetryPollingStopped = false;
-          goToMainPage();
-          pollTrigger();
-
-          showToast("✅ EJ3 įrenginys aptiktas ir prijungtas automatiškai!", 4000);
-        }
-      };
-
-      // Pirmas bandymas iškart
-      tryDiscover();
-      // Toliau kas 3 sekundes
-      autoDiscoveryInterval = setInterval(tryDiscover, 3000);
-    }
-
-    function stopAutoDiscovery() {
-      if (autoDiscoveryInterval) {
-        clearInterval(autoDiscoveryInterval);
-        autoDiscoveryInterval = null;
-        log('⏹️ Auto-discovery sustabdytas');
-      }
-    }
-
     async function initApp() {
       updateLangIcon();
 
@@ -1991,7 +2058,6 @@
         telemetryActive = false;
         telemetryPollingStopped = true;
         goToMainPage();
-        startAutoDiscovery();
         return;
       }
 
@@ -2478,7 +2544,6 @@
     let cameraAnimationFrameId = null;
 
     cameraBtnMain.addEventListener('click', async (e) => {
-        // Be registracijos ARBA offline – rodomas įspėjimas
         if (document.body.classList.contains('no-telemetry') || 
             document.body.classList.contains('telemetry-offline') ||
             cameraBtnMain.classList.contains('camera-disabled')) {
