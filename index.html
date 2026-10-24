@@ -1404,9 +1404,6 @@
        ============================================================ -->
   <div id="printersModal">
     <h2 style="color: white; letter-spacing: 2px; text-align: center;">SPAUSDINTUVAI</h2>
-    <p style="color:#aaa; font-size:13px; text-align:center; max-width:400px; margin-bottom: 20px;">
-      Tinkle aptinkami spausdintuvai (išskyrus EJ3 įrenginį)
-    </p>
     <div id="printersListContainer" class="printers-list"></div>
     <button id="refreshPrintersBtn" class="modal-btn" style="margin-bottom: 15px; width: 100%; max-width:400px; padding: 12px; background-color:#2196F3;">🔄 ATNAUJINTI SĄRAŠĄ</button>
     <button id="closePrintersBtn" class="close-modal-btn" style="margin-top: 10px; max-width:400px;">ATGAL</button>
@@ -1546,7 +1543,7 @@
     }
 
     // ============================================================
-    // FULLSCREEN – NEPALAUŽIAMAS
+    // FULLSCREEN – GRIEŽTAI VISADA
     // ============================================================
     let fsUserInteracted = false;
 
@@ -1561,10 +1558,10 @@
       } catch (err) {}
     }
 
-    // 1) Bandome iš karto
+    // 1) Iškart įkėlus
     requestFsNow();
 
-    // 2) Po pirmo vartotojo veiksmo
+    // 2) Po pirmo vartotojo veiksmo – pažymime, kad galima bandyti
     function onFirstUserInteraction() {
       if (fsUserInteracted) return;
       fsUserInteracted = true;
@@ -1577,14 +1574,18 @@
     document.addEventListener('keydown', onFirstUserInteraction, { once: true, capture: true });
     document.addEventListener('pointerdown', onFirstUserInteraction, { once: true, capture: true });
 
-    // 3) Po kiekvieno kito paspaudimo (jei fullscreen nėra)
+    // 3) Po kiekvieno kito paspaudimo – jei nėra, atkuriame
     document.addEventListener('click', function() {
       if (!document.fullscreenElement) {
         requestFsNow();
       }
     }, false);
-
     document.addEventListener('touchend', function() {
+      if (!document.fullscreenElement) {
+        requestFsNow();
+      }
+    }, false);
+    document.addEventListener('pointerdown', function() {
       if (!document.fullscreenElement) {
         requestFsNow();
       }
@@ -1595,7 +1596,7 @@
       if (document.fullscreenElement) {
         log('✅ Fullscreen aktyvus');
       } else {
-        log('ℹ️ Fullscreen išjungtas – bandysime atkurti');
+        log('ℹ️ Fullscreen išjungtas – bandome atkurti');
         setTimeout(() => {
           if (!document.fullscreenElement && fsUserInteracted) {
             requestFsNow();
@@ -1604,12 +1605,30 @@
       }
     });
 
-    // 5) Periodinis priminimas – jei fullscreen dingo, bandome atkurti
+    // 5) Periodinis priminimas – kas 500ms
     setInterval(() => {
       if (!document.fullscreenElement && fsUserInteracted) {
         requestFsNow();
       }
-    }, 1000);
+    }, 500);
+
+    // 6) Grįžus į puslapį iš kito tabo / atgal mygtuko
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && !document.fullscreenElement && fsUserInteracted) {
+        requestFsNow();
+      }
+    });
+    window.addEventListener('focus', () => {
+      if (!document.fullscreenElement && fsUserInteracted) {
+        requestFsNow();
+      }
+    });
+    window.addEventListener('pageshow', (e) => {
+      // jei grįžtama iš cache (back/forward)
+      if (e.persisted && !document.fullscreenElement && fsUserInteracted) {
+        requestFsNow();
+      }
+    });
 
     // ============================================================
     // KALBOS VALDYMAS
@@ -2130,7 +2149,6 @@
       if (!container) return;
       container.innerHTML = '<div style="color:#aaa; text-align:center; padding: 10px;">Ieškoma tinkle spausdintuvų...</div>';
 
-      // Bandome gauti spausdintuvų sąrašą iš EJ3 įrenginio
       fetch(ESP32_BASE.replace(/\/$/, '') + '/get_printers?t=' + Date.now())
         .then(res => {
           if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -2139,7 +2157,6 @@
         .then(data => {
           container.innerHTML = '';
 
-          // Normalizuojame atsakymą – gali būti masyvas arba { printers: [...] }
           let printers = [];
           if (Array.isArray(data)) {
             printers = data;
@@ -2153,9 +2170,7 @@
             const name = (p.name || p.ssid || p.hostname || '').toString().toLowerCase();
             const type = (p.type || p.deviceType || '').toString().toLowerCase();
             const model = (p.model || '').toString().toLowerCase();
-            // Išfiltruojame bet ką, kas susiję su EJ3
             if (name.includes('ej3') || type.includes('ej3') || model.includes('ej3')) return false;
-            // Taip pat išfiltruojame, jei IP sutampa su EJ3
             if (p.ip && ESP32_BASE.includes(p.ip)) return false;
             return true;
           });
@@ -2192,7 +2207,7 @@
           });
         })
         .catch(err => {
-          container.innerHTML = '<div style="color:#E91E63; text-align:center; padding: 10px;">Nepavyko gauti spausdintuvų sąrašo. Patikrinkite ryšį su EJ3 įrenginiu.</div>';
+          container.innerHTML = '<div style="color:#E91E63; text-align:center; padding: 10px;">Nepavyko aptikti spausdintuvų...</div>';
           console.error('Klaida gaunant spausdintuvus:', err);
         });
     }
