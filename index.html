@@ -394,7 +394,7 @@
   .action-btn:active { transform: scale(0.98); }
   .action-btn:disabled { background: #333; cursor: not-allowed; opacity: 0.6; }
 
-  /* Mygtukas, kuris neaktyvus be registracijos */
+  /* Mygtukas, kuris neaktyvus be registracijos ARBA Offline */
   #cameraBtnMain.camera-disabled {
     background-color: #444 !important;
     color: #888 !important;
@@ -754,8 +754,14 @@
     font-family: Arial, sans-serif;
   }
 
-  /* SPAUSDINTUVŲ MYGTUKAS – MATOMAS TIK SU REGISTRUOTU ĮRENGINIU */
+  /* SPAUSDINTUVŲ MYGTUKAS – MATOMAS TIK SU REGISTRUOTU ĮRENGINIU IR TIK KAI ONLINE */
   body.no-telemetry #openPrintersBtn {
+    display: none !important;
+  }
+  body.telemetry-offline #openPrintersBtn {
+    display: none !important;
+  }
+  body.telemetry-offline #openWifiBtn {
     display: none !important;
   }
   
@@ -774,21 +780,115 @@
     overflow-y: auto; 
   }
 
-  /* SPAUSDINTUVŲ MODALAS */
+  /* SPAUSDINTUVŲ MODALAS – TOKS PAT RĖMELIS KAIP NUSTATYMAI/KALBA */
   #printersModal { 
     display: none; 
     position: fixed; 
     top: 0; 
     left: 0; 
     width: 100vw; 
-    min-height: 100vh; 
+    height: 100vh; 
     background-color: rgba(0,0,0,0.95); 
     z-index: 155; 
     flex-direction: column; 
     align-items: center; 
-    padding: 40px 20px; 
-    overflow-y: auto; 
+    justify-content: center;
+    padding: 20px;
+    overflow-y: auto;
   }
+  
+  #printersModal .printers-box {
+    width: 100%;
+    max-width: 400px;
+    background: #1a1a1a;
+    border: 2px solid #4CAF50;
+    border-radius: 12px;
+    padding: 25px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 10px 30px rgba(76, 175, 80, 0.25);
+  }
+  
+  #printersModal h3 {
+    color: #4CAF50;
+    margin: 0 0 10px 0;
+    font-size: 18px;
+    letter-spacing: 1px;
+    text-align: center;
+    text-transform: uppercase;
+  }
+  
+  #printersModal .printers-option {
+    width: 100%;
+    padding: 14px;
+    background: #222;
+    color: white;
+    border: 2px solid #444;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    transition: all 0.2s;
+    font-family: Arial, sans-serif;
+  }
+  
+  #printersModal .printers-option:hover {
+    border-color: #4CAF50;
+    background: #2a2a2a;
+  }
+  
+  #printersModal .printers-close {
+    margin-top: 15px;
+    background: transparent;
+    color: #888;
+    border: 1px solid #444;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: Arial, sans-serif;
+  }
+
+  /* Spausdintuvų sąrašo elementai (viduje printers-box) */
+  .printers-list { 
+    width: 100%; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 10px; 
+    margin-bottom: 0;
+    max-height: 40vh;
+    overflow-y: auto;
+  }
+  .printer-item { 
+    background: #2c2c2c; 
+    padding: 12px 14px; 
+    border-radius: 8px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    border: 1px solid #444; 
+  }
+  .printer-info { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 4px; 
+    text-align: left; 
+  }
+  .printer-name { font-weight: bold; font-size: 14px; color: white; }
+  .printer-ip { font-size: 12px; color: #aaa; }
+
+  .printers-loading,
+  .printers-empty,
+  .printers-error {
+    text-align: center;
+    padding: 12px;
+    font-size: 13px;
+  }
+  .printers-loading { color: #aaa; }
+  .printers-empty { color: #aaa; }
+  .printers-error { color: #E91E63; }
   
   .modal-btn { 
     border: none; 
@@ -801,7 +901,7 @@
   }
   .modal-btn:hover { opacity: 0.9; }
   
-  .wifi-list, .printers-list { 
+  .wifi-list { 
     width: 100%; 
     max-width: 400px; 
     display: flex; 
@@ -809,7 +909,7 @@
     gap: 10px; 
     margin-bottom: 20px; 
   }
-  .wifi-item, .printer-item { 
+  .wifi-item { 
     background: #2c2c2c; 
     padding: 15px; 
     border-radius: 8px; 
@@ -818,14 +918,14 @@
     align-items: center; 
     border: 1px solid #444; 
   }
-  .wifi-info, .printer-info { 
+  .wifi-info { 
     display: flex; 
     flex-direction: column; 
     gap: 5px; 
     text-align: left; 
   }
-  .wifi-ssid, .printer-name { font-weight: bold; font-size: 16px; color: white; }
-  .wifi-ip, .printer-ip { font-size: 12px; color: #aaa; }
+  .wifi-ssid { font-weight: bold; font-size: 16px; color: white; }
+  .wifi-ip { font-size: 12px; color: #aaa; }
   .wifi-online { 
     color: #4CAF50; 
     font-size: 10px; 
@@ -1400,13 +1500,15 @@
   </div>
 
   <!-- ============================================================
-       SPAUSDINTUVŲ MODALAS – TIK SU REGISTRUOTU ĮRENGINIU
+       SPAUSDINTUVŲ MODALAS – TOKS PAT RĖMELIS KAIP NUSTATYMAI/KALBA
        ============================================================ -->
   <div id="printersModal">
-    <h2 style="color: white; letter-spacing: 2px; text-align: center;">SPAUSDINTUVAI</h2>
-    <div id="printersListContainer" class="printers-list"></div>
-    <button id="refreshPrintersBtn" class="modal-btn" style="margin-bottom: 15px; width: 100%; max-width:400px; padding: 12px; background-color:#2196F3;">🔄 ATNAUJINTI SĄRAŠĄ</button>
-    <button id="closePrintersBtn" class="close-modal-btn" style="margin-top: 10px; max-width:400px;">ATGAL</button>
+    <div class="printers-box">
+      <h3>SPAUSDINTUVAI</h3>
+      <div id="printersListContainer" class="printers-list"></div>
+      <button id="refreshPrintersBtn" class="printers-option" style="background-color:#2196F3; border-color:#2196F3;">🔄 ATNAUJINTI SĄRAŠĄ</button>
+      <button id="closePrintersBtn" class="printers-close">UŽDARYTI</button>
+    </div>
   </div>
 
   <div id="otaOverlay">
@@ -1558,10 +1660,8 @@
       } catch (err) {}
     }
 
-    // 1) Iškart įkėlus
     requestFsNow();
 
-    // 2) Po pirmo vartotojo veiksmo – pažymime, kad galima bandyti
     function onFirstUserInteraction() {
       if (fsUserInteracted) return;
       fsUserInteracted = true;
@@ -1574,24 +1674,16 @@
     document.addEventListener('keydown', onFirstUserInteraction, { once: true, capture: true });
     document.addEventListener('pointerdown', onFirstUserInteraction, { once: true, capture: true });
 
-    // 3) Po kiekvieno kito paspaudimo – jei nėra, atkuriame
     document.addEventListener('click', function() {
-      if (!document.fullscreenElement) {
-        requestFsNow();
-      }
+      if (!document.fullscreenElement) requestFsNow();
     }, false);
     document.addEventListener('touchend', function() {
-      if (!document.fullscreenElement) {
-        requestFsNow();
-      }
+      if (!document.fullscreenElement) requestFsNow();
     }, false);
     document.addEventListener('pointerdown', function() {
-      if (!document.fullscreenElement) {
-        requestFsNow();
-      }
+      if (!document.fullscreenElement) requestFsNow();
     }, false);
 
-    // 4) Reagavimas į fullscreenchange
     document.addEventListener('fullscreenchange', () => {
       if (document.fullscreenElement) {
         log('✅ Fullscreen aktyvus');
@@ -1605,14 +1697,12 @@
       }
     });
 
-    // 5) Periodinis priminimas – kas 500ms
     setInterval(() => {
       if (!document.fullscreenElement && fsUserInteracted) {
         requestFsNow();
       }
     }, 500);
 
-    // 6) Grįžus į puslapį iš kito tabo / atgal mygtuko
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && !document.fullscreenElement && fsUserInteracted) {
         requestFsNow();
@@ -1624,7 +1714,6 @@
       }
     });
     window.addEventListener('pageshow', (e) => {
-      // jei grįžtama iš cache (back/forward)
       if (e.persisted && !document.fullscreenElement && fsUserInteracted) {
         requestFsNow();
       }
@@ -1679,13 +1768,16 @@
     }
 
     // ============================================================
-    // KAMEROS MYGTUKO BŪSENA (PAGAL REGISTRACIJĄ)
+    // KAMEROS MYGTUKO BŪSENA (PAGAL REGISTRACIJĄ IR TELEMETRIJĄ)
     // ============================================================
     function updateCameraBtnState() {
       const cameraBtn = document.getElementById('cameraBtnMain');
       if (!cameraBtn) return;
 
-      if (document.body.classList.contains('no-telemetry')) {
+      const noTelemetry = document.body.classList.contains('no-telemetry');
+      const telemetryOffline = document.body.classList.contains('telemetry-offline');
+
+      if (noTelemetry || telemetryOffline) {
         cameraBtn.classList.add('camera-disabled');
         cameraBtn.classList.remove('camera-warning-shown');
         cameraBtn.textContent = '📷 FOTOGRAFUOTI';
@@ -1710,9 +1802,7 @@
         cameraBtn.classList.remove('camera-warning-shown');
         cameraBtn.textContent = '📷 FOTOGRAFUOTI';
         cameraBtn.style.backgroundColor = '';
-        if (document.body.classList.contains('no-telemetry')) {
-          cameraBtn.classList.add('camera-disabled');
-        }
+        updateCameraBtnState();
       }, 3000);
     }
 
@@ -1745,7 +1835,6 @@
     const regStatusMsg = document.getElementById('regStatusMsg');
     const regSkipBtn = document.getElementById('regSkipBtn');
 
-    // KLAVIATŪROS VALDYMAS
     regIpInput.addEventListener('pointerdown', function() {
       if (this.hasAttribute('readonly')) {
         this.removeAttribute('readonly');
@@ -1763,7 +1852,6 @@
       this.focus();
     });
 
-    // INFO IKONĖLĖS FUNKCIJA – 10 sekundžių
     window.handleInfoIconActivate = function(e) {
       if (e) {
         e.stopPropagation();
@@ -1792,6 +1880,7 @@
       telemetryPollingStopped = true;
 
       document.body.classList.add('no-telemetry');
+      document.body.classList.remove('telemetry-offline');
       goToMainPage();
       log('⏭️ Tęsiama be registracijos – pagrindinis puslapis');
     });
@@ -1849,6 +1938,7 @@
       markClientRegistered();
 
       document.body.classList.remove('no-telemetry');
+      document.body.classList.remove('telemetry-offline');
       telemetryActive = true;
       telemetryPollingStopped = false;
 
@@ -1946,11 +2036,23 @@
         online.style.display = 'flex';
       }
       if (offline) offline.style.display = 'none';
+
+      // === ATNAUJINAME OFFLINE KLASĘ ANT BODY ===
+      if (!document.body.classList.contains('no-telemetry')) {
+        document.body.classList.remove('telemetry-offline');
+        updateCameraBtnState();
+      }
+      
       hideOfflineAlert();
     }
 
     function setTelemetryOffline() {
       if (!telemetryIsOnline && document.getElementById('telemetryOffline').style.display === 'flex') {
+        // Vis tiek pridedame klasę, jei dar nepridėta
+        if (!document.body.classList.contains('no-telemetry')) {
+          document.body.classList.add('telemetry-offline');
+          updateCameraBtnState();
+        }
         return;
       }
       telemetryIsOnline = false;
@@ -1963,6 +2065,12 @@
         online.innerHTML = '';
       }
       if (offline) offline.style.display = 'flex';
+
+      // === PRIDEDAME OFFLINE KLASĘ ANT BODY (jei ne no-telemetry) ===
+      if (!document.body.classList.contains('no-telemetry')) {
+        document.body.classList.add('telemetry-offline');
+        updateCameraBtnState();
+      }
     }
 
     function showOfflineAlert() {
@@ -2112,6 +2220,10 @@
 
     document.getElementById('openWifiBtn').addEventListener('click', () => {
       if (!ESP32_BASE) { showToast("Pirmiausia pridėkite EJ3 įrenginį"); return; }
+      if (document.body.classList.contains('telemetry-offline')) {
+        showToast("EJ3 įrenginys nepasiekiamas (Offline)");
+        return;
+      }
       document.getElementById('settingsModal').style.display = 'none';
       document.getElementById('wifiModal').style.display = 'flex';
       loadWifiList();
@@ -2128,6 +2240,10 @@
     // ============================================================
     document.getElementById('openPrintersBtn').addEventListener('click', () => {
       if (!ESP32_BASE) { showToast("Pirmiausia pridėkite EJ3 įrenginį"); return; }
+      if (document.body.classList.contains('telemetry-offline')) {
+        showToast("EJ3 įrenginys nepasiekiamas (Offline)");
+        return;
+      }
       document.getElementById('settingsModal').style.display = 'none';
       document.getElementById('printersModal').style.display = 'flex';
       loadPrintersList();
@@ -2147,7 +2263,7 @@
     function loadPrintersList() {
       const container = document.getElementById('printersListContainer');
       if (!container) return;
-      container.innerHTML = '<div style="color:#aaa; text-align:center; padding: 10px;">Ieškoma tinkle spausdintuvų...</div>';
+      container.innerHTML = '<div class="printers-loading">Ieškoma tinkle spausdintuvų...</div>';
 
       fetch(ESP32_BASE.replace(/\/$/, '') + '/get_printers?t=' + Date.now())
         .then(res => {
@@ -2164,7 +2280,7 @@
             printers = data.printers;
           }
 
-          // Filtruojame EJ3 įrenginį – jis neturi būti rodomas spausdintuvų sąraše
+          // Filtruojame EJ3 įrenginį
           printers = printers.filter(p => {
             if (!p) return false;
             const name = (p.name || p.ssid || p.hostname || '').toString().toLowerCase();
@@ -2176,7 +2292,7 @@
           });
 
           if (printers.length === 0) {
-            container.innerHTML = '<div style="color:#aaa; text-align:center; padding: 10px;">Tinkle spausdintuvų nerasta</div>';
+            container.innerHTML = '<div class="printers-empty">Tinkle spausdintuvų nerasta</div>';
             return;
           }
 
@@ -2207,7 +2323,7 @@
           });
         })
         .catch(err => {
-          container.innerHTML = '<div style="color:#E91E63; text-align:center; padding: 10px;">Nepavyko aptikti spausdintuvų...</div>';
+          container.innerHTML = '<div class="printers-error">Nepavyko aptikti spausdintuvų...</div>';
           console.error('Klaida gaunant spausdintuvus:', err);
         });
     }
@@ -2338,7 +2454,10 @@
     let cameraAnimationFrameId = null;
 
     cameraBtnMain.addEventListener('click', async (e) => {
-        if (document.body.classList.contains('no-telemetry') || cameraBtnMain.classList.contains('camera-disabled')) {
+        // Be registracijos ARBA offline – rodomas įspėjimas
+        if (document.body.classList.contains('no-telemetry') || 
+            document.body.classList.contains('telemetry-offline') ||
+            cameraBtnMain.classList.contains('camera-disabled')) {
             e.preventDefault();
             e.stopPropagation();
             showCameraWarning();
