@@ -35,9 +35,6 @@
     margin: 0 auto;
   }
   
-  /* ============================================================
-     NUSTATYMŲ IKONA – VIENAS DANTRATIS
-     ============================================================ */
   .settings-icon {
     position: fixed; 
     top: 20px; 
@@ -66,9 +63,6 @@
     display: block; 
   }
 
-  /* ============================================================
-     KALBOS PASIRINKIMO IKONA – DEŠINIAJAME VIRŠUTINIAME KAMPE
-     ============================================================ */
   .lang-icon {
     position: fixed; 
     top: 20px; 
@@ -167,9 +161,6 @@
     font-family: Arial, sans-serif;
   }
 
-  /* ============================================================
-     TELEMETRIJOS BLOKAS
-     ============================================================ */
   #telemetryBox { 
     position: fixed; 
     top: 20px; 
@@ -371,9 +362,6 @@
     display: none;
   }
   
-  /* ============================================================
-     ACTION MYGTUKAI
-     ============================================================ */
   .action-btn { 
     background-color: #2196F3; 
     color: white; 
@@ -394,7 +382,6 @@
   .action-btn:active { transform: scale(0.98); }
   .action-btn:disabled { background: #333; cursor: not-allowed; opacity: 0.6; }
 
-  /* Mygtukas, kuris neaktyvus be registracijos ARBA Offline */
   #cameraBtnMain.camera-disabled {
     background-color: #444 !important;
     color: #888 !important;
@@ -408,7 +395,6 @@
     opacity: 0.6;
   }
 
-  /* Pranešimas, rodomas mygtuko vietoje */
   #cameraBtnMain.camera-warning-shown {
     background-color: #E91E63 !important;
     color: white !important;
@@ -681,9 +667,6 @@
   }
   .pdf-btn:active { transform: scale(0.98); }
 
-  /* ============================================================
-     NUSTATYMŲ MODALAS – LENTELĖ (KAIP KALBŲ MODALAS)
-     ============================================================ */
   #settingsModal { 
     display: none; 
     position: fixed; 
@@ -754,7 +737,6 @@
     font-family: Arial, sans-serif;
   }
 
-  /* SPAUSDINTUVŲ MYGTUKAS – MATOMAS TIK SU REGISTRUOTU ĮRENGINIU IR TIK KAI ONLINE */
   body.no-telemetry #openPrintersBtn {
     display: none !important;
   }
@@ -780,7 +762,6 @@
     overflow-y: auto; 
   }
 
-  /* SPAUSDINTUVŲ MODALAS – TOKS PAT RĖMELIS KAIP NUSTATYMAI/KALBA */
   #printersModal { 
     display: none; 
     position: fixed; 
@@ -851,7 +832,6 @@
     font-family: Arial, sans-serif;
   }
 
-  /* Spausdintuvų sąrašo elementai (viduje printers-box) */
   .printers-list { 
     width: 100%; 
     display: flex; 
@@ -1014,9 +994,6 @@
     box-shadow: 0 4px 15px rgba(0,0,0,0.8); 
   }
 
-  /* ============================================================
-     TOAST PRANEŠIMAI – Z-INDEX PAKELTAS AUKŠČIAUSIAI
-     ============================================================ */
   #toastMsg {
     position: fixed; 
     top: 80px; 
@@ -1221,9 +1198,6 @@
     flex: 0 1 auto;
   }
 
-  /* ============================================================
-     INFO IKONĖLĖ – VISADA PASPAUDŽIAMA, ATSKIRTA ZONA
-     ============================================================ */
   .reg-info-icon {
     flex-shrink: 0;
     width: 52px;
@@ -1321,9 +1295,6 @@
   <div id="toastMsg"></div>
   <div id="infoToast"></div>
 
-  <!-- ============================================================
-       PRIVALOMAS REGISTRACIJOS MODALAS
-       ============================================================ -->
   <div id="registrationModal">
     <div class="reg-box">
       <h2>REGISTRUOTI ĮRENGINĮ</h2>
@@ -1343,9 +1314,6 @@
     </div>
   </div>
   
-  <!-- ============================================================
-       TELEMETRIJOS BLOKAS
-       ============================================================ -->
   <div id="telemetryBox" class="disconnected">
     <div id="telemetryOnline">
       <div class="wifi-icon" title="Wi-Fi ryšys">
@@ -1377,9 +1345,6 @@
     <div id="offlineAlert">Įjunkite EJ3 įrenginį!</div>
   </div>
 
-  <!-- ============================================================
-       NUSTATYMŲ IKONA – VIENAS DANTRATIS
-       ============================================================ -->
   <div id="settingsIcon" class="settings-icon">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="3"></circle>
@@ -1388,9 +1353,6 @@
     </svg>
   </div>
 
-  <!-- ============================================================
-       KALBOS PASIRINKIMO IKONA – DEŠINIAJAME VIRŠUTINIAME KAMPE
-       ============================================================ -->
   <div id="langIcon" class="lang-icon" title="Kalba">
     <span id="langCode" class="lang-code">LT</span>
   </div>
@@ -1473,9 +1435,6 @@
       </div>
   </div>
 
-  <!-- ============================================================
-       NUSTATYMŲ MODALAS – LENTELĖ (KAIP KALBŲ MODALAS)
-       ============================================================ -->
   <div id="settingsModal">
     <div class="settings-box">
       <h3>NUSTATYMAI</h3>
@@ -1499,9 +1458,6 @@
     <button id="closeWifiBtn" class="close-modal-btn" style="margin-top: 30px; max-width:400px;">ATGAL</button>
   </div>
 
-  <!-- ============================================================
-       SPAUSDINTUVŲ MODALAS – TOKS PAT RĖMELIS KAIP NUSTATYMAI/KALBA
-       ============================================================ -->
   <div id="printersModal">
     <div class="printers-box">
       <h3>SPAUSDINTUVAI</h3>
@@ -1534,9 +1490,6 @@
     </div>
   </div>
 
-  <!-- ============================================================
-       KALBŲ PASIRINKIMO MODALAS
-       ============================================================ -->
   <div id="langModal">
     <div class="lang-box">
       <h3>PASIRINKITE KALBĄ</h3>
@@ -1559,6 +1512,9 @@
     const OCR_LANG = 'lit+eng';
     const DEEPL_BATCH_SIZE = 15;
 
+    // Numatytoji EJ3 IP – naudojama automatiniam aptikimui iš nepriregistruoto puslapio
+    const DEFAULT_EJ3_IP = '192.168.4.1';
+
     let ESP32_BASE = localStorage.getItem('esp32_url') || '';
     const CLIENT_REGISTERED_KEY = 'client_registered';
     const SKIP_REGISTRATION_KEY = 'skip_registration';
@@ -1577,6 +1533,7 @@
     let telemetryActive = false;
     let telemetryPollingStopped = false;
     let cameraWarningTimer = null;
+    let autoDiscoveryInterval = null;
 
     let originalImageElement = null;
     let originalUnblurredCanvas = null;
@@ -1655,7 +1612,7 @@
       try {
         const p = document.documentElement.requestFullscreen();
         if (p && p.catch) {
-          p.catch(err => { /* Naršyklė atmetė – bandysime vėliau */ });
+          p.catch(err => { /* Naršyklė atmetė */ });
         }
       } catch (err) {}
     }
@@ -1768,7 +1725,7 @@
     }
 
     // ============================================================
-    // KAMEROS MYGTUKO BŪSENA (PAGAL REGISTRACIJĄ IR TELEMETRIJĄ)
+    // KAMEROS MYGTUKO BŪSENA
     // ============================================================
     function updateCameraBtnState() {
       const cameraBtn = document.getElementById('cameraBtnMain');
@@ -1790,11 +1747,26 @@
       }
     }
 
+    // Rodomas pranešimas priklausomai nuo būsenos:
+    //  - no-telemetry → "Priregistruokite EJ3 įrenginį"
+    //  - telemetry-offline → "Įjunkite EJ3 įrenginį"
     function showCameraWarning() {
       const cameraBtn = document.getElementById('cameraBtnMain');
       if (!cameraBtn) return;
 
-      cameraBtn.textContent = 'Priregistruokite EJ3 įrenginį';
+      const isOffline = document.body.classList.contains('telemetry-offline');
+      const isNoTelemetry = document.body.classList.contains('no-telemetry');
+
+      let warningText;
+      if (isNoTelemetry) {
+        warningText = 'Priregistruokite EJ3 įrenginį';
+      } else if (isOffline) {
+        warningText = 'Įjunkite EJ3 įrenginį';
+      } else {
+        warningText = 'EJ3 nepasiekiamas';
+      }
+
+      cameraBtn.textContent = warningText;
       cameraBtn.classList.add('camera-warning-shown');
 
       if (cameraWarningTimer) clearTimeout(cameraWarningTimer);
@@ -1882,7 +1854,8 @@
       document.body.classList.add('no-telemetry');
       document.body.classList.remove('telemetry-offline');
       goToMainPage();
-      log('⏭️ Tęsiama be registracijos – pagrindinis puslapis');
+      startAutoDiscovery();
+      log('⏭️ Tęsiama be registracijos – pagrindinis puslapis (auto-discovery paleistas)');
     });
 
     function normalizeDeviceUrl(input) {
@@ -1898,7 +1871,7 @@
     async function testDeviceConnection(baseUrl) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
         const res = await fetch(baseUrl + '/check_trigger?t=' + Date.now(), {
           cache: 'no-store',
           signal: controller.signal
@@ -1942,6 +1915,9 @@
       telemetryActive = true;
       telemetryPollingStopped = false;
 
+      // Stabdome auto-discovery, nes jau priregistruota
+      stopAutoDiscovery();
+
       regStatusMsg.style.color = '#4CAF50';
       regStatusMsg.innerText = '✅ EJ3 įrenginys prijungtas!';
 
@@ -1956,6 +1932,57 @@
       if (e.key === 'Enter') saveRegistration();
     });
 
+    // ============================================================
+    // AUTO-DISCOVERY – nepriregistruotame puslapyje ieškome EJ3
+    // ============================================================
+    function startAutoDiscovery() {
+      if (autoDiscoveryInterval) return;
+      log('🔍 Auto-discovery paleistas – ieškoma EJ3 įrenginio');
+
+      const tryDiscover = async () => {
+        // Jei jau priregistruota – sustabdome
+        if (isClientRegistered() && ESP32_BASE) {
+          stopAutoDiscovery();
+          return;
+        }
+        // Jei vartotojas dabar registruojasi – nestabdome, bet ir netrukdome
+        // Bandome prisijungti prie numatyto EJ3 IP
+        const candidate = 'http://' + DEFAULT_EJ3_IP;
+        const ok = await testDeviceConnection(candidate);
+        if (ok) {
+          log('✅ Auto-discovery rado EJ3: ' + candidate);
+          localStorage.setItem('esp32_url', candidate);
+          localStorage.setItem(CLIENT_REGISTERED_KEY, '1');
+          localStorage.removeItem(SKIP_REGISTRATION_KEY);
+          ESP32_BASE = candidate;
+          stopAutoDiscovery();
+
+          // Pereiname į priregistruotą režimą
+          document.body.classList.remove('no-telemetry');
+          document.body.classList.remove('telemetry-offline');
+          telemetryActive = true;
+          telemetryPollingStopped = false;
+          goToMainPage();
+          pollTrigger();
+
+          showToast("✅ EJ3 įrenginys aptiktas ir prijungtas automatiškai!", 4000);
+        }
+      };
+
+      // Pirmas bandymas iškart
+      tryDiscover();
+      // Toliau kas 3 sekundes
+      autoDiscoveryInterval = setInterval(tryDiscover, 3000);
+    }
+
+    function stopAutoDiscovery() {
+      if (autoDiscoveryInterval) {
+        clearInterval(autoDiscoveryInterval);
+        autoDiscoveryInterval = null;
+        log('⏹️ Auto-discovery sustabdytas');
+      }
+    }
+
     async function initApp() {
       updateLangIcon();
 
@@ -1964,6 +1991,7 @@
         telemetryActive = false;
         telemetryPollingStopped = true;
         goToMainPage();
+        startAutoDiscovery();
         return;
       }
 
@@ -2037,7 +2065,6 @@
       }
       if (offline) offline.style.display = 'none';
 
-      // === ATNAUJINAME OFFLINE KLASĘ ANT BODY ===
       if (!document.body.classList.contains('no-telemetry')) {
         document.body.classList.remove('telemetry-offline');
         updateCameraBtnState();
@@ -2048,7 +2075,6 @@
 
     function setTelemetryOffline() {
       if (!telemetryIsOnline && document.getElementById('telemetryOffline').style.display === 'flex') {
-        // Vis tiek pridedame klasę, jei dar nepridėta
         if (!document.body.classList.contains('no-telemetry')) {
           document.body.classList.add('telemetry-offline');
           updateCameraBtnState();
@@ -2066,7 +2092,6 @@
       }
       if (offline) offline.style.display = 'flex';
 
-      // === PRIDEDAME OFFLINE KLASĘ ANT BODY (jei ne no-telemetry) ===
       if (!document.body.classList.contains('no-telemetry')) {
         document.body.classList.add('telemetry-offline');
         updateCameraBtnState();
@@ -2280,7 +2305,6 @@
             printers = data.printers;
           }
 
-          // Filtruojame EJ3 įrenginį
           printers = printers.filter(p => {
             if (!p) return false;
             const name = (p.name || p.ssid || p.hostname || '').toString().toLowerCase();
@@ -3994,7 +4018,7 @@
     }
 
     // ============================================================
-    // TEKSTO SKAIDYMAS Į EILUTES – SU ILGŲ ŽODŽIŲ APDOROJIMU
+    // TEKSTO SKAIDYMAS Į EILUTES
     // ============================================================
     function wrapTextToLines(ctx, text, maxWidth) {
         const words = text.split(/\s+/);
