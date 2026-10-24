@@ -753,6 +753,11 @@
     font-size: 14px;
     font-family: Arial, sans-serif;
   }
+
+  /* SPAUSDINTUVŲ MYGTUKAS – MATOMAS TIK SU REGISTRUOTU ĮRENGINIU */
+  body.no-telemetry #openPrintersBtn {
+    display: none !important;
+  }
   
   #wifiModal { 
     display: none; 
@@ -763,6 +768,22 @@
     min-height: 100vh; 
     background-color: rgba(0,0,0,0.95); 
     z-index: 150; 
+    flex-direction: column; 
+    align-items: center; 
+    padding: 40px 20px; 
+    overflow-y: auto; 
+  }
+
+  /* SPAUSDINTUVŲ MODALAS */
+  #printersModal { 
+    display: none; 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100vw; 
+    min-height: 100vh; 
+    background-color: rgba(0,0,0,0.95); 
+    z-index: 155; 
     flex-direction: column; 
     align-items: center; 
     padding: 40px 20px; 
@@ -780,7 +801,7 @@
   }
   .modal-btn:hover { opacity: 0.9; }
   
-  .wifi-list { 
+  .wifi-list, .printers-list { 
     width: 100%; 
     max-width: 400px; 
     display: flex; 
@@ -788,7 +809,7 @@
     gap: 10px; 
     margin-bottom: 20px; 
   }
-  .wifi-item { 
+  .wifi-item, .printer-item { 
     background: #2c2c2c; 
     padding: 15px; 
     border-radius: 8px; 
@@ -797,14 +818,14 @@
     align-items: center; 
     border: 1px solid #444; 
   }
-  .wifi-info { 
+  .wifi-info, .printer-info { 
     display: flex; 
     flex-direction: column; 
     gap: 5px; 
     text-align: left; 
   }
-  .wifi-ssid { font-weight: bold; font-size: 16px; color: white; }
-  .wifi-ip { font-size: 12px; color: #aaa; }
+  .wifi-ssid, .printer-name { font-weight: bold; font-size: 16px; color: white; }
+  .wifi-ip, .printer-ip { font-size: 12px; color: #aaa; }
   .wifi-online { 
     color: #4CAF50; 
     font-size: 10px; 
@@ -1360,6 +1381,7 @@
       <h3>NUSTATYMAI</h3>
       <button id="changeDeviceBtn" class="settings-option">📡 PRIDĖTI EJ3 ĮRENGINĮ</button>
       <button id="openWifiBtn" class="settings-option">📶 Išsaugoti WIFI tinklai</button>
+      <button id="openPrintersBtn" class="settings-option">🖨 SPAUSDINTUVAI</button>
       <button id="otaUpdateBtn" class="settings-option">🛠 Sistemos atnaujinimas</button>
       <button id="closeSettingsBtn" class="settings-close">UŽDARYTI</button>
     </div>
@@ -1375,6 +1397,19 @@
        <button class="wifi-save-btn" onclick="saveNewWifi()">IŠSAUGOTI</button>
     </div>
     <button id="closeWifiBtn" class="close-modal-btn" style="margin-top: 30px; max-width:400px;">ATGAL</button>
+  </div>
+
+  <!-- ============================================================
+       SPAUSDINTUVŲ MODALAS – TIK SU REGISTRUOTU ĮRENGINIU
+       ============================================================ -->
+  <div id="printersModal">
+    <h2 style="color: white; letter-spacing: 2px; text-align: center;">SPAUSDINTUVAI</h2>
+    <p style="color:#aaa; font-size:13px; text-align:center; max-width:400px; margin-bottom: 20px;">
+      Tinkle aptinkami spausdintuvai (išskyrus EJ3 įrenginį)
+    </p>
+    <div id="printersListContainer" class="printers-list"></div>
+    <button id="refreshPrintersBtn" class="modal-btn" style="margin-bottom: 15px; width: 100%; max-width:400px; padding: 12px; background-color:#2196F3;">🔄 ATNAUJINTI SĄRAŠĄ</button>
+    <button id="closePrintersBtn" class="close-modal-btn" style="margin-top: 10px; max-width:400px;">ATGAL</button>
   </div>
 
   <div id="otaOverlay">
@@ -1513,23 +1548,15 @@
     // ============================================================
     // FULLSCREEN – NEPALAUŽIAMAS
     // ============================================================
-    // Strategija:
-    //  1. Bandome įjungti iš karto įkėlus (gali būti užblokuota).
-    //  2. Po pirmo bet kokio vartotojo veiksmo (click, touch, keydown) – įjungiame.
-    //  3. Po kiekvieno kito paspaudimo – jei fullscreen nėra, vėl įjungiame.
-    //  4. Po fullscreenchange – jei fullscreen išjungtas, bandome vėl įjungti.
-    //  5. Kas 1000 ms – jei fullscreen nėra, bandome vėl įjungti (silent).
-
     let fsUserInteracted = false;
 
     function requestFsNow() {
-      // Apsauga nuo iškvietimo be vartotojo veiksmo – bandome, bet gali būti atmesta
       if (!document.documentElement.requestFullscreen) return;
       if (document.fullscreenElement) return;
       try {
         const p = document.documentElement.requestFullscreen();
         if (p && p.catch) {
-          p.catch(err => { /* Naršyklė atmetė – bandysime po vartotojo veiksmo */ });
+          p.catch(err => { /* Naršyklė atmetė – bandysime vėliau */ });
         }
       } catch (err) {}
     }
@@ -1550,7 +1577,7 @@
     document.addEventListener('keydown', onFirstUserInteraction, { once: true, capture: true });
     document.addEventListener('pointerdown', onFirstUserInteraction, { once: true, capture: true });
 
-    // 3) Po kiekvieno kito paspaudimo (jei fullscreen nėra) – atkuriame
+    // 3) Po kiekvieno kito paspaudimo (jei fullscreen nėra)
     document.addEventListener('click', function() {
       if (!document.fullscreenElement) {
         requestFsNow();
@@ -1569,7 +1596,6 @@
         log('✅ Fullscreen aktyvus');
       } else {
         log('ℹ️ Fullscreen išjungtas – bandysime atkurti');
-        // Bandome iškart, o jei nepavyks – po trumpo uždelsimo
         setTimeout(() => {
           if (!document.fullscreenElement && fsUserInteracted) {
             requestFsNow();
@@ -1579,26 +1605,11 @@
     });
 
     // 5) Periodinis priminimas – jei fullscreen dingo, bandome atkurti
-    //    (naršyklė gali atmesti, bet bandome kiekvieną sekundę)
     setInterval(() => {
       if (!document.fullscreenElement && fsUserInteracted) {
         requestFsNow();
       }
     }, 1000);
-
-    // ============================================================
-    // GLOBALUS TAP (kad fullscreen įsijungtų po pirmo palietimo)
-    // ============================================================
-    function handleGlobalTap(e) {
-      const regModal = document.getElementById('registrationModal');
-      if (regModal && regModal.style.display === 'flex') {
-        // Registracijos lange neforsuojame fullscreen, kad netrukdytų
-        return;
-      }
-      if (!document.fullscreenElement) {
-        requestFsNow();
-      }
-    }
 
     // ============================================================
     // KALBOS VALDYMAS
@@ -1693,6 +1704,7 @@
       document.getElementById('registrationModal').style.display = 'none';
       document.getElementById('settingsModal').style.display = 'none';
       document.getElementById('wifiModal').style.display = 'none';
+      document.getElementById('printersModal').style.display = 'none';
       document.getElementById('otaOverlay').style.display = 'none';
       document.getElementById('langModal').style.display = 'none';
       document.getElementById('cameraModal').style.display = 'none';
@@ -2092,6 +2104,99 @@
       setTimeout(() => { requestFsNow(); }, 100);
     });
 
+    // ============================================================
+    // SPAUSDINTUVŲ MODALAS
+    // ============================================================
+    document.getElementById('openPrintersBtn').addEventListener('click', () => {
+      if (!ESP32_BASE) { showToast("Pirmiausia pridėkite EJ3 įrenginį"); return; }
+      document.getElementById('settingsModal').style.display = 'none';
+      document.getElementById('printersModal').style.display = 'flex';
+      loadPrintersList();
+      setTimeout(() => { requestFsNow(); }, 100);
+    });
+
+    document.getElementById('closePrintersBtn').addEventListener('click', () => {
+      document.getElementById('printersModal').style.display = 'none';
+      document.getElementById('settingsModal').style.display = 'flex';
+      setTimeout(() => { requestFsNow(); }, 100);
+    });
+
+    document.getElementById('refreshPrintersBtn').addEventListener('click', () => {
+      loadPrintersList();
+    });
+
+    function loadPrintersList() {
+      const container = document.getElementById('printersListContainer');
+      if (!container) return;
+      container.innerHTML = '<div style="color:#aaa; text-align:center; padding: 10px;">Ieškoma tinkle spausdintuvų...</div>';
+
+      // Bandome gauti spausdintuvų sąrašą iš EJ3 įrenginio
+      fetch(ESP32_BASE.replace(/\/$/, '') + '/get_printers?t=' + Date.now())
+        .then(res => {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.json();
+        })
+        .then(data => {
+          container.innerHTML = '';
+
+          // Normalizuojame atsakymą – gali būti masyvas arba { printers: [...] }
+          let printers = [];
+          if (Array.isArray(data)) {
+            printers = data;
+          } else if (data && Array.isArray(data.printers)) {
+            printers = data.printers;
+          }
+
+          // Filtruojame EJ3 įrenginį – jis neturi būti rodomas spausdintuvų sąraše
+          printers = printers.filter(p => {
+            if (!p) return false;
+            const name = (p.name || p.ssid || p.hostname || '').toString().toLowerCase();
+            const type = (p.type || p.deviceType || '').toString().toLowerCase();
+            const model = (p.model || '').toString().toLowerCase();
+            // Išfiltruojame bet ką, kas susiję su EJ3
+            if (name.includes('ej3') || type.includes('ej3') || model.includes('ej3')) return false;
+            // Taip pat išfiltruojame, jei IP sutampa su EJ3
+            if (p.ip && ESP32_BASE.includes(p.ip)) return false;
+            return true;
+          });
+
+          if (printers.length === 0) {
+            container.innerHTML = '<div style="color:#aaa; text-align:center; padding: 10px;">Tinkle spausdintuvų nerasta</div>';
+            return;
+          }
+
+          printers.forEach(p => {
+            const name = p.name || p.ssid || p.hostname || 'Nežinomas spausdintuvas';
+            const ip = p.ip || p.address || '—';
+            const model = p.model || p.type || '';
+
+            const item = document.createElement('div');
+            item.className = 'printer-item';
+
+            const info = document.createElement('div');
+            info.className = 'printer-info';
+
+            const nameEl = document.createElement('div');
+            nameEl.className = 'printer-name';
+            nameEl.textContent = name;
+
+            const ipEl = document.createElement('div');
+            ipEl.className = 'printer-ip';
+            ipEl.textContent = 'IP: ' + ip + (model ? ' • ' + model : '');
+
+            info.appendChild(nameEl);
+            info.appendChild(ipEl);
+            item.appendChild(info);
+
+            container.appendChild(item);
+          });
+        })
+        .catch(err => {
+          container.innerHTML = '<div style="color:#E91E63; text-align:center; padding: 10px;">Nepavyko gauti spausdintuvų sąrašo. Patikrinkite ryšį su EJ3 įrenginiu.</div>';
+          console.error('Klaida gaunant spausdintuvus:', err);
+        });
+    }
+
     function loadWifiList() {
       const container = document.getElementById('wifiListContainer');
       container.innerHTML = '<div style="color:#aaa;">Kraunama...</div>';
@@ -2217,9 +2322,7 @@
     let focusRingObj = {x: 0, y: 0, alpha: 0}; 
     let cameraAnimationFrameId = null;
 
-    // KAMEROS MYGTUKO PASPAUDIMAS
     cameraBtnMain.addEventListener('click', async (e) => {
-        // Be registracijos – rodomas įspėjimas mygtuko vietoje
         if (document.body.classList.contains('no-telemetry') || cameraBtnMain.classList.contains('camera-disabled')) {
             e.preventDefault();
             e.stopPropagation();
@@ -3082,7 +3185,6 @@
         if (isProcessing) return;
         isProcessing = true;
         
-        // Resetuojame seną kaukę
         if (window.textMaskMat) {
             try { window.textMaskMat.delete(); } catch (e) {}
             window.textMaskMat = null;
@@ -3569,7 +3671,6 @@
                 const idx = y * smallW + x;
                 
                 if (colorMask[idx] === 1 && visited[idx] === 0) {
-                    // BFS su pointer'iu – O(n), ne O(n²)
                     const queue = [{x, y}];
                     let head = 0;
                     let minX = x, maxX = x, minY = y, maxY = y;
@@ -3650,7 +3751,6 @@
         const translations = new Array(paragraphs.length).fill(null);
         const total = paragraphs.length;
         
-        // Batch'iname po DEEPL_BATCH_SIZE pastraipų
         for (let batchStart = 0; batchStart < total; batchStart += DEEPL_BATCH_SIZE) {
             const batchEnd = Math.min(batchStart + DEEPL_BATCH_SIZE, total);
             const progress = 60 + Math.floor((batchStart / total) * 30);
