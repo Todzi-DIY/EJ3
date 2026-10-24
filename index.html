@@ -1209,11 +1209,9 @@
 
       <div class="reg-ip-row">
         <div class="reg-ip-label">Įveskite EJ3 įrenginio IP adresą:</div>
-        <!-- PRIDĖTAS onclick ATRIBUTAS TIESIOGIAI -->
         <button id="regInfoIcon" type="button" class="reg-info-icon" aria-label="Kaip sužinoti IP?" onclick="handleInfoIconActivate(event);">i</button>
       </div>
 
-      <!-- PRIDĖTAS readonly ATRIBUTAS – klaviatūra neatsidarys automatiškai -->
       <input type="text" id="regIpInput" placeholder="pvz. 192.168.1.50" autocomplete="off" inputmode="decimal" readonly>
 
       <div id="regStatusMsg"></div>
@@ -1513,62 +1511,94 @@
     }
 
     // ============================================================
-    // FULLSCREEN – VISADA IR VISUR
+    // FULLSCREEN – NEPALAUŽIAMAS
     // ============================================================
+    // Strategija:
+    //  1. Bandome įjungti iš karto įkėlus (gali būti užblokuota).
+    //  2. Po pirmo bet kokio vartotojo veiksmo (click, touch, keydown) – įjungiame.
+    //  3. Po kiekvieno kito paspaudimo – jei fullscreen nėra, vėl įjungiame.
+    //  4. Po fullscreenchange – jei fullscreen išjungtas, bandome vėl įjungti.
+    //  5. Kas 1000 ms – jei fullscreen nėra, bandome vėl įjungti (silent).
+
+    let fsUserInteracted = false;
+
     function requestFsNow() {
+      // Apsauga nuo iškvietimo be vartotojo veiksmo – bandome, bet gali būti atmesta
       if (!document.documentElement.requestFullscreen) return;
+      if (document.fullscreenElement) return;
       try {
         const p = document.documentElement.requestFullscreen();
         if (p && p.catch) {
-          p.catch(err => {});
+          p.catch(err => { /* Naršyklė atmetė – bandysime po vartotojo veiksmo */ });
         }
       } catch (err) {}
     }
 
-    // Bandome įjungti fullscreen iškart įkėlus
+    // 1) Bandome iš karto
     requestFsNow();
 
-    // Jei nepavyko (naršyklė blokuoja be vartotojo veiksmo), įjungiame po pirmo paspaudimo
-    document.body.addEventListener('click', function onFirstClick() {
+    // 2) Po pirmo vartotojo veiksmo
+    function onFirstUserInteraction() {
+      if (fsUserInteracted) return;
+      fsUserInteracted = true;
       if (!document.fullscreenElement) {
         requestFsNow();
       }
-    }, { once: true });
+    }
+    document.addEventListener('click', onFirstUserInteraction, { once: true, capture: true });
+    document.addEventListener('touchstart', onFirstUserInteraction, { once: true, capture: true, passive: true });
+    document.addEventListener('keydown', onFirstUserInteraction, { once: true, capture: true });
+    document.addEventListener('pointerdown', onFirstUserInteraction, { once: true, capture: true });
 
-    // Taip pat bandome po touch
-    document.body.addEventListener('touchend', function onFirstTouch() {
+    // 3) Po kiekvieno kito paspaudimo (jei fullscreen nėra) – atkuriame
+    document.addEventListener('click', function() {
       if (!document.fullscreenElement) {
         requestFsNow();
       }
-    }, { once: true });
+    }, false);
 
+    document.addEventListener('touchend', function() {
+      if (!document.fullscreenElement) {
+        requestFsNow();
+      }
+    }, false);
+
+    // 4) Reagavimas į fullscreenchange
     document.addEventListener('fullscreenchange', () => {
       if (document.fullscreenElement) {
         log('✅ Fullscreen aktyvus');
       } else {
-        log('ℹ️ Fullscreen išjungtas');
-        // Jei vartotojas išjungė fullscreen – bandome vėl įjungti po kito paspaudimo
-        document.body.addEventListener('click', function onReClick() {
-          if (!document.fullscreenElement) {
+        log('ℹ️ Fullscreen išjungtas – bandysime atkurti');
+        // Bandome iškart, o jei nepavyks – po trumpo uždelsimo
+        setTimeout(() => {
+          if (!document.fullscreenElement && fsUserInteracted) {
             requestFsNow();
           }
-        }, { once: true });
+        }, 100);
       }
     });
 
+    // 5) Periodinis priminimas – jei fullscreen dingo, bandome atkurti
+    //    (naršyklė gali atmesti, bet bandome kiekvieną sekundę)
+    setInterval(() => {
+      if (!document.fullscreenElement && fsUserInteracted) {
+        requestFsNow();
+      }
+    }, 1000);
+
+    // ============================================================
+    // GLOBALUS TAP (kad fullscreen įsijungtų po pirmo palietimo)
+    // ============================================================
     function handleGlobalTap(e) {
-      // Jei registracijos modalas atidarytas – NIEKO NEDAROME, kad neiššauktume fullscreen ir nesugadintume registro lango.
       const regModal = document.getElementById('registrationModal');
       if (regModal && regModal.style.display === 'flex') {
+        // Registracijos lange neforsuojame fullscreen, kad netrukdytų
         return;
       }
       if (!document.fullscreenElement) {
         requestFsNow();
       }
     }
-
-    // SVARBU: Naudojame tik 'click', kad išvengtume dvigubo suveikimo ir konfliktų su touchend
-    document.addEventListener('click', handleGlobalTap, false);
 
     // ============================================================
     // KALBOS VALDYMAS
@@ -1626,13 +1656,11 @@
       if (!cameraBtn) return;
 
       if (document.body.classList.contains('no-telemetry')) {
-        // Be registracijos – mygtukas pilkas ir neaktyvus
         cameraBtn.classList.add('camera-disabled');
         cameraBtn.classList.remove('camera-warning-shown');
         cameraBtn.textContent = '📷 FOTOGRAFUOTI';
         cameraBtn.style.backgroundColor = '';
       } else {
-        // Su registracija – mygtukas aktyvus
         cameraBtn.classList.remove('camera-disabled');
         cameraBtn.classList.remove('camera-warning-shown');
         cameraBtn.textContent = '📷 FOTOGRAFUOTI';
@@ -1644,17 +1672,14 @@
       const cameraBtn = document.getElementById('cameraBtnMain');
       if (!cameraBtn) return;
 
-      // Pakeičiame mygtuko tekstą į įspėjimą
       cameraBtn.textContent = 'Priregistruokite EJ3 įrenginį';
       cameraBtn.classList.add('camera-warning-shown');
 
       if (cameraWarningTimer) clearTimeout(cameraWarningTimer);
       cameraWarningTimer = setTimeout(() => {
-        // Grąžiname mygtuką į pradinę būseną
         cameraBtn.classList.remove('camera-warning-shown');
         cameraBtn.textContent = '📷 FOTOGRAFUOTI';
         cameraBtn.style.backgroundColor = '';
-        // Jei vis dar no-telemetry, vėl pridedame disabled
         if (document.body.classList.contains('no-telemetry')) {
           cameraBtn.classList.add('camera-disabled');
         }
@@ -1689,7 +1714,7 @@
     const regStatusMsg = document.getElementById('regStatusMsg');
     const regSkipBtn = document.getElementById('regSkipBtn');
 
-    // KLAVIATŪROS VALDYMAS – klaviatūra atsiras tik paspaudus ant lauko
+    // KLAVIATŪROS VALDYMAS
     regIpInput.addEventListener('pointerdown', function() {
       if (this.hasAttribute('readonly')) {
         this.removeAttribute('readonly');
@@ -1707,8 +1732,7 @@
       this.focus();
     });
 
-    // INFO IKONĖLĖS FUNKCIJA – IŠKVIEČIAMA TIESIOGIAI IŠ HTML (onclick)
-    // Pranešimas rodomas 10 sekundžių
+    // INFO IKONĖLĖS FUNKCIJA – 10 sekundžių
     window.handleInfoIconActivate = function(e) {
       if (e) {
         e.stopPropagation();
@@ -2194,9 +2218,8 @@
     let cameraAnimationFrameId = null;
 
     // KAMEROS MYGTUKO PASPAUDIMAS
-    // Jei be registracijos – rodomas įspėjimas mygtuko vietoje
     cameraBtnMain.addEventListener('click', async (e) => {
-        // Jei mygtukas neaktyvus (no-telemetry) – rodome įspėjimą
+        // Be registracijos – rodomas įspėjimas mygtuko vietoje
         if (document.body.classList.contains('no-telemetry') || cameraBtnMain.classList.contains('camera-disabled')) {
             e.preventDefault();
             e.stopPropagation();
@@ -3059,7 +3082,7 @@
         if (isProcessing) return;
         isProcessing = true;
         
-        // Resetuojame seną kaukę, kad nebūtų naudojama sena informacija
+        // Resetuojame seną kaukę
         if (window.textMaskMat) {
             try { window.textMaskMat.delete(); } catch (e) {}
             window.textMaskMat = null;
@@ -3633,7 +3656,6 @@
             const progress = 60 + Math.floor((batchStart / total) * 30);
             setProgress(progress, `Verčiama ${batchStart + 1}-${batchEnd}/${total}...`);
             
-            // DeepL leidžia siųsti kelis tekstus vienu metu per parametrą "text" (multiple values)
             const params = new URLSearchParams();
             params.append('source_lang', 'LT');
             params.append('target_lang', targetLang);
@@ -3655,7 +3677,6 @@
                             translations[batchStart + i] = data.translations[i].text;
                         }
                     } else {
-                        // Fallback – verčiame po vieną
                         for (let i = batchStart; i < batchEnd; i++) {
                             translations[i] = await translateSingle(paragraphs[i].text, targetLang) || paragraphs[i].text;
                         }
@@ -3759,7 +3780,6 @@
                 currentLine = testLine;
             }
             
-            // Jei žodis vis dar per ilgas – skaidome po simbolį
             if (!currentLine && ctx.measureText(word).width > maxWidth) {
                 let chunk = '';
                 for (const ch of word) {
