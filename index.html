@@ -785,40 +785,35 @@
     // ============================================================
     // TELEMETRIJOS TIKRINIMAS PER WORKER /esp32_status
     // ============================================================
-    async function checkESP32Status() {
-        const registeredIP = getRegisteredIP();
-        
-        if (!registeredIP) {
-            log('Nėra registruoto IP, telemetrija išjungta');
-            setTelemetryOffline();
-            return;
-        }
-        
-        try {
-            const res = await fetch(WORKER_URL + '/esp32_status?t=' + Date.now(), {
-                cache: 'no-store'
-            });
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            const data = await res.json();
-            
-            if (data.online && data.ip === registeredIP) {
-                log('✅ ESP32 online (IP: ' + registeredIP + ')');
-                setTelemetryOnline(data);
-            } else if (data.online && data.ip !== registeredIP) {
-                log('⚠️ ESP32 online, bet IP skiriasi: ' + data.ip + ' ≠ ' + registeredIP);
-                setTelemetryOffline();
-            } else {
-                log('❌ ESP32 offline');
-                setTelemetryOffline();
-            }
-        } catch (e) {
-            log('Telemetrijos klaida: ' + e.message);
-            telemetryFailCount++;
-            // GREITESNIS OFFLINE: 2 → 1
-            if (telemetryFailCount >= 1) setTelemetryOffline();
-        }
+async function checkESP32Status() {
+    const registeredIP = getRegisteredIP();
+    
+    if (!registeredIP) {
+        log('Nėra registruoto IP, telemetrija išjungta');
+        setTelemetryOffline();
+        return;
     }
-
+    
+    try {
+        const res = await fetch(WORKER_URL + '/esp32_status?t=' + Date.now(), {
+            cache: 'no-store'
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        
+        if (data.online) {
+            log('✅ ESP32 online (IP: ' + (data.ip || 'nežinomas') + ')');
+            setTelemetryOnline(data);
+        } else {
+            log('❌ ESP32 offline' + (data.error ? ' (' + data.error + ')' : ''));
+            setTelemetryOffline();
+        }
+    } catch (e) {
+        log('Telemetrijos klaida: ' + e.message);
+        telemetryFailCount++;
+        if (telemetryFailCount >= 1) setTelemetryOffline();
+    }
+}
     function setTelemetryOnline(data) {
         telemetryFailCount = 0;
         telemetryIsOnline = true;
