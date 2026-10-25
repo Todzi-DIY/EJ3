@@ -377,7 +377,6 @@
   <div id="toastMsg"></div>
   <div id="infoToast"></div>
 
-  <!-- TELEMETRIJOS BLOKAS -->
   <div id="telemetryBox" class="disconnected">
     <div id="telemetryOnline">
       <div class="wifi-icon" title="Wi-Fi ryšys">
@@ -596,6 +595,7 @@
     let ocrWorker = null;
     let toastTimer = null;
     let infoToastTimer = null;
+    let offlineAlertTimer = null;
     let cameraWarningTimer = null;
     let telemetryFailCount = 0;
     let telemetryIsOnline = false;
@@ -657,6 +657,34 @@
         const t = document.getElementById('progressText');
         if (c) c.style.display = 'none';
         if (t) t.style.display = 'none';
+    }
+
+    // ============================================================
+    // OFFLINE ALERT (pranešimas "Įjunkite EJ3 įrenginį!")
+    // ============================================================
+    function showOfflineAlert() {
+        const alertEl = document.getElementById('offlineAlert');
+        if (!alertEl) return;
+        alertEl.classList.add('show');
+        if (offlineAlertTimer) clearTimeout(offlineAlertTimer);
+        offlineAlertTimer = setTimeout(() => {
+            alertEl.classList.remove('show');
+        }, 4000);
+    }
+
+    function hideOfflineAlert() {
+        const alertEl = document.getElementById('offlineAlert');
+        if (alertEl) alertEl.classList.remove('show');
+        if (offlineAlertTimer) { clearTimeout(offlineAlertTimer); offlineAlertTimer = null; }
+    }
+
+    // Pridedame click handlerį telemetryOffline elementui
+    const telemetryOfflineEl = document.getElementById('telemetryOffline');
+    if (telemetryOfflineEl) {
+        telemetryOfflineEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showOfflineAlert();
+        });
     }
 
     // ============================================================
@@ -786,7 +814,8 @@
         } catch (e) {
             log('Telemetrijos klaida: ' + e.message);
             telemetryFailCount++;
-            if (telemetryFailCount >= 2) setTelemetryOffline();
+            // GREITESNIS OFFLINE: 2 → 1
+            if (telemetryFailCount >= 1) setTelemetryOffline();
         }
     }
 
@@ -840,6 +869,8 @@
         const openPrintersBtn = document.getElementById('openPrintersBtn');
         if (openWifiBtn) openWifiBtn.style.display = 'block';
         if (openPrintersBtn) openPrintersBtn.style.display = 'block';
+        
+        hideOfflineAlert();
     }
 
     function setTelemetryOffline() {
@@ -859,10 +890,11 @@
         if (openPrintersBtn) openPrintersBtn.style.display = 'none';
     }
 
+    // GREITESNIS POLLING: 3s → 1s
     function startTelemetryPolling() {
         if (telemetryPollInterval) clearInterval(telemetryPollInterval);
         checkESP32Status();
-        telemetryPollInterval = setInterval(checkESP32Status, 3000);
+        telemetryPollInterval = setInterval(checkESP32Status, 1000);
     }
 
     // ============================================================
