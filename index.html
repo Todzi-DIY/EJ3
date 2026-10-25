@@ -785,35 +785,36 @@
     // ============================================================
     // TELEMETRIJOS TIKRINIMAS PER WORKER /esp32_status
     // ============================================================
-async function checkESP32Status() {
-    const registeredIP = getRegisteredIP();
-    
-    if (!registeredIP) {
-        log('Nėra registruoto IP, telemetrija išjungta');
-        setTelemetryOffline();
-        return;
-    }
-    
-    try {
-        const res = await fetch(WORKER_URL + '/esp32_status?t=' + Date.now(), {
-            cache: 'no-store'
-        });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
+    async function checkESP32Status() {
+        const registeredIP = getRegisteredIP();
         
-        if (data.online) {
-            log('✅ ESP32 online (IP: ' + (data.ip || 'nežinomas') + ')');
-            setTelemetryOnline(data);
-        } else {
-            log('❌ ESP32 offline' + (data.error ? ' (' + data.error + ')' : ''));
+        if (!registeredIP) {
+            log('Nėra registruoto IP, telemetrija išjungta');
             setTelemetryOffline();
+            return;
         }
-    } catch (e) {
-        log('Telemetrijos klaida: ' + e.message);
-        telemetryFailCount++;
-        if (telemetryFailCount >= 1) setTelemetryOffline();
+        
+        try {
+            const res = await fetch(WORKER_URL + '/esp32_status?t=' + Date.now(), {
+                cache: 'no-store'
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            
+            if (data.online) {
+                log('✅ ESP32 online (IP: ' + (data.ip || 'nežinomas') + ')');
+                setTelemetryOnline(data);
+            } else {
+                log('❌ ESP32 offline' + (data.error ? ' (' + data.error + ')' : ''));
+                setTelemetryOffline();
+            }
+        } catch (e) {
+            log('Telemetrijos klaida: ' + e.message);
+            telemetryFailCount++;
+            if (telemetryFailCount >= 1) setTelemetryOffline();
+        }
     }
-}
+
     function setTelemetryOnline(data) {
         telemetryFailCount = 0;
         telemetryIsOnline = true;
@@ -1271,12 +1272,9 @@ async function checkESP32Status() {
                 });
                 const data = await res.json();
                 
-                if (data.online && data.ip === ip) {
+                if (data.online) {
                     regStatusMsg.style.color = '#4CAF50';
-                    regStatusMsg.innerText = '✅ Įrenginys prijungtas!';
-                } else if (data.online && data.ip !== ip) {
-                    regStatusMsg.style.color = '#FF9800';
-                    regStatusMsg.innerText = 'Įspėjimas: ESP32 online, bet IP skiriasi (' + data.ip + '). Išsaugota.';
+                    regStatusMsg.innerText = '✅ Įrenginys prijungtas! (IP: ' + (data.ip || 'nežinomas') + ')';
                 } else {
                     regStatusMsg.style.color = '#FF9800';
                     regStatusMsg.innerText = 'IP išsaugotas. Laukiame ESP32...';
@@ -1321,7 +1319,7 @@ async function checkESP32Status() {
     }
 
     // ============================================================
-    // STARTAS
+    // STARTAS (PATAISYTA: Nuimame 'locked', jei IP jau yra)
     // ============================================================
     log('Puslapis įkeltas');
     updateCameraBtnState();
@@ -1329,6 +1327,8 @@ async function checkESP32Status() {
     if (!getRegisteredIP()) {
         showRegistrationModal();
     } else {
+        document.body.classList.remove('locked');
+        registrationModal.style.display = 'none';
         startTelemetryPolling();
     }
    
