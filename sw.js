@@ -1,103 +1,3611 @@
-// ============================================================
-// EJ3 Service Worker
-// Cilė: sumažinti krovimosi laiką kešuojant CDN failus
-// ============================================================
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<meta name="description" content="EJ3 - Dokumentų vertėjas su OCR ir DeepL">
+<title>EJ3</title>
 
-const CACHE_VERSION = 'ej3-v1';
-const CACHE_NAME = `ej3-cache-${CACHE_VERSION}`;
+<script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady();"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-// CDN failai, kuriuos kešuojame (jie nesikeičia)
-const CDN_URLS = [
-    'https://docs.opencv.org/4.8.0/opencv.js',
-    'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js',
-    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
-];
+<style>
+  * { box-sizing: border-box; }
+  html, body { 
+    min-height: 100vh; width: 100%; background-color: black; color: white; 
+    margin: 0; padding: 0; font-family: Arial, sans-serif; 
+    overflow-x: hidden; overflow-y: auto; 
+  }
+  .container { 
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 100%; min-height: 100vh; padding: 100px 20px 50px 20px; margin: 0 auto;
+  }
+  .settings-icon {
+    position: fixed; top: 20px; left: 20px; cursor: pointer; background-color: #1a1a1a;
+    width: 44px; height: 44px; border-radius: 10px; border: 2px solid #333; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.5); display: flex; justify-content: center; 
+    align-items: center; transition: all 0.3s ease; z-index: 100;
+  }
+  .settings-icon:hover { background-color: #252525; border-color: #4CAF50; transform: scale(1.05); }
+  .settings-icon svg { width: 24px; height: 24px; display: block; }
 
-// Install event - kešuojame CDN failus
-self.addEventListener('install', (event) => {
-    console.log('[SW] Install');
-    event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
-            console.log('[SW] Kešuojami CDN failai');
-            return Promise.allSettled(
-                CDN_URLS.map(url => 
-                    cache.add(url).catch(err => 
-                        console.warn(`[SW] Nepavyko kešuoti ${url}:`, err.message)
-                    )
-                )
-            );
-        }).then(() => self.skipWaiting())
-    );
-});
+  .lang-icon {
+    position: fixed; top: 20px; right: 20px; cursor: pointer; background-color: #1a1a1a;
+    width: 44px; height: 44px; border-radius: 10px; border: 2px solid #333; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.5); display: flex; justify-content: center; 
+    align-items: center; transition: all 0.3s ease; z-index: 100;
+  }
+  .lang-icon:hover { background-color: #252525; border-color: #2196F3; transform: scale(1.05); }
+  .lang-icon .lang-code { font-size: 14px; font-weight: bold; color: #2196F3; letter-spacing: 0.5px; }
 
-// Activate event - išvalome senus kešus
-self.addEventListener('activate', (event) => {
-    console.log('[SW] Activate');
-    event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.map((cacheName) => {
-                    if (cacheName !== CACHE_NAME) {
-                        console.log('[SW] Trinamas senas kešas:', cacheName);
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
-        }).then(() => self.clients.claim())
-    );
-});
+  #langModal {
+    display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: rgba(0,0,0,0.95); z-index: 500; flex-direction: column;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  #langModal .lang-box {
+    width: 100%; max-width: 400px; background: #1a1a1a; border: 2px solid #2196F3;
+    border-radius: 12px; padding: 25px 22px; display: flex; flex-direction: column;
+    gap: 10px; box-shadow: 0 10px 30px rgba(33, 150, 243, 0.25);
+  }
+  #langModal h3 { color: #2196F3; margin: 0 0 10px 0; font-size: 18px; letter-spacing: 1px; text-align: center; text-transform: uppercase; }
+  #langModal .lang-option {
+    width: 100%; padding: 14px; background: #222; color: white; border: 2px solid #444;
+    border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; text-align: center;
+    transition: all 0.2s; font-family: Arial, sans-serif;
+  }
+  #langModal .lang-option:hover { border-color: #2196F3; background: #2a2a2a; }
+  #langModal .lang-option.active { background: rgba(33, 150, 243, 0.25); border-color: #2196F3; color: #64B5F6; }
+  #langModal .lang-close {
+    margin-top: 15px; background: transparent; color: #888; border: 1px solid #444;
+    padding: 12px; border-radius: 8px; cursor: pointer; font-size: 14px; font-family: Arial, sans-serif;
+  }
 
-// Fetch event - strategija:
-// 1. CDN failai -> cache-first
-// 2. HTML/JS/CSS -> network-first su cache fallback
-// 3. Kiti -> network-only
-self.addEventListener('fetch', (event) => {
-    const url = new URL(event.request.url);
-    
-    // CDN failai - cache-first
-    if (CDN_URLS.some(cdn => event.request.url === cdn || event.request.url.startsWith(cdn))) {
-        event.respondWith(
-            caches.match(event.request).then((cached) => {
-                if (cached) {
-                    return cached;
+  #telemetryBox { 
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100; 
+    background: #1a1a1a; padding: 6px 15px; min-height: 44px; min-width: 180px;
+    border-radius: 10px; border: 2px solid #333; box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #telemetryBox.disconnected {
+    border-color: #E91E63 !important;
+    box-shadow: 0 0 12px rgba(233, 30, 99, 0.6) !important;
+  }
+  #telemetryOnline { display: flex; gap: 15px; align-items: center; justify-content: center; width: 100%; }
+  #telemetryOffline {
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    width: 100%; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent;
+  }
+  #telemetryOffline .offline-box {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background-color: #E91E63; color: white; padding: 8px 18px; border-radius: 8px;
+    text-align: center; animation: pulseOffline 1.2s ease-in-out infinite;
+    box-shadow: 0 0 10px rgba(233, 30, 99, 0.9); gap: 1px;
+  }
+  #telemetryOffline .offline-box .offline-title { font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; line-height: 1.1; }
+  #telemetryOffline .offline-box .offline-status { font-size: 10px; font-weight: bold; letter-spacing: 1px; line-height: 1.1; }
+  @keyframes pulseOffline {
+    0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 10px rgba(233, 30, 99, 0.9); }
+    50% { opacity: 0.4; transform: scale(0.97); box-shadow: 0 0 4px rgba(233, 30, 99, 0.4); }
+  }
+  #offlineAlert {
+    display: none; position: absolute; top: -8px; left: -8px; right: -8px; bottom: -8px;
+    background-color: #B0003A; color: white; border-radius: 12px; font-size: 15px; font-weight: bold;
+    text-align: center; z-index: 200; box-shadow: 0 0 25px rgba(255, 64, 129, 1);
+    border: 2px solid #ff4081; pointer-events: none; letter-spacing: 0.3px;
+    align-items: center; justify-content: center; padding: 8px; line-height: 1.2;
+  }
+  #offlineAlert.show { display: flex; animation: alertPop 0.2s ease-out; }
+  @keyframes alertPop { from { opacity: 0; } to { opacity: 1; } }
+  .wifi-icon { display: flex; align-items: flex-end; gap: 3px; height: 16px; }
+  .wifi-bar { width: 4px; background: #555; border-radius: 2px; transition: background 0.2s; }
+  .bat-container { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 15px; }
+  .bat-icon { position: relative; display: inline-block; width: 40px; height: 18px; border: 2px solid #fff; border-radius: 3px; padding: 1px; background: #222; }
+  .bat-fill { width: 0%; height: 100%; background-color: #4CAF50; border-radius: 1px; transition: width 0.3s ease, background-color 0.3s ease; }
+  .bat-tip { position: absolute; right: -5px; top: 3px; width: 3px; height: 8px; background-color: #fff; border-radius: 0 2px 2px 0; }
+  .charging-icon { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 3px #000; z-index: 2; }
+  .bat-info { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; min-width: 40px; }
+  .bat-pct { font-size: 14px; color: #fff; font-weight: bold; text-align: center; }
+  @keyframes chargeAnim { 0% { width: 10%; background-color: #E91E63; } 50% { background-color: #ffeb3b; } 100% { width: 100%; background-color: #4CAF50; } }
+  .charging-active { animation: chargeAnim 1.5s infinite ease-in-out; }
+
+  .action-btn { 
+    background-color: #2196F3; color: white; width: 100%; max-width: 320px; 
+    padding: 18px 15px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; 
+    cursor: pointer; text-align: center; transition: all 0.3s; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3); margin: 10px 0; position: relative;
+  }
+  .action-btn:active { transform: scale(0.98); }
+  .action-btn:disabled { background: #333; cursor: not-allowed; opacity: 0.6; }
+
+  #cameraBtnMain.camera-disabled {
+    background-color: #444 !important; color: #888 !important; cursor: pointer; 
+    opacity: 0.5; filter: grayscale(100%); box-shadow: none; transition: opacity 0.2s;
+  }
+  #cameraBtnMain.camera-disabled:hover { opacity: 0.6; }
+  #cameraBtnMain.camera-warning-shown {
+    background-color: #E91E63 !important; color: white !important; opacity: 1 !important; 
+    filter: none !important; cursor: default;
+    box-shadow: 0 4px 10px rgba(233, 30, 99, 0.5) !important;
+    animation: pulseWarning 0.6s ease-in-out infinite;
+  }
+  #cameraBtnMain.camera-warning-shown:hover { opacity: 1; }
+  @keyframes pulseWarning { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.97); } }
+
+  .modal-overlay { 
+    display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+    background-color: rgba(0, 0, 0, 0.95); z-index: 200; flex-direction: column; 
+    align-items: center; justify-content: center; padding: 20px; overflow-y: auto;
+  }
+  #translationModal .modal-box {
+    width: 100%; max-width: 750px; display: flex; flex-direction: column; 
+    align-items: center; gap: 15px; border: 2px solid #333; border-radius: 12px; 
+    padding: 60px 20px 20px 20px; background-color: #1a1a1a; position: relative; margin: auto;
+  }
+  #cameraModal .modal-box {
+    width: 100%; max-width: 650px; display: flex; flex-direction: column; 
+    align-items: center; gap: 15px; border: 2px solid #333; border-radius: 12px; 
+    padding: 60px 12px 20px 12px; background-color: #1a1a1a; position: relative; margin: auto;
+  }
+  #cameraModal .image-frame {
+    width: 100%; max-height: 75vh; aspect-ratio: 1 / 1.4142; margin: 0 auto; flex: none;
+  }
+  .close-x-icon {
+    position: absolute; top: 13px; right: 15px; cursor: pointer; color: #E91E63;
+    width: 34px; height: 34px; display: flex; justify-content: center; align-items: center;
+    background: rgba(233, 30, 99, 0.15); border-radius: 50%; transition: all 0.3s ease; z-index: 50;
+  }
+  .close-x-icon:hover { background: rgba(233, 30, 99, 0.4); transform: scale(1.1); }
+  .close-x-icon svg { width: 20px; height: 20px; display: block; }
+
+  .image-frame {
+    aspect-ratio: 1 / 1.4142; width: auto; height: min(70vh, 900px); max-width: 95vw;
+    margin: 0 auto; display: none; justify-content: center; align-items: center; 
+    flex-direction: column; border: 4px solid #4CAF50; border-radius: 8px; 
+    position: relative; background-color: white; overflow: hidden; 
+    box-shadow: 0 5px 25px rgba(76, 175, 80, 0.3);
+  }
+  .image-frame[style*="display: flex"] { display: flex !important; }
+  .image-frame canvas { width: 100%; height: 100%; object-fit: contain; touch-action: none; display: block; }
+  #liveVideo { width: 100%; height: 100%; object-fit: cover; }
+  #liveOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair; }
+  #magnifier {
+    display: none; position: absolute; left: 50%; transform: translateX(-50%);
+    width: 170px; height: 170px; border: 3px solid #FF9800; border-radius: 8px;
+    z-index: 100; pointer-events: none; box-shadow: 0 4px 15px rgba(0,0,0,0.8); background-color: #111;
+  }
+  .align-btn {
+    background-color: #FF9800; color: white; padding: 12px 20px; font-size: 14px; 
+    font-weight: bold; border: none; border-radius: 8px; cursor: pointer; display: none; 
+    box-shadow: 0 4px 10px rgba(255, 152, 0, 0.4); transition: transform 0.2s;
+    width: 100%; max-width: 250px; text-transform: uppercase; margin-top: 5px;
+  }
+  .align-btn:active { transform: scale(0.98); }
+  .overlay-layer {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+    background: rgba(0,0,0,0.85); display: flex; flex-direction: column; 
+    justify-content: center; align-items: center; z-index: 10;
+  }
+  .spinner { border: 4px solid rgba(255, 255, 255, 0.2); border-top: 4px solid #4CAF50; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  .overlay-text { font-size: 16px; font-weight: bold; color: white; text-align: center; padding: 0 10px; }
+
+  .lang-select {
+    width: 100%; padding: 15px; font-size: 16px; text-align: center; font-weight: bold; 
+    background-color: #2c2c2c; color: white; border: 2px solid #555; border-radius: 8px; 
+    outline: none; cursor: pointer; flex-shrink: 0; margin-top: 5px;
+  }
+  .translate-action-btn {
+    background-color: #E91E63; color: white; width: 100%; padding: 18px; font-size: 16px; 
+    font-weight: bold; border: none; border-radius: 8px; cursor: pointer; display: none; 
+    box-shadow: 0 4px 10px rgba(233, 30, 99, 0.4); transition: transform 0.2s; flex-shrink: 0;
+  }
+  .translate-action-btn:active { transform: scale(0.98); }
+
+  #printAndDownloadButtons {
+    display: none; width: 100%; max-width: 750px; flex-direction: column; gap: 10px;
+    margin-top: 15px; margin-left: auto; margin-right: auto;
+  }
+  .print-btn {
+    background-color: #4CAF50; color: white; width: 100%; padding: 18px; font-size: 18px; 
+    font-weight: bold; border: none; border-radius: 8px; cursor: pointer;
+    box-shadow: 0 4px 10px rgba(76, 175, 80, 0.4); text-transform: uppercase;
+    letter-spacing: 2px; transition: transform 0.2s;
+  }
+  .print-btn:active { transform: scale(0.98); }
+  .pdf-btn {
+    background-color: #2196F3; color: white; width: 100%; padding: 12px; font-size: 14px; 
+    font-weight: bold; border: none; border-radius: 8px; cursor: pointer;
+    box-shadow: 0 4px 10px rgba(33, 150, 243, 0.4); transition: transform 0.2s; opacity: 0.85;
+  }
+  .pdf-btn:active { transform: scale(0.98); }
+
+  #settingsModal { 
+    display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+    background-color: rgba(0, 0, 0, 0.95); z-index: 100; flex-direction: column; 
+    align-items: center; justify-content: center; padding: 20px; overflow-y: auto;
+  }
+  #settingsModal .settings-box {
+    width: 100%; max-width: 400px; background: #1a1a1a; border: 2px solid #4CAF50;
+    border-radius: 12px; padding: 25px 22px; display: flex; flex-direction: column;
+    gap: 10px; box-shadow: 0 10px 30px rgba(76, 175, 80, 0.25);
+  }
+  #settingsModal h3 { color: #4CAF50; margin: 0 0 10px 0; font-size: 18px; letter-spacing: 1px; text-align: center; text-transform: uppercase; }
+  #settingsModal .settings-option {
+    width: 100%; padding: 14px; background: #222; color: white; border: 2px solid #444;
+    border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; text-align: center;
+    transition: all 0.2s; font-family: Arial, sans-serif;
+  }
+  #settingsModal .settings-option:hover { border-color: #4CAF50; background: #2a2a2a; }
+  #settingsModal .settings-close {
+    margin-top: 15px; background: transparent; color: #888; border: 1px solid #444;
+    padding: 12px; border-radius: 8px; cursor: pointer; font-size: 14px; font-family: Arial, sans-serif;
+  }
+
+  body.telemetry-offline #openPrintersBtn { display: none !important; }
+  body.telemetry-offline #openWifiBtn { display: none !important; }
+
+  #wifiModal { 
+    display: none; position: fixed; top: 0; left: 0; width: 100vw; min-height: 100vh; 
+    background-color: rgba(0,0,0,0.95); z-index: 150; flex-direction: column; 
+    align-items: center; padding: 40px 20px; overflow-y: auto; 
+  }
+
+  #printersModal { 
+    display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+    background-color: rgba(0,0,0,0.95); z-index: 155; flex-direction: column; 
+    align-items: center; justify-content: center; padding: 20px; overflow-y: auto;
+  }
+  #printersModal .printers-box {
+    width: 100%; max-width: 400px; background: #1a1a1a; border: 2px solid #4CAF50;
+    border-radius: 12px; padding: 25px 22px; display: flex; flex-direction: column;
+    gap: 10px; box-shadow: 0 10px 30px rgba(76, 175, 80, 0.25);
+  }
+  #printersModal h3 { color: #4CAF50; margin: 0 0 10px 0; font-size: 18px; letter-spacing: 1px; text-align: center; text-transform: uppercase; }
+  #printersModal .printers-option {
+    width: 100%; padding: 14px; background: #222; color: white; border: 2px solid #444;
+    border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; text-align: center;
+    transition: all 0.2s; font-family: Arial, sans-serif;
+  }
+  #printersModal .printers-option:hover { border-color: #4CAF50; background: #2a2a2a; }
+  #printersModal .printers-close {
+    margin-top: 15px; background: transparent; color: #888; border: 1px solid #444;
+    padding: 12px; border-radius: 8px; cursor: pointer; font-size: 14px; font-family: Arial, sans-serif;
+  }
+  .printers-list { 
+    width: 100%; display: flex; flex-direction: column; gap: 10px; 
+    margin-bottom: 0; max-height: 40vh; overflow-y: auto;
+  }
+  .printer-item { 
+    background: #2c2c2c; padding: 12px 14px; border-radius: 8px; 
+    display: flex; justify-content: space-between; align-items: center; border: 1px solid #444; 
+  }
+  .printer-info { display: flex; flex-direction: column; gap: 4px; text-align: left; }
+  .printer-name { font-weight: bold; font-size: 14px; color: white; }
+  .printer-ip { font-size: 12px; color: #aaa; }
+  .printers-loading, .printers-empty, .printers-error { text-align: center; padding: 12px; font-size: 13px; }
+  .printers-loading { color: #aaa; }
+  .printers-empty { color: #aaa; }
+  .printers-error { color: #E91E63; }
+  
+  .modal-btn { border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; color: white; transition: opacity 0.3s; }
+  .modal-btn:hover { opacity: 0.9; }
+  
+  .wifi-list { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .wifi-item { background: #2c2c2c; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444; }
+  .wifi-info { display: flex; flex-direction: column; gap: 5px; text-align: left; }
+  .wifi-ssid { font-weight: bold; font-size: 16px; color: white; }
+  .wifi-ip { font-size: 12px; color: #aaa; }
+  .wifi-online { color: #4CAF50; font-size: 10px; font-weight: bold; border: 1px solid #4CAF50; padding: 2px 6px; border-radius: 4px; display: inline-block; width: fit-content; }
+  .wifi-del-btn { background: #E91E63; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+  .wifi-add-box { background: #1a1a1a; border: 2px dashed #555; padding: 20px; border-radius: 8px; max-width: 400px; width: 100%; display: flex; flex-direction: column; gap: 10px; }
+  .wifi-input { padding: 10px; border-radius: 6px; border: 1px solid #444; background: #222; color: white; outline: none; font-size: 14px; }
+  .wifi-save-btn { background: #4CAF50; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
+
+  .close-modal-btn { background-color: transparent; color: #888; border: 1px solid #444; width: 100%; padding: 15px; border-radius: 8px; font-size: 14px; cursor: pointer; margin-top: 20px; flex-shrink: 0; }
+
+  #otaOverlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.95); z-index: 350; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+  .upload-modal-box { background: #1a1a1a; border: 2px solid #00796B; padding: 30px; border-radius: 10px; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.8); }
+
+  #toastMsg {
+    position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+    background-color: rgba(233, 30, 99, 0.95); color: white; padding: 15px 25px;
+    border-radius: 8px; font-weight: bold; z-index: 99999999; font-size: 14px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.6); display: none; text-align: center;
+    width: 90%; max-width: 400px; border: 2px solid #ff4081; word-wrap: break-word;
+  }
+
+  #infoToast {
+    position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+    background-color: rgba(33, 150, 243, 0.97); color: white; padding: 18px 22px;
+    border-radius: 10px; z-index: 99999999; box-shadow: 0 8px 25px rgba(0,0,0,0.7);
+    display: none; text-align: left; width: 90%; max-width: 420px;
+    border: 2px solid #64B5F6; word-wrap: break-word;
+  }
+  #infoToast .info-title { font-size: 17px; font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px; line-height: 1.25; }
+  #infoToast .info-line { font-size: 14px; line-height: 1.5; margin: 4px 0; }
+  #infoToast .info-line-small { font-size: 12px; line-height: 1.5; margin: 8px 0 0 0; color: #BBDEFB; font-style: italic; }
+  #infoToast .info-line .info-bullet { color: #BBDEFB; font-weight: bold; margin-right: 4px; }
+  #infoToast .info-line .info-strong { color: #fff; font-weight: bold; }
+
+  #progressBarContainer {
+    width: 100%; max-width: 750px; height: 6px; background: #333; 
+    border-radius: 3px; margin: 10px auto; overflow: hidden; display: none;
+  }
+  #progressBarFill {
+    width: 0%; height: 100%; 
+    background: linear-gradient(90deg, #4CAF50, #8BC34A); 
+    transition: width 0.3s ease;
+  }
+  #progressText {
+    text-align: center; font-size: 12px; color: #aaa; margin: 5px 0; display: none;
+  }
+
+  #registrationModal {
+    display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: rgba(0, 0, 0, 0.99); z-index: 999999; flex-direction: column;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  #registrationModal .reg-box {
+    width: 100%; max-width: 420px; background: #1a1a1a; border: 2px solid #2196F3;
+    border-radius: 12px; padding: 30px 22px; display: flex; flex-direction: column;
+    gap: 15px; box-shadow: 0 10px 30px rgba(33, 150, 243, 0.25); position: relative;
+  }
+  #registrationModal h2 {
+    color: #2196F3; margin: 0 0 5px 0; font-size: 20px; letter-spacing: 1px;
+    text-align: center; text-transform: uppercase;
+  }
+  #registrationModal input {
+    width: 100%; padding: 14px; font-size: 16px; background: #222; color: white;
+    border: 2px solid #444; border-radius: 8px; outline: none; text-align: center;
+    font-family: monospace; letter-spacing: 1px; cursor: pointer;
+  }
+  #registrationModal input:focus { border-color: #2196F3; cursor: text; }
+  #regStatusMsg {
+    color: #FF9800; font-size: 12px; font-weight: bold; text-align: center; min-height: 16px;
+  }
+  #regSaveBtn {
+    background: #2196F3; color: white; width: 100%; padding: 16px; font-size: 16px;
+    font-weight: bold; border: none; border-radius: 8px; cursor: pointer;
+    text-transform: uppercase; letter-spacing: 1px; transition: all 0.2s;
+  }
+  #regSaveBtn:active { transform: scale(0.98); }
+  #regSaveBtn:disabled { background: #333; cursor: not-allowed; opacity: 0.6; }
+
+  #regSkipBtn {
+    background: transparent; border: none; color: #888; font-size: 12px; 
+    font-weight: normal; cursor: pointer; text-align: center; padding: 8px; 
+    text-decoration: underline; text-decoration-color: #555; transition: color 0.2s;
+    font-family: Arial, sans-serif; line-height: 1.4;
+  }
+  #regSkipBtn:hover, #regSkipBtn:active { color: #bbb; text-decoration-color: #aaa; }
+
+  #regExitBtn {
+    background: transparent; border: 1px solid #444; color: #aaa; font-size: 13px;
+    padding: 10px; border-radius: 6px; cursor: pointer; text-align: center;
+    font-family: Arial, sans-serif; margin-top: 5px;
+    transition: all 0.2s;
+  }
+  #regExitBtn:hover { border-color: #666; color: #ddd; }
+
+  .reg-ip-row {
+    display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+  }
+  .reg-ip-row .reg-ip-label {
+    color: #ccc; font-size: 13px; font-weight: bold; text-align: center; flex: 0 1 auto;
+  }
+
+  .reg-info-icon {
+    flex-shrink: 0; width: 52px; height: 52px; min-width: 52px; min-height: 52px;
+    border-radius: 50%; background-color: rgba(33, 150, 243, 0.35);
+    border: 2px solid #2196F3; color: #2196F3; font-weight: bold; font-size: 22px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+    position: relative; z-index: 9999999; pointer-events: auto; touch-action: manipulation;
+    padding: 0; font-family: Arial, sans-serif; animation: pulseInfo 1.2s ease-in-out infinite;
+    outline: none;
+  }
+  .reg-info-icon::before {
+    content: ''; position: absolute; top: -14px; left: -14px; right: -14px; bottom: -14px;
+    border-radius: 50%; pointer-events: auto; z-index: 1;
+  }
+  .reg-info-icon:active {
+    transform: scale(0.9); background-color: rgba(33, 150, 243, 0.6);
+  }
+  @keyframes pulseInfo {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.7); transform: scale(1); }
+    50% { box-shadow: 0 0 0 10px rgba(33, 150, 243, 0); transform: scale(1.08); }
+  }
+
+  body.locked .container,
+  body.locked #telemetryBox,
+  body.locked #settingsIcon,
+  body.locked #langIcon {
+    display: none !important;
+  }
+  body.locked { overflow: hidden !important; }
+  body.no-telemetry #telemetryBox { display: none !important; }
+  body.no-telemetry #openWifiBtn { display: none !important; }
+
+  #loadingOverlay {
+    display: flex; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: rgba(0, 0, 0, 0.98); z-index: 99999999;
+    flex-direction: column; align-items: center; justify-content: center;
+    padding: 20px; transition: opacity 0.4s ease;
+  }
+  #loadingOverlay.hidden {
+    opacity: 0; pointer-events: none;
+  }
+  #loadingOverlay .loading-logo {
+    font-size: 32px; font-weight: bold; color: #4CAF50; letter-spacing: 4px;
+    margin-bottom: 30px; text-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
+  }
+  #loadingOverlay .loading-spinner {
+    width: 60px; height: 60px; border: 5px solid rgba(255, 255, 255, 0.15);
+    border-top: 5px solid #4CAF50; border-radius: 50%;
+    animation: spin 1s linear infinite; margin-bottom: 20px;
+  }
+  #loadingOverlay .loading-text {
+    color: #aaa; font-size: 14px; text-align: center; max-width: 300px;
+  }
+
+  @media (max-width: 768px) {
+    .action-btn { padding: 16px 12px; font-size: 15px; }
+    #translationModal .modal-box { padding: 50px 15px 15px 15px; }
+    .image-frame { height: min(65vh, 700px); max-width: 98vw; }
+    .print-btn { padding: 15px; font-size: 16px; }
+    .pdf-btn { padding: 10px; font-size: 13px; }
+  }
+  @media (max-width: 480px) {
+    .container { padding: 90px 12px 30px 12px; }
+    #telemetryBox { padding: 4px 10px; gap: 10px; }
+    .image-frame { height: min(60vh, 600px); }
+  }
+  @media (max-height: 500px) and (orientation: landscape) {
+    .image-frame { height: min(80vh, 500px); }
+    .container { padding: 60px 20px 20px 20px; }
+  }
+</style>
+</head>
+<body class="locked">
+
+  <div id="toastMsg"></div>
+  <div id="infoToast"></div>
+
+  <!-- Loading overlay -->
+  <div id="loadingOverlay">
+    <div class="loading-logo">EJ3</div>
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Kraunamos bibliotekos...<br>Pirmas įkėlimas gali užtrukti 10-20s</div>
+  </div>
+
+  <!-- AUTO-DETECTION SCRIPT -->
+  <script>
+    (function() {
+      const EJ3_DEVICES_KEY = 'ej3_registered_devices';
+      const EJ3_CHANNEL_NAME = 'ej3_registration';
+      const DEFAULT_EJ3_IP = '192.168.4.1';
+      const SKIP_REGISTRATION_KEY = 'skip_registration';
+      let discoveryInterval = null;
+      let redirectInProgress = false;
+      let discoveryRunning = false;
+
+      function getRegisteredDevices() {
+        try {
+          const raw = localStorage.getItem(EJ3_DEVICES_KEY);
+          return raw ? JSON.parse(raw) : [];
+        } catch (e) { return []; }
+      }
+
+      function isRegistered() {
+        return localStorage.getItem('client_registered') === '1';
+      }
+
+      function isSkipRegistration() {
+        return localStorage.getItem(SKIP_REGISTRATION_KEY) === '1';
+      }
+
+      function redirectToRegisteredDevice(ip) {
+        if (!ip || redirectInProgress) return;
+        try {
+          const currentHost = window.location.hostname;
+          const targetHost = ip.replace(/^https?:\/\//, '').split('/')[0].split(':')[0];
+          if (currentHost === targetHost) return;
+        } catch (e) {}
+
+        redirectInProgress = true;
+        console.log('[EJ3] ⚡ Nukreipiama į priregistruotą įrenginį:', ip);
+        window.location.href = ip.startsWith('http') ? ip : 'http://' + ip;
+      }
+
+      async function probeEj3Device(ip, abortCtrl) {
+        try {
+          const controller = abortCtrl || new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 1500);
+          const res = await fetch('http://' + ip + '/check_trigger?t=' + Date.now(), {
+            cache: 'no-store',
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          if (!res.ok) return false;
+          const data = await res.json();
+          return data && (data.bat !== undefined || data.rssi !== undefined);
+        } catch (e) { return false; }
+      }
+
+      try {
+        const channel = new BroadcastChannel(EJ3_CHANNEL_NAME);
+        channel.onmessage = (e) => {
+          if (e.data && e.data.type === 'device_added' && e.data.device && e.data.device.ip) {
+            console.log('[EJ3] ⚡ BroadcastChannel pranešimas:', e.data.device.ip);
+            redirectToRegisteredDevice(e.data.device.ip);
+          }
+        };
+      } catch (e) {}
+
+      window.addEventListener('storage', (e) => {
+        if (e.key === EJ3_DEVICES_KEY && e.newValue) {
+          try {
+            const devices = JSON.parse(e.newValue);
+            if (devices.length > 0 && devices[devices.length - 1].ip) {
+              console.log('[EJ3] ⚡ localStorage pasikeitė:', devices[devices.length - 1].ip);
+              redirectToRegisteredDevice(devices[devices.length - 1].ip);
+            }
+          } catch (err) {}
+        }
+      });
+
+      async function tryDiscover(abortCtrl) {
+        if (redirectInProgress) return;
+        if (isRegistered()) { stopAutoDiscovery(); return; }
+        if (isSkipRegistration()) { stopAutoDiscovery(); return; }
+        if (abortCtrl && abortCtrl.signal.aborted) return;
+
+        const devices = getRegisteredDevices();
+        if (devices.length > 0 && devices[0].ip) {
+          const alive = await probeEj3Device(devices[0].ip.replace(/^https?:\/\//, ''), abortCtrl);
+          if (alive && !(abortCtrl && abortCtrl.signal.aborted)) {
+            console.log('[EJ3] ⚡ Rastas priregistruotas įrenginys localStorage:', devices[0].ip);
+            redirectToRegisteredDevice(devices[0].ip);
+            return;
+          }
+        }
+        if (abortCtrl && abortCtrl.signal.aborted) return;
+        const alive = await probeEj3Device(DEFAULT_EJ3_IP, abortCtrl);
+        if (alive && !(abortCtrl && abortCtrl.signal.aborted)) {
+          console.log('[EJ3] ⚡ Rastas EJ3 įrenginys:', DEFAULT_EJ3_IP);
+          redirectToRegisteredDevice('http://' + DEFAULT_EJ3_IP);
+        }
+      }
+
+      function startAutoDiscovery() {
+        if (discoveryRunning) return;
+        if (isRegistered() || isSkipRegistration()) return;
+        discoveryRunning = true;
+        console.log('[EJ3] 🔍 Auto-discovery paleistas');
+        let currentAbort = new AbortController();
+        tryDiscover(currentAbort);
+        discoveryInterval = setInterval(() => {
+          if (isRegistered() || isSkipRegistration()) {
+            stopAutoDiscovery();
+            return;
+          }
+          currentAbort = new AbortController();
+          tryDiscover(currentAbort);
+        }, 1000);
+      }
+
+      function stopAutoDiscovery() {
+        if (discoveryInterval) {
+          clearInterval(discoveryInterval);
+          discoveryInterval = null;
+        }
+        discoveryRunning = false;
+        console.log('[EJ3] ⏹️ Auto-discovery sustabdytas');
+      }
+
+      if (!isRegistered() && !isSkipRegistration()) {
+        startAutoDiscovery();
+      }
+
+      window.ej3AutoDiscovery = { start: startAutoDiscovery, stop: stopAutoDiscovery };
+    })();
+  </script>
+
+  <!-- PRIVALOMAS REGISTRACIJOS MODALAS -->
+  <div id="registrationModal">
+    <div class="reg-box">
+      <h2>REGISTRUOTI ĮRENGINĮ</h2>
+
+      <div class="reg-ip-row">
+        <div class="reg-ip-label">Įveskite EJ3 įrenginio IP adresą:</div>
+        <button id="regInfoIcon" type="button" class="reg-info-icon" aria-label="Kaip sužinoti IP?" onclick="handleInfoIconActivate(event);">i</button>
+      </div>
+
+      <input type="text" id="regIpInput" placeholder="pvz. 192.168.1.50" autocomplete="off" inputmode="decimal" readonly>
+
+      <div id="regStatusMsg"></div>
+      
+      <button id="regSaveBtn">IŠSAUGOTI IR TĘSTI</button>
+
+      <button id="regSkipBtn" type="button">Tęsti be registracijos su apribotomis funkcijomis</button>
+
+      <button id="regExitBtn" type="button">Išeiti iš EJ3</button>
+    </div>
+  </div>
+  
+  <!-- TELEMETRIJOS BLOKAS -->
+  <div id="telemetryBox" class="disconnected">
+    <div id="telemetryOnline">
+      <div class="wifi-icon" title="Wi-Fi ryšys">
+        <div class="wifi-bar" style="height: 4px;"></div>
+        <div class="wifi-bar" style="height: 8px;"></div>
+        <div class="wifi-bar" style="height: 12px;"></div>
+        <div class="wifi-bar" style="height: 16px;"></div>
+      </div>
+      <div style="width: 2px; height: 30px; background: #333; margin: 0 5px;"></div>
+      <div class="bat-container" title="Baterijos lygis">
+        <div class="bat-icon">
+          <div id="batFill" class="bat-fill"></div>
+          <div class="bat-tip"></div>
+          <div id="charging-icon" class="charging-icon">⚡</div>
+        </div>
+        <div class="bat-info">
+          <span id="batText" class="bat-pct">--%</span>
+        </div>
+      </div>
+    </div>
+    <div id="telemetryOffline" title="Paspauskite, jei norite daugiau informacijos">
+      <div class="offline-box">
+        <div class="offline-title">EJ3 telemetrija</div>
+        <div class="offline-status">Offline</div>
+      </div>
+    </div>
+    <div id="offlineAlert">Įjunkite EJ3 įrenginį!</div>
+  </div>
+
+  <div id="settingsIcon" class="settings-icon">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M12 2 L12 4 M12 20 L12 22 M2 12 L4 12 M20 12 L22 12 M4.93 4.93 L6.34 6.34 M17.66 17.66 L19.07 19.07 M4.93 19.07 L6.34 17.66 M17.66 6.34 L19.07 4.93"></path>
+      <circle cx="12" cy="12" r="8" stroke-dasharray="2 3"></circle>
+    </svg>
+  </div>
+
+  <div id="langIcon" class="lang-icon" title="Kalba">
+    <span id="langCode" class="lang-code">LT</span>
+  </div>
+
+  <div class="container" id="mainContainer">
+    <button id="addFileBtnMain" class="action-btn">📁 Pridėkite failą</button>
+    <button id="cameraBtnMain" class="action-btn" style="background-color: #4CAF50;">📷 FOTOGRAFUOTI</button>
+    <input type="file" id="modalFileInput" accept="image/*" style="display:none;">
+  </div>
+
+  <div id="cameraModal" class="modal-overlay">
+      <div class="modal-box">
+          <div id="closeCameraModalX" class="close-x-icon">
+              <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+          </div>
+          <div class="image-frame" style="display: flex; background: black;">
+              <video id="liveVideo" autoplay playsinline></video>
+              <canvas id="liveOverlay"></canvas>
+          </div>
+          <button id="captureBtn" class="action-btn" style="width: 100%; max-width: 100%; background-color: #4CAF50;">FOTOGRAFUOTI</button>
+      </div>
+  </div>
+
+  <div id="cameraBlockedModal" class="modal-overlay">
+      <div class="modal-box" style="border-color: #E91E63; max-width: 450px; align-items: flex-start; padding: 30px 20px; margin: auto;">
+          <h3 style="color: #E91E63; margin-top: 0; font-size: 18px; text-transform: uppercase;">DĖMESIO: KAMERA NEPASIEKIAMA!</h3>
+          <p style="color: #ccc; font-size: 14px; line-height: 1.5; margin-bottom: 15px;">
+              Naršyklė blokuoja prieigą prie kameros. Įsitikinkite, kad:<br><br>
+              1. Puslapis atidarytas per <b>https://ej3.eu</b><br>
+              2. Suteikėte leidimą naudoti kamerą<br>
+              3. Naudojate modernią naršyklę
+          </p>
+          <button id="closeCameraBlockedBtn" class="action-btn" style="background-color: transparent; border: 2px solid #E91E63; color: #E91E63; width: 100%; max-width: 100%;">SUPRATAU</button>
+      </div>
+  </div>
+
+  <div id="translationModal" class="modal-overlay">
+      <div class="modal-box">
+          <div id="closeModalX" class="close-x-icon">
+              <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+          </div>
+          <div id="modalFrame" class="image-frame">
+              <canvas id="resultCanvas"></canvas>
+              <canvas id="magnifier" width="170" height="170"></canvas>
+              <div id="translateOverlay" class="overlay-layer" style="display:none;">
+                  <div class="spinner"></div>
+                  <div id="translateOverlayText" class="overlay-text">Skenuojamas tekstas... Prašome palaukti</div>
+              </div>
+          </div>
+          <div id="progressBarContainer">
+            <div id="progressBarFill"></div>
+          </div>
+          <div id="progressText"></div>
+          <button id="alignBtn" class="align-btn">🎯 KOREGUOTI RĖMELĮ</button>
+          <select id="langSelect" class="lang-select" style="display:none;">
+              <option value="" disabled selected>Versti į...</option>
+          </select>
+          <button id="translateActionBtn" class="translate-action-btn"></button>
+      </div>
+      <div id="printAndDownloadButtons">
+          <button id="printBtn" class="print-btn">🖨 SPAUSDINTI</button>
+          <button id="downloadPdfBtn" class="pdf-btn">📥 Parsisiųsti PDF</button>
+      </div>
+  </div>
+
+  <div id="settingsModal">
+    <div class="settings-box">
+      <h3>NUSTATYMAI</h3>
+      <button id="changeDeviceBtn" class="settings-option">📡 PRIDĖTI EJ3 ĮRENGINĮ</button>
+      <button id="openWifiBtn" class="settings-option">📶 Išsaugoti WIFI tinklai</button>
+      <button id="openPrintersBtn" class="settings-option">🖨 SPAUSDINTUVAI</button>
+      <button id="otaUpdateBtn" class="settings-option">🛠 Sistemos atnaujinimas</button>
+      <button id="closeSettingsBtn" class="settings-close">UŽDARYTI</button>
+    </div>
+  </div>
+
+  <!-- WIFI modalas (nebenaudojamas, bet paliktas suderinamumui) -->
+  <div id="wifiModal">
+    <h2 style="color: white; letter-spacing: 2px; text-align: center;">IŠSAUGOTI WIFI TINKLAI</h2>
+    <div style="color: #aaa; text-align: center; padding: 20px;">Funkcija pasiekiama tik per local režimą (http://192.168.4.1)</div>
+    <button id="closeWifiBtn" class="close-modal-btn" style="margin-top: 30px; max-width:400px;">ATGAL</button>
+  </div>
+
+  <!-- Spausdintuvų modalas (nebenaudojamas, bet paliktas suderinamumui) -->
+  <div id="printersModal">
+    <div class="printers-box">
+      <h3>SPAUSDINTUVAI</h3>
+      <div style="color: #aaa; text-align: center; padding: 20px;">Funkcija pasiekiama tik per local režimą (http://192.168.4.1)</div>
+      <button id="closePrintersBtn" class="printers-close">UŽDARYTI</button>
+    </div>
+  </div>
+
+  <div id="otaOverlay">
+    <div class="upload-modal-box">
+      <h3 style="color: white; margin-top: 0; letter-spacing: 1px;">SISTEMOS ATNAUJINIMAS</h3>
+      <input type="file" id="otaFileInput" accept=".bin" style="display: none;" />
+      <button id="otaSelectFileBtn" class="modal-btn" style="margin-bottom: 15px; width: 100%; padding: 15px; background-color:#00796B;">Pasirinkti .bin failą</button>
+      <p id="otaFileName" style="color: #aaa; font-size: 14px; word-break: break-all; margin-bottom: 20px;"></p>
+      <div id="otaConfirmSection" style="display: none; margin-bottom: 20px;">
+        <p style="color: white; margin-bottom: 15px;">Ar tikrai norite atnaujinti sistemą?</p>
+        <div style="display: flex; gap: 15px; justify-content: center;">
+          <button id="otaYesBtn" style="background:#4CAF50; color:white; border:none; padding:10px 30px; border-radius:5px; font-weight:bold; cursor:pointer; flex: 1;">TAIP</button>
+          <button id="otaNoBtn" style="background:#E91E63; color:white; border:none; padding:10px 30px; border-radius:5px; font-weight:bold; cursor:pointer; flex: 1;">NE</button>
+        </div>
+      </div>
+      <div id="otaProgressContainer" style="display:none; width:100%; height:10px; background:#333; border-radius:5px; margin-bottom:10px; overflow:hidden;">
+          <div id="otaProgressBarFill" style="width:0%; height:100%; background:#4CAF50;"></div>
+      </div>
+      <div id="otaProgressText" style="color: white; font-weight: bold; margin-bottom: 20px; min-height: 20px;"></div>
+      <button id="otaCloseBtn" class="close-modal-btn" style="margin-top: 0; width: 100%;">UŽDARYTI</button>
+    </div>
+  </div>
+
+  <div id="langModal">
+    <div class="lang-box">
+      <h3>PASIRINKITE KALBĄ</h3>
+      <button class="lang-option" data-lang="LT">🇱🇹 Lietuvių</button>
+      <button class="lang-option" data-lang="EN">🇬🇧 English</button>
+      <button class="lang-option" data-lang="DE">🇩🇪 Deutsch</button>
+      <button class="lang-option" data-lang="PL">🇵🇱 Polski</button>
+      <button class="lang-option" data-lang="RU">🇷🇺 Русский</button>
+      <button class="lang-close" id="langCloseBtn">UŽDARYTI</button>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // KONFIGŪRACIJA
+    // ============================================================
+    const CONFIG = {
+        get WORKER_URL() {
+            return localStorage.getItem('worker_url') 
+                || 'https://deepl-proxy.t-jasukaitis.workers.dev';
+        },
+        MAX_IMAGE_DIM: 1400,
+        OCR_LANG: 'lit+eng',
+        DEEPL_BATCH_SIZE: 15,
+        DEEPL_DELAY: 250,
+        TELEMETRY_OK_INTERVAL: 1000,
+        TELEMETRY_FAIL_INTERVAL: 300,
+        TELEMETRY_TIMEOUT: 800,
+        TELEMETRY_FAIL_THRESHOLD: 2,
+        DEVICE_TEST_TIMEOUT: 3000,
+        PROBE_TIMEOUT: 1500
+    };
+
+    // Nuoroda atgal suderinamumui
+    const WORKER_URL = CONFIG.WORKER_URL;
+    const DEEPL_DELAY = CONFIG.DEEPL_DELAY;
+    const MAX_IMAGE_DIM = CONFIG.MAX_IMAGE_DIM;
+    const OCR_LANG = CONFIG.OCR_LANG;
+    const DEEPL_BATCH_SIZE = CONFIG.DEEPL_BATCH_SIZE;
+
+    let ESP32_BASE = localStorage.getItem('esp32_url') || '';
+    const CLIENT_REGISTERED_KEY = 'client_registered';
+    const SKIP_REGISTRATION_KEY = 'skip_registration';
+    const UI_LANG_KEY = 'ui_language';
+
+    let currentUiLang = localStorage.getItem(UI_LANG_KEY) || 'LT';
+
+    // Apsauga nuo dvigubo initApp()
+    let appInitialized = false;
+    let telemetryPollingActive = false;
+
+    // ============================================================
+    // BŪSENOS KINTAMIEJI
+    // ============================================================
+    let cvReady = false;
+    let ocrWorker = null;
+    let toastTimer = null;
+    let infoToastTimer = null;
+    let offlineAlertTimer = null;
+    let cameraWarningTimer = null;
+    let telemetryFailCount = 0;
+    let telemetryIsOnline = false;
+
+    let originalImageElement = null;
+    let originalUnblurredCanvas = null;
+    let warpedCanvas = null;
+    let deskewedCanvas = null;
+    let ocrResult = null;
+    let documentAiData = null;
+    let warpedColorCanvas = null;
+    let imageDrawInfo = null;
+    let translatedCanvasSnapshot = null;
+    let currentDocPoly = null;
+    let isAlignMode = false;
+    let activeDragPoint = -1;
+    let isProcessing = false;
+    let extractedTextGlobal = '';
+
+    // ============================================================
+    // UTILITY
+    // ============================================================
+    function showToast(msg, duration) {
+        const toast = document.getElementById('toastMsg');
+        if (!toast) return;
+        toast.innerText = msg;
+        toast.style.display = 'block';
+        if(toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { toast.style.display = 'none'; }, duration || 7000);
+    }
+
+    function showInfoToast(html, duration) {
+        const toast = document.getElementById('infoToast');
+        if (!toast) return;
+        toast.innerHTML = html;
+        toast.style.display = 'block';
+        if(infoToastTimer) clearTimeout(infoToastTimer);
+        infoToastTimer = setTimeout(() => { toast.style.display = 'none'; }, duration || 10000);
+    }
+
+    function hideInfoToast() {
+        const toast = document.getElementById('infoToast');
+        if (toast) toast.style.display = 'none';
+        if (infoToastTimer) { clearTimeout(infoToastTimer); infoToastTimer = null; }
+    }
+
+    function log(msg) {
+        console.log('[EJ3]', msg);
+    }
+
+    function setProgress(percent, text) {
+        const container = document.getElementById('progressBarContainer');
+        const fill = document.getElementById('progressBarFill');
+        const textEl = document.getElementById('progressText');
+        if (container && fill) {
+            container.style.display = 'block';
+            fill.style.width = percent + '%';
+        }
+        if (textEl && text) {
+            textEl.style.display = 'block';
+            textEl.innerText = text;
+        }
+    }
+
+    function hideProgress() {
+        const container = document.getElementById('progressBarContainer');
+        const textEl = document.getElementById('progressText');
+        if (container) container.style.display = 'none';
+        if (textEl) textEl.style.display = 'none';
+    }
+
+    // ============================================================
+    // FULLSCREEN
+    // ============================================================
+    let fsUserInteracted = false;
+
+    function requestFsNow() {
+        if (!document.documentElement.requestFullscreen) return;
+        if (document.fullscreenElement) return;
+        try {
+            const p = document.documentElement.requestFullscreen();
+            if (p && p.catch) p.catch(() => {});
+        } catch (err) {}
+    }
+
+    requestFsNow();
+
+    function onFirstUserInteraction() {
+        if (fsUserInteracted) return;
+        fsUserInteracted = true;
+        if (!document.fullscreenElement) requestFsNow();
+    }
+    document.addEventListener('click', onFirstUserInteraction, { once: true, capture: true });
+    document.addEventListener('touchstart', onFirstUserInteraction, { once: true, capture: true, passive: true });
+    document.addEventListener('keydown', onFirstUserInteraction, { once: true, capture: true });
+    document.addEventListener('pointerdown', onFirstUserInteraction, { once: true, capture: true });
+
+    document.addEventListener('click', function() { if (!document.fullscreenElement) requestFsNow(); }, false);
+    document.addEventListener('touchend', function() { if (!document.fullscreenElement) requestFsNow(); }, false);
+    document.addEventListener('pointerdown', function() { if (!document.fullscreenElement) requestFsNow(); }, false);
+
+    document.addEventListener('fullscreenchange', () => {
+        if (document.fullscreenElement) log('✅ Fullscreen aktyvus');
+        else setTimeout(() => { if (!document.fullscreenElement && fsUserInteracted) requestFsNow(); }, 100);
+    });
+
+    setInterval(() => { if (!document.fullscreenElement && fsUserInteracted) requestFsNow(); }, 500);
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && !document.fullscreenElement && fsUserInteracted) requestFsNow();
+    });
+    window.addEventListener('focus', () => { if (!document.fullscreenElement && fsUserInteracted) requestFsNow(); });
+    window.addEventListener('pageshow', (e) => { if (e.persisted && !document.fullscreenElement && fsUserInteracted) requestFsNow(); });
+
+    // ============================================================
+    // beforeunload apsauga
+    // ============================================================
+    window.addEventListener('beforeunload', (e) => {
+        if (isProcessing) {
+            e.preventDefault();
+            e.returnValue = 'Vertimas dar vyksta. Ar tikrai norite uždaryti?';
+            return e.returnValue;
+        }
+    });
+
+    // ============================================================
+    // KALBOS VALDYMAS
+    // ============================================================
+    function updateLangIcon() {
+        const langCodeEl = document.getElementById('langCode');
+        if (langCodeEl) {
+            const labels = { LT: 'LT', EN: 'EN', DE: 'DE', PL: 'PL', RU: 'RU' };
+            langCodeEl.innerText = labels[currentUiLang] || 'LT';
+        }
+        document.querySelectorAll('.lang-option').forEach(btn => {
+            if (btn.dataset.lang === currentUiLang) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
+    }
+
+    function setUiLang(lang) {
+        currentUiLang = lang;
+        localStorage.setItem(UI_LANG_KEY, lang);
+        updateLangIcon();
+        log('UI kalba: ' + lang);
+    }
+
+    // ============================================================
+    // KLIENTO REGISTRACIJOS PATIKRINIMAS
+    // ============================================================
+    function isClientRegistered() {
+        return localStorage.getItem(CLIENT_REGISTERED_KEY) === '1';
+    }
+
+    function markClientRegistered() {
+        localStorage.setItem(CLIENT_REGISTERED_KEY, '1');
+        localStorage.removeItem(SKIP_REGISTRATION_KEY);
+    }
+
+    function isSkipRegistration() {
+        return localStorage.getItem(SKIP_REGISTRATION_KEY) === '1';
+    }
+
+    function lockBody() {
+        document.body.classList.add('locked');
+    }
+    function unlockBody() {
+        document.body.classList.remove('locked');
+    }
+
+    // ============================================================
+    // KAMEROS MYGTUKO BŪSENA
+    // ============================================================
+    function updateCameraBtnState() {
+        const cameraBtn = document.getElementById('cameraBtnMain');
+        if (!cameraBtn) return;
+
+        const noTelemetry = document.body.classList.contains('no-telemetry');
+        const telemetryOffline = document.body.classList.contains('telemetry-offline');
+
+        if (noTelemetry || telemetryOffline) {
+            cameraBtn.classList.add('camera-disabled');
+            cameraBtn.classList.remove('camera-warning-shown');
+            cameraBtn.textContent = '📷 FOTOGRAFUOTI';
+            cameraBtn.style.backgroundColor = '';
+        } else {
+            cameraBtn.classList.remove('camera-disabled');
+            cameraBtn.classList.remove('camera-warning-shown');
+            cameraBtn.textContent = '📷 FOTOGRAFUOTI';
+            cameraBtn.style.backgroundColor = '#4CAF50';
+        }
+    }
+
+    function showCameraWarning() {
+        const cameraBtn = document.getElementById('cameraBtnMain');
+        if (!cameraBtn) return;
+
+        const isOffline = document.body.classList.contains('telemetry-offline');
+        const isNoTelemetry = document.body.classList.contains('no-telemetry');
+
+        let warningText;
+        if (isNoTelemetry) warningText = 'Priregistruokite EJ3 įrenginį';
+        else if (isOffline) warningText = 'Įjunkite EJ3 įrenginį';
+        else warningText = 'EJ3 nepasiekiamas';
+
+        cameraBtn.textContent = warningText;
+        cameraBtn.classList.add('camera-warning-shown');
+
+        if (cameraWarningTimer) clearTimeout(cameraWarningTimer);
+        cameraWarningTimer = setTimeout(() => {
+            cameraBtn.classList.remove('camera-warning-shown');
+            cameraBtn.textContent = '📷 FOTOGRAFUOTI';
+            cameraBtn.style.backgroundColor = '';
+            updateCameraBtnState();
+        }, 3000);
+    }
+
+    // ============================================================
+    // GRĮŽIMAS Į PAGRINDINĮ PUSLAPĮ
+    // ============================================================
+    function goToMainPage() {
+        if (window.ej3AutoDiscovery) {
+            window.ej3AutoDiscovery.stop();
+        }
+        
+        document.getElementById('registrationModal').style.display = 'none';
+        document.getElementById('settingsModal').style.display = 'none';
+        document.getElementById('wifiModal').style.display = 'none';
+        document.getElementById('printersModal').style.display = 'none';
+        document.getElementById('otaOverlay').style.display = 'none';
+        document.getElementById('langModal').style.display = 'none';
+        document.getElementById('cameraModal').style.display = 'none';
+        document.getElementById('translationModal').style.display = 'none';
+        document.getElementById('cameraBlockedModal').style.display = 'none';
+
+        document.getElementById('mainContainer').style.display = 'flex';
+        unlockBody();
+        updateCameraBtnState();
+        setTimeout(() => { requestFsNow(); }, 100);
+    }
+
+    // ============================================================
+    // PRIVALOMAS REGISTRACIJOS MODALAS
+    // ============================================================
+    const registrationModal = document.getElementById('registrationModal');
+    const regIpInput = document.getElementById('regIpInput');
+    const regSaveBtn = document.getElementById('regSaveBtn');
+    const regStatusMsg = document.getElementById('regStatusMsg');
+    const regSkipBtn = document.getElementById('regSkipBtn');
+    const regExitBtn = document.getElementById('regExitBtn');
+
+    if (regIpInput) {
+        regIpInput.addEventListener('pointerdown', function() {
+            if (this.hasAttribute('readonly')) this.removeAttribute('readonly');
+        });
+        regIpInput.addEventListener('touchstart', function() {
+            if (this.hasAttribute('readonly')) this.removeAttribute('readonly');
+        }, { passive: true });
+        regIpInput.addEventListener('click', function() {
+            if (this.hasAttribute('readonly')) this.removeAttribute('readonly');
+            this.focus();
+        });
+        // Pridėtas focus įvykis
+        regIpInput.addEventListener('focus', function() {
+            if (this.hasAttribute('readonly')) this.removeAttribute('readonly');
+        });
+    }
+
+    window.handleInfoIconActivate = function(e) {
+        if (e) { e.stopPropagation(); e.preventDefault(); }
+        hideInfoToast();
+        const html = `
+            <div class="info-title">EJ3 įrenginio IP adreso gavimas:</div>
+            <div class="info-line">1. Įjunkite EJ3 įrenginį ir NFC funkciją telefone.</div>
+            <div class="info-line">2. Priglauskite EJ3 įrenginio NFC ženklelį prie telefono nugarėlės.</div>
+            <div class="info-line">3. Telefone atsidarys EJ3 registracijos puslapis.</div>
+            <div class="info-line-small">* Arba jį galite atidarykiti rankiniu būdu prisijunge prie "EJ3" wifi tinklo.</div>
+        `;
+        showInfoToast(html, 10000);
+    };
+
+    if (regSkipBtn) {
+        regSkipBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (window.ej3AutoDiscovery) {
+                window.ej3AutoDiscovery.stop();
+            }
+
+            localStorage.setItem(SKIP_REGISTRATION_KEY, '1');
+            localStorage.removeItem(CLIENT_REGISTERED_KEY);
+            localStorage.removeItem('esp32_url');
+            ESP32_BASE = '';
+            telemetryPollingActive = false;
+
+            document.body.classList.add('no-telemetry');
+            document.body.classList.remove('telemetry-offline');
+            goToMainPage();
+            log('⏭️ Tęsiama be registracijos – pagrindinis puslapis');
+        });
+    }
+
+    if (regExitBtn) {
+        regExitBtn.addEventListener('click', () => {
+            if (confirm('Ar tikrai norite išeiti iš EJ3?')) {
+                if (window.ej3AutoDiscovery) {
+                    window.ej3AutoDiscovery.stop();
                 }
-                return fetch(event.request).then((response) => {
-                    if (response.ok) {
-                        const clone = response.clone();
-                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-                    }
-                    return response;
-                });
-            })
-        );
-        return;
+                window.location.href = 'about:blank';
+                setTimeout(() => { window.close(); }, 100);
+            }
+        });
     }
-    
-    // HTML/JS/CSS failai - network-first
-    if (url.origin === self.location.origin) {
-        event.respondWith(
-            fetch(event.request)
-                .then((response) => {
-                    if (response.ok && response.status === 200) {
-                        const clone = response.clone();
-                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-                    }
-                    return response;
-                })
-                .catch(() => {
-                    return caches.match(event.request).then((cached) => {
-                        if (cached) return cached;
-                        // Fallback į index.html jei navigacija
-                        if (event.request.mode === 'navigate') {
-                            return caches.match('/index.html');
-                        }
-                        return new Response('Offline', { status: 503 });
+
+    function normalizeDeviceUrl(input) {
+        let v = input.trim();
+        if (!v) return '';
+        if (!/^https?:\/\//i.test(v)) v = 'http://' + v;
+        v = v.replace(/\/+$/, '');
+        return v;
+    }
+
+    async function testDeviceConnection(baseUrl) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), CONFIG.DEVICE_TEST_TIMEOUT);
+            const res = await fetch(baseUrl + '/check_trigger?t=' + Date.now(), {
+                cache: 'no-store',
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (!res.ok) return false;
+            const data = await res.json();
+            return data && (data.bat !== undefined || data.rssi !== undefined);
+        } catch (e) { return false; }
+    }
+
+    async function saveRegistration() {
+        const raw = regIpInput.value.trim();
+        if (!raw) {
+            regStatusMsg.style.color = '#E91E63';
+            regStatusMsg.innerText = 'Įveskite EJ3 įrenginio IP adresą';
+            return;
+        }
+        const baseUrl = normalizeDeviceUrl(raw);
+        regSaveBtn.disabled = true;
+        regStatusMsg.style.color = '#FF9800';
+        regStatusMsg.innerText = 'Tikrinamas ryšys su EJ3 įrenginiu...';
+
+        const ok = await testDeviceConnection(baseUrl);
+
+        if (!ok) {
+            regStatusMsg.style.color = '#E91E63';
+            regStatusMsg.innerText = 'Nepavyksta prisijungti. Patikrinkite adresą ir ar EJ3 įrenginys įjungtas.';
+            regSaveBtn.disabled = false;
+            return;
+        }
+
+        localStorage.setItem('esp32_url', baseUrl);
+        ESP32_BASE = baseUrl;
+        markClientRegistered();
+
+        if (window.ej3AutoDiscovery) {
+            window.ej3AutoDiscovery.stop();
+        }
+
+        document.body.classList.remove('no-telemetry');
+        document.body.classList.remove('telemetry-offline');
+        telemetryPollingActive = true;
+
+        regStatusMsg.style.color = '#4CAF50';
+        regStatusMsg.innerText = '✅ EJ3 įrenginys prijungtas!';
+
+        setTimeout(() => {
+            goToMainPage();
+            if (!telemetryPollingActive) {
+                telemetryPollingActive = true;
+            }
+            pollTrigger();
+        }, 600);
+    }
+
+    if (regSaveBtn) regSaveBtn.addEventListener('click', saveRegistration);
+    if (regIpInput) regIpInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') saveRegistration();
+    });
+
+    // ============================================================
+    // Apsauga nuo dvigubo initApp()
+    // ============================================================
+    async function initApp() {
+        if (appInitialized) {
+            log('initApp jau iškviestas, praleidžiama');
+            return;
+        }
+        appInitialized = true;
+
+        updateLangIcon();
+
+        if (isSkipRegistration()) {
+            document.body.classList.add('no-telemetry');
+            telemetryPollingActive = false;
+            goToMainPage();
+            return;
+        }
+
+        const registered = isClientRegistered();
+        const hasIp = !!ESP32_BASE;
+
+        if (registered && hasIp) {
+            const ok = await testDeviceConnection(ESP32_BASE);
+            if (ok) {
+                document.body.classList.remove('no-telemetry');
+                document.body.classList.remove('telemetry-offline');
+                telemetryPollingActive = true;
+                goToMainPage();
+                pollTrigger();
+                return;
+            } else {
+                localStorage.removeItem('esp32_url');
+                localStorage.removeItem(CLIENT_REGISTERED_KEY);
+                ESP32_BASE = '';
+            }
+        }
+
+        lockBody();
+        registrationModal.style.display = 'flex';
+        setTelemetryOffline();
+        updateCameraBtnState();
+    }
+
+    // ============================================================
+    // TELEMETRIJOS POLLING
+    // ============================================================
+    const ONLINE_TELEMETRY_HTML = `
+        <div class="wifi-icon" title="Wi-Fi ryšys">
+            <div class="wifi-bar" style="height: 4px;"></div>
+            <div class="wifi-bar" style="height: 8px;"></div>
+            <div class="wifi-bar" style="height: 12px;"></div>
+            <div class="wifi-bar" style="height: 16px;"></div>
+        </div>
+        <div style="width: 2px; height: 30px; background: #333; margin: 0 5px;"></div>
+        <div class="bat-container" title="Baterijos lygis">
+            <div class="bat-icon">
+                <div id="batFill" class="bat-fill"></div>
+                <div class="bat-tip"></div>
+                <div id="charging-icon" class="charging-icon">⚡</div>
+            </div>
+            <div class="bat-info">
+                <span id="batText" class="bat-pct">--%</span>
+            </div>
+        </div>
+    `;
+
+    function setTelemetryOnline() {
+        if (telemetryIsOnline) return;
+        telemetryIsOnline = true;
+        const box = document.getElementById('telemetryBox');
+        const online = document.getElementById('telemetryOnline');
+        const offline = document.getElementById('telemetryOffline');
+        if (box) box.classList.remove('disconnected');
+        if (online) {
+            if (!online.querySelector('.wifi-icon')) {
+                online.innerHTML = ONLINE_TELEMETRY_HTML;
+            }
+            online.style.display = 'flex';
+        }
+        if (offline) offline.style.display = 'none';
+
+        if (!document.body.classList.contains('no-telemetry')) {
+            document.body.classList.remove('telemetry-offline');
+            updateCameraBtnState();
+        }
+        hideOfflineAlert();
+    }
+
+    function setTelemetryOffline() {
+        const offlineEl = document.getElementById('telemetryOffline');
+        if (!telemetryIsOnline && offlineEl && offlineEl.style.display === 'flex') {
+            if (!document.body.classList.contains('no-telemetry')) {
+                document.body.classList.add('telemetry-offline');
+                updateCameraBtnState();
+            }
+            return;
+        }
+        telemetryIsOnline = false;
+        const box = document.getElementById('telemetryBox');
+        const online = document.getElementById('telemetryOnline');
+        if (box) box.classList.add('disconnected');
+        if (online) {
+            online.style.display = 'none';
+            online.innerHTML = '';
+        }
+        if (offlineEl) offlineEl.style.display = 'flex';
+
+        if (!document.body.classList.contains('no-telemetry')) {
+            document.body.classList.add('telemetry-offline');
+            updateCameraBtnState();
+        }
+    }
+
+    function showOfflineAlert() {
+        const alert = document.getElementById('offlineAlert');
+        if (!alert) return;
+        alert.classList.add('show');
+        if (offlineAlertTimer) clearTimeout(offlineAlertTimer);
+        offlineAlertTimer = setTimeout(() => { alert.classList.remove('show'); }, 4000);
+    }
+
+    function hideOfflineAlert() {
+        const alert = document.getElementById('offlineAlert');
+        if (alert) alert.classList.remove('show');
+        if (offlineAlertTimer) { clearTimeout(offlineAlertTimer); offlineAlertTimer = null; }
+    }
+
+    const telemetryOfflineEl = document.getElementById('telemetryOffline');
+    if (telemetryOfflineEl) {
+        telemetryOfflineEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showOfflineAlert();
+        });
+    }
+
+    // Apsauga nuo dvigubo polling
+    let pollTimerHandle = null;
+    function pollTrigger() {
+        if (!telemetryPollingActive) return;
+        if (!ESP32_BASE) {
+            pollTimerHandle = setTimeout(pollTrigger, 1000);
+            return;
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), CONFIG.TELEMETRY_TIMEOUT);
+        const started = Date.now();
+
+        fetch(ESP32_BASE.replace(/\/$/, '') + '/check_trigger?t=' + started, {
+            cache: 'no-store',
+            signal: controller.signal
+        })
+        .then(res => {
+            clearTimeout(timeoutId);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        })
+        .then(data => {
+            telemetryFailCount = 0;
+            setTelemetryOnline();
+            if (data) {
+                if (data.rssi !== undefined) {
+                    const bars = document.querySelectorAll('.wifi-bar');
+                    const r = data.rssi;
+                    let activeBars = 0;
+                    if (r > -65) activeBars = 4;
+                    else if (r > -75) activeBars = 3;
+                    else if (r > -85) activeBars = 2;
+                    else if (r > -95) activeBars = 1;
+                    bars.forEach((b, i) => {
+                        b.style.background = i < activeBars ? '#4CAF50' : '#555';
                     });
-                })
-        );
-        return;
+                }
+                if (data.bat !== undefined) {
+                    const batLevel = document.getElementById('batFill');
+                    const batText = document.getElementById('batText');
+                    const chargeIcon = document.getElementById('charging-icon');
+                    if (batText) batText.innerText = data.bat + '%';
+                    if (batLevel) {
+                        if (data.charging) {
+                            if (chargeIcon) chargeIcon.style.display = 'block';
+                            batLevel.classList.add('charging-active');
+                            batLevel.style.width = '100%';
+                        } else {
+                            if (chargeIcon) chargeIcon.style.display = 'none';
+                            batLevel.classList.remove('charging-active');
+                            batLevel.style.width = data.bat + '%';
+                            if (data.bat > 50) batLevel.style.backgroundColor = '#4CAF50';
+                            else if (data.bat > 20) batLevel.style.backgroundColor = '#ffeb3b';
+                            else batLevel.style.backgroundColor = '#E91E63';
+                        }
+                    }
+                }
+            }
+        })
+        .catch(() => {
+            clearTimeout(timeoutId);
+            telemetryFailCount++;
+            if (telemetryFailCount >= CONFIG.TELEMETRY_FAIL_THRESHOLD) {
+                setTelemetryOffline();
+            }
+        })
+        .finally(() => {
+            if (!telemetryPollingActive) return;
+            const interval = telemetryIsOnline
+                ? CONFIG.TELEMETRY_OK_INTERVAL
+                : CONFIG.TELEMETRY_FAIL_INTERVAL;
+            pollTimerHandle = setTimeout(pollTrigger, interval);
+        });
+    }
+
+    // ============================================================
+    // NUSTATYMŲ VALDYMAS
+    // ============================================================
+    const settingsIcon = document.getElementById('settingsIcon');
+    if (settingsIcon) {
+        settingsIcon.addEventListener('click', () => {
+            document.getElementById('mainContainer').style.display = 'none';
+            document.getElementById('settingsModal').style.display = 'flex';
+            // Dinamiškai atnaujiname changeDeviceBtn tekstą
+            updateChangeDeviceBtnText();
+            setTimeout(() => { requestFsNow(); }, 100);
+        });
+    }
+    const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+    if (closeSettingsBtn) {
+        closeSettingsBtn.addEventListener('click', () => {
+            document.getElementById('settingsModal').style.display = 'none';
+            document.getElementById('mainContainer').style.display = 'flex';
+            setTimeout(() => { requestFsNow(); }, 100);
+        });
+    }
+
+    // Dinaminis changeDeviceBtn tekstas
+    function updateChangeDeviceBtnText() {
+        const btn = document.getElementById('changeDeviceBtn');
+        if (!btn) return;
+        if (ESP32_BASE) {
+            btn.textContent = '📡 PAKEISTI EJ3 ĮRENGINĮ';
+        } else {
+            btn.textContent = '📡 PRIDĖTI EJ3 ĮRENGINĮ';
+        }
+    }
+
+    const langIcon = document.getElementById('langIcon');
+    if (langIcon) {
+        langIcon.addEventListener('click', () => {
+            document.getElementById('langModal').style.display = 'flex';
+            setTimeout(() => { requestFsNow(); }, 100);
+        });
+    }
+    const langCloseBtn = document.getElementById('langCloseBtn');
+    if (langCloseBtn) {
+        langCloseBtn.addEventListener('click', () => {
+            document.getElementById('langModal').style.display = 'none';
+            setTimeout(() => { requestFsNow(); }, 100);
+        });
+    }
+    document.querySelectorAll('.lang-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const lang = btn.dataset.lang;
+            setUiLang(lang);
+            document.getElementById('langModal').style.display = 'none';
+            setTimeout(() => { requestFsNow(); }, 100);
+        });
+    });
+
+    const changeDeviceBtn = document.getElementById('changeDeviceBtn');
+    if (changeDeviceBtn) {
+        changeDeviceBtn.addEventListener('click', () => {
+            document.getElementById('settingsModal').style.display = 'none';
+            regIpInput.value = ESP32_BASE ? ESP32_BASE : '';
+            regIpInput.setAttribute('readonly', 'readonly');
+            regStatusMsg.innerText = '';
+            regSaveBtn.disabled = false;
+            lockBody();
+            registrationModal.style.display = 'flex';
+        });
+    }
+
+    // ============================================================
+    // WIFI MYGTUKAS – NUKREIPIAME Į ESP32
+    // ============================================================
+    const openWifiBtn = document.getElementById('openWifiBtn');
+    if (openWifiBtn) {
+        openWifiBtn.addEventListener('click', () => {
+            if (!ESP32_BASE) { showToast("Pirmiausia pridėkite EJ3 įrenginį"); return; }
+            if (document.body.classList.contains('telemetry-offline')) {
+                showToast("EJ3 įrenginys nepasiekiamas (Offline)");
+                return;
+            }
+            // NUKREIPIAME į ESP32 lokalų IP su #wifi hash
+            const target = ESP32_BASE.replace(/\/$/, '') + '/#wifi';
+            log('➡️ Nukreipiama į: ' + target);
+            showToast("Nukreipiama į EJ3 įrenginį...", 2000);
+            setTimeout(() => {
+                window.location.href = target;
+            }, 800);
+        });
+    }
+
+    const closeWifiBtn = document.getElementById('closeWifiBtn');
+    if (closeWifiBtn) {
+        closeWifiBtn.addEventListener('click', () => {
+            document.getElementById('wifiModal').style.display = 'none';
+            document.getElementById('settingsModal').style.display = 'flex';
+            setTimeout(() => { requestFsNow(); }, 100);
+        });
+    }
+
+    // ============================================================
+    // SPAUSDINTUVŲ MYGTUKAS – NUKREIPIAME Į ESP32
+    // ============================================================
+    const openPrintersBtn = document.getElementById('openPrintersBtn');
+    if (openPrintersBtn) {
+        openPrintersBtn.addEventListener('click', () => {
+            if (!ESP32_BASE) { showToast("Pirmiausia pridėkite EJ3 įrenginį"); return; }
+            if (document.body.classList.contains('telemetry-offline')) {
+                showToast("EJ3 įrenginys nepasiekiamas (Offline)");
+                return;
+            }
+            // NUKREIPIAME į ESP32 lokalų IP su #printers hash
+            const target = ESP32_BASE.replace(/\/$/, '') + '/#printers';
+            log('➡️ Nukreipiama į: ' + target);
+            showToast("Nukreipiama į EJ3 įrenginį...", 2000);
+            setTimeout(() => {
+                window.location.href = target;
+            }, 800);
+        });
+    }
+
+    const closePrintersBtn = document.getElementById('closePrintersBtn');
+    if (closePrintersBtn) {
+        closePrintersBtn.addEventListener('click', () => {
+            document.getElementById('printersModal').style.display = 'none';
+            document.getElementById('settingsModal').style.display = 'flex';
+            setTimeout(() => { requestFsNow(); }, 100);
+        });
+    }
+
+    const refreshPrintersBtn = document.getElementById('refreshPrintersBtn');
+    if (refreshPrintersBtn) {
+        refreshPrintersBtn.addEventListener('click', () => { loadPrintersList(); });
+    }
+
+    // ============================================================
+    // PAGALBINĖS FUNKCIJOS (nebenaudojamos, bet paliktos suderinamumui)
+    // ============================================================
+    function loadPrintersList() {
+        // Nebenaudojama – spausdintuvai atidaromi per ESP32
+        log('loadPrintersList() iškviesta, bet nebenaudojama (nukreipiama per hash)');
+    }
+
+    function loadWifiList() {
+        // Nebenaudojama – WiFi atidaromas per ESP32
+        log('loadWifiList() iškviesta, bet nebenaudojama (nukreipiama per hash)');
+    }
+
+    window.deleteWifi = function(ssid) {
+        log('deleteWifi() nebenaudojama – WiFi valdymas per ESP32');
+    };
+
+    window.saveNewWifi = function() {
+        log('saveNewWifi() nebenaudojama – WiFi valdymas per ESP32');
+    };
+
+    // ============================================================
+    // OTA ATNAUJINIMAS
+    // ============================================================
+    let selectedOtaFile = null;
+    const otaUpdateBtn = document.getElementById('otaUpdateBtn');
+    if (otaUpdateBtn) {
+        otaUpdateBtn.addEventListener('click', () => {
+            if (!ESP32_BASE) { showToast("Pirmiausia pridėkite EJ3 įrenginį"); return; }
+            document.getElementById('settingsModal').style.display = 'none';
+            document.getElementById('otaOverlay').style.display = 'flex';
+            document.getElementById('otaSelectFileBtn').style.display = 'inline-block';
+            document.getElementById('otaConfirmSection').style.display = 'none';
+            document.getElementById('otaProgressContainer').style.display = 'none';
+            document.getElementById('otaProgressText').innerText = '';
+            document.getElementById('otaFileName').innerText = '';
+            document.getElementById('otaFileInput').value = '';
+            setTimeout(() => { requestFsNow(); }, 100);
+        });
+    }
+    const otaCloseBtn = document.getElementById('otaCloseBtn');
+    if (otaCloseBtn) {
+        otaCloseBtn.addEventListener('click', () => {
+            document.getElementById('otaOverlay').style.display = 'none';
+            document.getElementById('settingsModal').style.display = 'flex';
+            setTimeout(() => { requestFsNow(); }, 100);
+        });
+    }
+    const otaSelectFileBtn = document.getElementById('otaSelectFileBtn');
+    if (otaSelectFileBtn) {
+        otaSelectFileBtn.addEventListener('click', () => { document.getElementById('otaFileInput').click(); });
+    }
+    const otaFileInput = document.getElementById('otaFileInput');
+    if (otaFileInput) {
+        otaFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            selectedOtaFile = file;
+            document.getElementById('otaFileName').innerText = "Pasirinkta: " + file.name;
+            document.getElementById('otaSelectFileBtn').style.display = 'none';
+            document.getElementById('otaConfirmSection').style.display = 'block';
+        });
+    }
+    const otaNoBtn = document.getElementById('otaNoBtn');
+    if (otaNoBtn) {
+        otaNoBtn.addEventListener('click', () => {
+            document.getElementById('otaConfirmSection').style.display = 'none';
+            document.getElementById('otaSelectFileBtn').style.display = 'inline-block';
+            document.getElementById('otaFileInput').value = '';
+            document.getElementById('otaFileName').innerText = '';
+            selectedOtaFile = null;
+        });
+    }
+    const otaYesBtn = document.getElementById('otaYesBtn');
+    if (otaYesBtn) {
+        otaYesBtn.addEventListener('click', () => {
+            if(!selectedOtaFile) return;
+            document.getElementById('otaConfirmSection').style.display = 'none';
+            document.getElementById('otaProgressContainer').style.display = 'block';
+            document.getElementById('otaProgressText').innerText = "Siunčiama... 0%";
+            document.getElementById('otaCloseBtn').style.display = 'none';
+            let fd = new FormData(); fd.append("update", selectedOtaFile, "update.bin");
+            let xhr = new XMLHttpRequest();
+            xhr.open("POST", ESP32_BASE.replace(/\/$/, '') + '/update', true);
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    let percentComplete = Math.round((e.loaded / e.total) * 100);
+                    document.getElementById('otaProgressBarFill').style.width = percentComplete + '%';
+                    document.getElementById('otaProgressText').innerText = "Siunčiama... " + percentComplete + '%';
+                }
+            };
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    setTimeout(() => { window.location.reload(); }, 3000);
+                } else {
+                    document.getElementById('otaProgressText').innerText = "Klaida! (" + xhr.status + ")";
+                    document.getElementById('otaCloseBtn').style.display = 'inline-block';
+                }
+            };
+            xhr.onerror = function() {
+                document.getElementById('otaProgressText').innerText = "Ryšio klaida!";
+                document.getElementById('otaCloseBtn').style.display = 'inline-block';
+            };
+            xhr.send(fd);
+        });
+    }
+
+    // ============================================================
+    // KAMERA
+    // ============================================================
+    const cameraBtnMain = document.getElementById('cameraBtnMain');
+    const cameraModal = document.getElementById('cameraModal');
+    const closeCameraModalX = document.getElementById('closeCameraModalX');
+    const liveVideo = document.getElementById('liveVideo');
+    const liveOverlay = document.getElementById('liveOverlay');
+    const captureBtn = document.getElementById('captureBtn');
+    
+    let liveStream = null;
+    let isCameraActive = false;
+    let lastDetectTime = 0;
+    let currentCamPoly = null;
+    let focusRingObj = {x: 0, y: 0, alpha: 0}; 
+    let cameraAnimationFrameId = null;
+
+    if (cameraBtnMain) {
+        cameraBtnMain.addEventListener('click', async (e) => {
+            if (document.body.classList.contains('no-telemetry') || 
+                document.body.classList.contains('telemetry-offline') ||
+                cameraBtnMain.classList.contains('camera-disabled')) {
+                e.preventDefault();
+                e.stopPropagation();
+                showCameraWarning();
+                return;
+            }
+
+            try {
+                applyCameraAspectRatio();
+                window.addEventListener('resize', applyCameraAspectRatio);
+                liveStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: { ideal: "environment" }, 
+                        width: { ideal: 1920 }, 
+                        height: { ideal: 1080 } 
+                    } 
+                });
+                liveVideo.srcObject = liveStream;
+                cameraModal.style.display = 'flex';
+                document.getElementById('mainContainer').style.display = 'none';
+                isCameraActive = true;
+                currentCamPoly = null;
+                setTimeout(() => { requestFsNow(); }, 100);
+                
+                liveVideo.onloadedmetadata = () => {
+                    liveOverlay.width = liveVideo.clientWidth;
+                    liveOverlay.height = liveVideo.clientHeight;
+                    setTimeout(async () => {
+                        try {
+                            const track = liveStream.getVideoTracks()[0];
+                            const capabilities = track.getCapabilities();
+                            const advanced = {};
+                            if (capabilities.torch) advanced.torch = true;
+                            if (capabilities.zoom) advanced.zoom = Math.max(capabilities.zoom.min, Math.min(capabilities.zoom.max, 0.8));
+                            if (capabilities.focusMode) advanced.focusMode = "continuous";
+                            if (Object.keys(advanced).length > 0) {
+                                await track.applyConstraints({ advanced: [advanced] });
+                            }
+                        } catch(e) {}
+                    }, 500);
+                    detectLiveDocument(performance.now());
+                };
+            } catch (err) {
+                stopCameraStream();
+                cameraModal.style.display = 'none';
+                document.getElementById('cameraBlockedModal').style.display = 'flex';
+            }
+        });
+    }
+
+    function applyCameraAspectRatio() {
+        const frame = document.querySelector('#cameraModal .image-frame');
+        if (frame) frame.style.aspectRatio = "1 / 1.4142";
+    }
+
+    function stopCameraStream() {
+        if (liveStream) {
+            liveStream.getTracks().forEach(t => t.stop());
+            liveStream = null;
+        }
+        isCameraActive = false;
+        if (cameraAnimationFrameId) {
+            cancelAnimationFrame(cameraAnimationFrameId);
+            cameraAnimationFrameId = null;
+        }
+        window.removeEventListener('resize', applyCameraAspectRatio);
+    }
+
+    if (liveOverlay) {
+        liveOverlay.addEventListener('click', async (e) => {
+            if(!isCameraActive || !liveStream) return;
+            let rect = liveOverlay.getBoundingClientRect();
+            let x = e.clientX - rect.left;
+            let y = e.clientY - rect.top;
+            focusRingObj = {x: x, y: y, alpha: 1.0};
+        });
+    }
+
+    const closeCameraBlockedBtn = document.getElementById('closeCameraBlockedBtn');
+    if (closeCameraBlockedBtn) {
+        closeCameraBlockedBtn.addEventListener('click', () => {
+            document.getElementById('cameraBlockedModal').style.display = 'none';
+            document.getElementById('mainContainer').style.display = 'flex';
+            setTimeout(() => { requestFsNow(); }, 100);
+        });
+    }
+
+    if (closeCameraModalX) {
+        closeCameraModalX.addEventListener('click', () => {
+            stopCameraStream();
+            cameraModal.style.display = 'none';
+            document.getElementById('mainContainer').style.display = 'flex';
+            setTimeout(() => { requestFsNow(); }, 100);
+        });
+    }
+
+    function clampPoly(poly, w, h) {
+        for(let i=0; i<4; i++) {
+            poly[i].x = Math.max(0, Math.min(w, poly[i].x));
+            poly[i].y = Math.max(0, Math.min(h, poly[i].y));
+        }
+    }
+
+    function detectLiveDocument(timestamp) {
+        if(!isCameraActive) return;
+        cameraAnimationFrameId = requestAnimationFrame(detectLiveDocument);
+        if (liveVideo.videoWidth && liveVideo.videoHeight) {
+            if (liveOverlay.width !== liveVideo.clientWidth) {
+                liveOverlay.width = liveVideo.clientWidth;
+                liveOverlay.height = liveVideo.clientHeight;
+            }
+            const W = liveOverlay.width; const H = liveOverlay.height;
+            const oCtx = liveOverlay.getContext('2d');
+            
+            if (timestamp - lastDetectTime > 50) {
+                lastDetectTime = timestamp;
+                const scanW = 64; const scanH = Math.floor(64 * (H / W));
+                const scanC = document.createElement('canvas');
+                scanC.width = scanW; scanC.height = scanH;
+                const sCtx = scanC.getContext('2d');
+                sCtx.drawImage(liveVideo, 0, 0, scanW, scanH);
+                let d = sCtx.getImageData(0,0,scanW,scanH).data;
+                
+                let pMinX = scanW, pMaxX = 0, pMinY = scanH, pMaxY = 0;
+                let hasPaper = false;
+                let paperPixels = new Uint8Array(scanW * scanH);
+                
+                for (let y = 0; y < scanH; y++) {
+                    for (let x = 0; x < scanW; x++) {
+                        let idx = (y * scanW + x) * 4;
+                        if (d[idx] > 100 && d[idx+1] > 100 && d[idx+2] > 100 && (d[idx]+d[idx+1]+d[idx+2]) > 350) {
+                            paperPixels[y * scanW + x] = 1;
+                            if(x < pMinX) pMinX = x; if(x > pMaxX) pMaxX = x;
+                            if(y < pMinY) pMinY = y; if(y > pMaxY) pMaxY = y;
+                            hasPaper = true;
+                        }
+                    }
+                }
+                
+                let minSum = Infinity, maxSum = -Infinity, minDiff = Infinity, maxDiff = -Infinity;
+                let TL = {x: scanW/2, y: scanH/2}, BR = {x: scanW/2, y: scanH/2};
+                let TR = {x: scanW/2, y: scanH/2}, BL = {x: scanW/2, y: scanH/2};
+                let foundText = false;
+
+                if (hasPaper && (pMaxX - pMinX > 10) && (pMaxY - pMinY > 10)) {
+                    for (let y = pMinY; y < pMaxY; y++) {
+                        for (let x = pMinX; x < pMaxX; x++) {
+                            if (!paperPixels[y * scanW + x]) continue;
+                            let idx = (y * scanW + x) * 4;
+                            let rIdx = (y * scanW + Math.min(x+1, scanW-1)) * 4;
+                            let dIdx = (Math.min(y+1, scanH-1) * scanW + x) * 4;
+                            let v = d[idx] + d[idx+1] + d[idx+2];
+                            let vR = d[rIdx] + d[rIdx+1] + d[rIdx+2];
+                            let vD = d[dIdx] + d[dIdx+1] + d[dIdx+2];
+                            if (v < 400 && (Math.abs(v - vR) > 60 || Math.abs(v - vD) > 60)) {
+                                let sum = x + y; let diff = x - y;
+                                if(sum < minSum) { minSum = sum; TL = {x, y}; }
+                                if(sum > maxSum) { maxSum = sum; BR = {x, y}; }
+                                if(diff > maxDiff) { maxDiff = diff; TR = {x, y}; }
+                                if(diff < minDiff) { minDiff = diff; BL = {x, y}; }
+                                foundText = true;
+                            }
+                        }
+                    }
+                }
+                
+                let targetPoly = [];
+                if (foundText && (BR.x - TL.x > 10 || BR.y - TL.y > 10)) {
+                    let scaleX = W / scanW; let scaleY = H / scanH;
+                    targetPoly = [
+                        {x: TL.x * scaleX, y: TL.y * scaleY},
+                        {x: TR.x * scaleX, y: TR.y * scaleY},
+                        {x: BR.x * scaleX, y: BR.y * scaleY},
+                        {x: BL.x * scaleX, y: BL.y * scaleY}
+                    ];
+                    clampPoly(targetPoly, W, H);
+                } else {
+                    targetPoly = [
+                        {x: W*0.1, y: H*0.2}, {x: W*0.9, y: H*0.2},
+                        {x: W*0.9, y: H*0.8}, {x: W*0.1, y: H*0.8}
+                    ];
+                }
+
+                if(!currentCamPoly) currentCamPoly = JSON.parse(JSON.stringify(targetPoly));
+                for(let i=0; i<4; i++) {
+                    currentCamPoly[i].x += (targetPoly[i].x - currentCamPoly[i].x) * 0.45;
+                    currentCamPoly[i].y += (targetPoly[i].y - currentCamPoly[i].y) * 0.45;
+                }
+            }
+
+            oCtx.clearRect(0, 0, W, H);
+            
+            let isLandscape = W > H;
+            let pxPerCm = isLandscape ? (W / 29.7) : (W / 21.0);
+            let mLeft = 3.0 * pxPerCm;
+            let mRight = 2.0 * pxPerCm;
+            let mTop = 2.0 * pxPerCm;
+            let mBottom = 2.0 * pxPerCm;
+            
+            oCtx.strokeStyle = 'rgba(200, 200, 200, 0.5)';
+            oCtx.lineWidth = 2;
+            oCtx.setLineDash([8, 8]);
+            oCtx.strokeRect(mLeft, mTop, W - mLeft - mRight, H - mTop - mBottom);
+            oCtx.setLineDash([]);
+
+            if(currentCamPoly) {
+                oCtx.strokeStyle = 'rgba(255, 152, 0, 0.9)';
+                oCtx.lineWidth = 3;
+                oCtx.beginPath();
+                oCtx.moveTo(currentCamPoly[0].x, currentCamPoly[0].y);
+                oCtx.lineTo(currentCamPoly[1].x, currentCamPoly[1].y);
+                oCtx.lineTo(currentCamPoly[2].x, currentCamPoly[2].y);
+                oCtx.lineTo(currentCamPoly[3].x, currentCamPoly[3].y);
+                oCtx.closePath();
+                oCtx.stroke();
+            }
+            
+            if(focusRingObj.alpha > 0) {
+                oCtx.strokeStyle = `rgba(76, 175, 80, ${focusRingObj.alpha})`;
+                oCtx.lineWidth = 3;
+                oCtx.beginPath();
+                oCtx.arc(focusRingObj.x, focusRingObj.y, 25, 0, Math.PI*2);
+                oCtx.stroke();
+                focusRingObj.alpha -= 0.04; 
+            }
+        }
+    }
+
+    if (captureBtn) {
+        captureBtn.addEventListener('click', async () => {
+            if(!isCameraActive) return;
+            if (!liveVideo.videoWidth || !liveVideo.videoHeight) {
+                showToast("Kamera dar neparuošta. Palaukite sekundę.");
+                return;
+            }
+            const captureCanvas = document.createElement('canvas');
+            captureCanvas.width = liveVideo.videoWidth;
+            captureCanvas.height = liveVideo.videoHeight;
+            const ctx = captureCanvas.getContext('2d');
+            ctx.drawImage(liveVideo, 0, 0, captureCanvas.width, captureCanvas.height);
+            
+            stopCameraStream();
+            cameraModal.style.display = 'none';
+
+            let dataUrl = captureCanvas.toDataURL('image/jpeg', 0.95);
+            let img = new Image();
+            img.onload = () => { processExtractedImage(img); };
+            img.src = dataUrl;
+        });
+    }
+
+    // ============================================================
+    // loadImage su onerror ir timeout
+    // ============================================================
+    function loadImage(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            const timeoutId = setTimeout(() => {
+                reject(new Error('Failo įkėlimas užtruko per ilgai'));
+            }, 30000);
+
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    clearTimeout(timeoutId);
+                    resolve(img);
+                };
+                img.onerror = () => {
+                    clearTimeout(timeoutId);
+                    reject(new Error('Nepavyko įkelti paveikslėlio (sugadintas failas?)'));
+                };
+                img.src = e.target.result;
+            };
+            reader.onerror = () => {
+                clearTimeout(timeoutId);
+                reject(new Error('Nepavyko perskaityti failo'));
+            };
+            reader.onabort = () => {
+                clearTimeout(timeoutId);
+                reject(new Error('Failo skaitymas atšauktas'));
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // ============================================================
+    // FAILO ĮKĖLIMAS
+    // ============================================================
+    const translationModal = document.getElementById('translationModal');
+    const modalFileInput = document.getElementById('modalFileInput');
+    const modalFrame = document.getElementById('modalFrame');
+    const resultCanvas = document.getElementById('resultCanvas');
+    const translateOverlay = document.getElementById('translateOverlay');
+    const translateOverlayText = document.getElementById('translateOverlayText');
+    const langSelect = document.getElementById('langSelect');
+    const translateActionBtn = document.getElementById('translateActionBtn');
+    const closeModalX = document.getElementById('closeModalX');
+    const alignBtn = document.getElementById('alignBtn');
+    const printAndDownloadButtons = document.getElementById('printAndDownloadButtons');
+
+    const languagesMap = {
+        "LT": "Lietuvių",
+        "EN-US": "Anglų (Amerikiečių)",
+        "EN-GB": "Anglų (Britų)",
+        "DE": "Vokiečių",
+        "FR": "Prancūzų",
+        "ES": "Ispanų",
+        "IT": "Italų",
+        "PL": "Lenkų",
+        "RU": "Rusų",
+        "UK": "Ukrainiečių",
+        "LV": "Latvių",
+        "ET": "Estų",
+        "FI": "Suomių",
+        "SV": "Švedų",
+        "NB": "Norvegų"
+    };
+    
+    if (langSelect) {
+        Object.keys(languagesMap).forEach(code => {
+            let opt = document.createElement('option'); 
+            opt.value = code; 
+            opt.innerText = languagesMap[code];
+            langSelect.appendChild(opt);
+        });
+    }
+
+    const addFileBtnMain = document.getElementById('addFileBtnMain');
+    if (addFileBtnMain) {
+        addFileBtnMain.addEventListener('click', () => { modalFileInput.click(); });
+    }
+
+    if (closeModalX) {
+        closeModalX.addEventListener('click', () => {
+            translationModal.style.display = 'none';
+            document.getElementById('mainContainer').style.display = 'flex';
+            modalFileInput.value = ''; 
+            printAndDownloadButtons.style.display = 'none';
+            hideProgress();
+            setTimeout(() => { requestFsNow(); }, 100);
+        });
+    }
+
+    if (modalFileInput) {
+        modalFileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+            try {
+                const img = await loadImage(file);
+                processExtractedImage(img);
+            } catch (err) {
+                showToast(err.message || "Klaida įkeliant nuotrauką.");
+            } finally {
+                modalFileInput.value = '';
+            }
+        });
+    }
+
+    // ============================================================
+    // OPENCV.JS PARUOŠIMAS
+    // ============================================================
+    function onOpenCvReady() {
+        log('OpenCV.js paruoštas');
+        if (typeof cv !== 'undefined' && cv.then) {
+            cv.then(() => {
+                cvReady = true;
+                log('✅ OpenCV.js pilnai paruoštas');
+            });
+        } else {
+            cvReady = true;
+            log('✅ OpenCV.js paruoštas (sinchroninis)');
+        }
+    }
+    window.onOpenCvReady = onOpenCvReady;
+    
+    // ============================================================
+    // MODULIS 1: DOKUMENTO KRAŠTŲ APTIKIMAS
+    // ============================================================
+    function detectDocumentBounds(canvas) {
+        log('--- MODULIS 1: Kraštų aptikimas ---');
+        
+        const W = canvas.width;
+        const H = canvas.height;
+        
+        try {
+            log('Bandome šviesaus regiono metodą...');
+            
+            const smallW = 100;
+            const smallH = Math.floor(smallW * (H / W));
+            const smallCanvas = document.createElement('canvas');
+            smallCanvas.width = smallW;
+            smallCanvas.height = smallH;
+            const sCtx = smallCanvas.getContext('2d');
+            sCtx.drawImage(canvas, 0, 0, smallW, smallH);
+            const sData = sCtx.getImageData(0, 0, smallW, smallH).data;
+            
+            let minX = smallW, maxX = 0, minY = smallH, maxY = 0;
+            let found = false;
+            let totalBright = 0;
+            let brightCount = 0;
+            
+            for (let y = 0; y < smallH; y++) {
+                for (let x = 0; x < smallW; x++) {
+                    const idx = (y * smallW + x) * 4;
+                    const r = sData[idx];
+                    const g = sData[idx + 1];
+                    const b = sData[idx + 2];
+                    const brightness = (r + g + b) / 3;
+                    
+                    totalBright += brightness;
+                    
+                    if (brightness > 140) {
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                        found = true;
+                        brightCount++;
+                    }
+                }
+            }
+            
+            const avgBright = totalBright / (smallW * smallH);
+            const brightPercent = (brightCount / (smallW * smallH)) * 100;
+            
+            log(`Vidutinis šviesumas: ${avgBright.toFixed(1)}, šviesių pikselių: ${brightPercent.toFixed(1)}%`);
+            
+            if (found && (maxX - minX) > 20 && (maxY - minY) > 20 && brightPercent > 15) {
+                log(`✅ Rastas šviesus regionas: ${minX},${minY} - ${maxX},${maxY}`);
+                
+                const scaleX = W / smallW;
+                const scaleY = H / smallH;
+                const padding = 10;
+                
+                return [
+                    {x: Math.max(0, (minX - padding) * scaleX), y: Math.max(0, (minY - padding) * scaleY)},
+                    {x: Math.min(W, (maxX + padding) * scaleX), y: Math.max(0, (minY - padding) * scaleY)},
+                    {x: Math.min(W, (maxX + padding) * scaleX), y: Math.min(H, (maxY + padding) * scaleY)},
+                    {x: Math.max(0, (minX - padding) * scaleX), y: Math.min(H, (maxY + padding) * scaleY)}
+                ];
+            }
+        } catch (e) {
+            log('⚠️ Šviesaus regiono metodas nepavyko: ' + e.message);
+        }
+        
+        if (!cvReady) {
+            log('⚠️ OpenCV neparuoštas, naudojamas visas plotas');
+            return [
+                {x: 0, y: 0},
+                {x: W, y: 0},
+                {x: W, y: H},
+                {x: 0, y: H}
+            ];
+        }
+        
+        try {
+            log('Bandome Canny + kontūrai metodą...');
+            
+            const maxDim = 800;
+            let scale = 1;
+            let sw = W;
+            let sh = H;
+            
+            if (W > maxDim || H > maxDim) {
+                scale = maxDim / Math.max(W, H);
+                sw = Math.floor(W * scale);
+                sh = Math.floor(H * scale);
+            }
+            
+            const src = cv.imread(canvas);
+            const small = new cv.Mat();
+            
+            if (scale < 1) {
+                cv.resize(src, small, new cv.Size(sw, sh), 0, 0, cv.INTER_AREA);
+            } else {
+                src.copyTo(small);
+            }
+            
+            const gray = new cv.Mat();
+            const blur = new cv.Mat();
+            const edges = new cv.Mat();
+            
+            cv.cvtColor(small, gray, cv.COLOR_RGBA2GRAY);
+            cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0);
+            cv.Canny(blur, edges, 50, 150);
+            
+            const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+            const closed = new cv.Mat();
+            cv.morphologyEx(edges, closed, cv.MORPH_CLOSE, kernel);
+            
+            const contours = new cv.MatVector();
+            const hierarchy = new cv.Mat();
+            cv.findContours(closed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+            
+            log(`Rasta ${contours.size()} kontūrų`);
+            
+            let doc = null;
+            let maxArea = 0;
+            let foundQuad = false;
+            
+            for (let i = 0; i < contours.size(); i++) {
+                const cnt = contours.get(i);
+                const peri = cv.arcLength(cnt, true);
+                const approx = new cv.Mat();
+                cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
+                
+                const area = cv.contourArea(cnt);
+                
+                if (approx.rows === 4 && area > maxArea && area > 5000) {
+                    maxArea = area;
+                    if (doc) doc.delete();
+                    doc = approx.clone();
+                    foundQuad = true;
+                }
+                approx.delete();
+            }
+            
+            src.delete(); small.delete(); gray.delete(); blur.delete();
+            edges.delete(); closed.delete(); kernel.delete();
+            contours.delete(); hierarchy.delete();
+            
+            if (foundQuad && doc) {
+                log(`✅ Rastas keturkampis dokumentas (${Math.round(maxArea)} px²)`);
+                
+                const pts = [];
+                for (let i = 0; i < 4; i++) {
+                    pts.push({ 
+                        x: doc.intPtr(i, 0)[0] / scale, 
+                        y: doc.intPtr(i, 0)[1] / scale 
+                    });
+                }
+                doc.delete();
+                
+                return orderPoints(pts);
+            }
+            
+            if (doc) doc.delete();
+            log('⚠️ Dokumento kraštai nerasti, naudojamas visas plotas');
+            
+        } catch (e) {
+            log('⚠️ Canny klaida: ' + e.message);
+        }
+        
+        return [
+            {x: 0, y: 0},
+            {x: W, y: 0},
+            {x: W, y: H},
+            {x: 0, y: H}
+        ];
     }
     
-    // Kiti (ESP32 užklausos, Worker'io užklausos) - network-only
-    // NEKEŠUOJAME, nes tai dinaminiai duomenys
-});
+    function orderPoints(pts) {
+        const sum = pts.map(p => p.x + p.y);
+        const diff = pts.map(p => p.x - p.y);
+        return [
+            pts[sum.indexOf(Math.min(...sum))],
+            pts[diff.indexOf(Math.max(...diff))],
+            pts[sum.indexOf(Math.max(...sum))],
+            pts[diff.indexOf(Math.min(...diff))]
+        ];
+    }
+
+    // ============================================================
+    // MODULIS 2: PERSPEKTYVOS KOREKCIJA (WARP)
+    // ============================================================
+    function executeWarpAndFilter(poly) {
+        log('--- MODULIS 2: Perspektyvos korekcija ---');
+        
+        let oW = originalUnblurredCanvas.width;
+        let oH = originalUnblurredCanvas.height;
+        let origData = originalUnblurredCanvas.getContext('2d').getImageData(0, 0, oW, oH);
+        
+        let TL = poly[0], TR = poly[1], BR = poly[2], BL = poly[3];
+
+        let wTop = Math.hypot(TR.x - TL.x, TR.y - TL.y);
+        let wBot = Math.hypot(BR.x - BL.x, BR.y - BL.y);
+        let hLeft = Math.hypot(BL.x - TL.x, BL.y - TL.y);
+        let hRight = Math.hypot(BR.x - TR.x, BR.y - TR.y);
+
+        let textW = Math.round(Math.max(wTop, wBot));
+        let textH = Math.round(Math.max(hLeft, hRight));
+
+        if(textW < 50 || textH < 50) { 
+            textW = 800; 
+            textH = 1100; 
+        }
+
+        let colorCanvas = document.createElement('canvas');
+        colorCanvas.width = textW; 
+        colorCanvas.height = textH;
+        let cCtx = colorCanvas.getContext('2d');
+        let cData = cCtx.createImageData(textW, textH);
+
+        for (let y = 0; y < textH; y++) {
+            let ty = y / (textH - 1 || 1);
+            for (let x = 0; x < textW; x++) {
+                let tx = x / (textW - 1 || 1);
+                let px = (1-ty)*((1-tx)*TL.x + tx*TR.x) + ty*((1-tx)*BL.x + tx*BR.x);
+                let py = (1-ty)*((1-tx)*TL.y + tx*TR.y) + ty*((1-tx)*BL.y + tx*BR.y);
+                let srcX = Math.floor(px); 
+                let srcY = Math.floor(py);
+                let destIdx = (y * textW + x) * 4;
+
+                if (srcX >= 0 && srcX < oW && srcY >= 0 && srcY < oH) {
+                    let srcIdx = (srcY * oW + srcX) * 4;
+                    cData.data[destIdx] = origData.data[srcIdx];
+                    cData.data[destIdx+1] = origData.data[srcIdx+1];
+                    cData.data[destIdx+2] = origData.data[srcIdx+2];
+                    cData.data[destIdx+3] = 255;
+                } else {
+                    cData.data[destIdx] = 255;
+                    cData.data[destIdx+1] = 255;
+                    cData.data[destIdx+2] = 255;
+                    cData.data[destIdx+3] = 255;
+                }
+            }
+        }
+        cCtx.putImageData(cData, 0, 0);
+        
+        warpedColorCanvas = colorCanvas;
+
+        let canvasW = 1240;
+        let canvasH = 1754;
+        
+        resultCanvas.width = canvasW; 
+        resultCanvas.height = canvasH;
+        modalFrame.style.aspectRatio = "1 / 1.4142";
+        
+        const ctx = resultCanvas.getContext('2d');
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvasW, canvasH);
+        
+        let scale = Math.min(canvasW / textW, canvasH / textH);
+        let finalW = textW * scale;
+        let finalH = textH * scale;
+        let drawX = (canvasW - finalW) / 2;
+        let drawY = (canvasH - finalH) / 2;
+        
+        ctx.drawImage(colorCanvas, 0, 0, textW, textH, drawX, drawY, finalW, finalH);
+        
+        imageDrawInfo = {
+            drawX: drawX, drawY: drawY, finalW: finalW, finalH: finalH,
+            textW: textW, textH: textH, scale: scale,
+            canvasW: canvasW, canvasH: canvasH
+        };
+        
+        deskewedCanvas = document.createElement('canvas');
+        deskewedCanvas.width = canvasW;
+        deskewedCanvas.height = canvasH;
+        deskewedCanvas.getContext('2d').drawImage(resultCanvas, 0, 0);
+        
+        log(`✅ Išlyginta: ${canvasW}x${canvasH}`);
+    }
+
+    // ============================================================
+    // MODULIS 3: DESKEW
+    // ============================================================
+    function deskewImage(canvas) {
+        log('--- MODULIS 3: Deskew ---');
+        
+        if (!cvReady) {
+            log('⚠️ OpenCV neparuoštas, deskew praleistas');
+            return canvas;
+        }
+        
+        try {
+            const src = cv.imread(canvas);
+            const gray = new cv.Mat();
+            cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+            
+            const binary = new cv.Mat();
+            cv.threshold(gray, binary, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU);
+            
+            const lines = new cv.Mat();
+            cv.HoughLinesP(binary, lines, 1, Math.PI / 180, 100, canvas.width * 0.3, 20);
+            
+            const angles = [];
+            for (let i = 0; i < lines.rows; i++) {
+                const x1 = lines.intAt(i, 0);
+                const y1 = lines.intAt(i, 1);
+                const x2 = lines.intAt(i, 2);
+                const y2 = lines.intAt(i, 3);
+                const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+                
+                if (Math.abs(angle) < 30) {
+                    angles.push(angle);
+                }
+            }
+            
+            let deskewAngle = 0;
+            if (angles.length > 0) {
+                angles.sort((a, b) => a - b);
+                deskewAngle = angles[Math.floor(angles.length / 2)];
+            }
+            
+            log(`Nustatytas pasukimas: ${deskewAngle.toFixed(2)}°`);
+            
+            let resultCanvas = canvas;
+            
+            if (Math.abs(deskewAngle) > 0.3) {
+                const center = new cv.Point(canvas.width / 2, canvas.height / 2);
+                const M = cv.getRotationMatrix2D(center, deskewAngle, 1.0);
+                const rotated = new cv.Mat();
+                cv.warpAffine(src, rotated, M, new cv.Size(canvas.width, canvas.height), 
+                    cv.INTER_CUBIC, cv.BORDER_CONSTANT, new cv.Scalar(255, 255, 255, 255));
+                
+                resultCanvas = document.createElement('canvas');
+                resultCanvas.width = rotated.cols;
+                resultCanvas.height = rotated.rows;
+                cv.imshow(resultCanvas, rotated);
+                
+                M.delete(); 
+                rotated.delete();
+                log('✅ Tekstas išlygintas');
+            } else {
+                log('✓ Tekstas jau horizontalus');
+            }
+            
+            src.delete(); 
+            gray.delete(); 
+            binary.delete(); 
+            lines.delete();
+            
+            return resultCanvas;
+            
+        } catch (e) {
+            log('⚠️ Deskew klaida: ' + e.message);
+            return canvas;
+        }
+    }
+
+    // ============================================================
+    // MODULIS 4: FONO IR TEKSTO ATSKYRIMAS
+    // ============================================================
+    function separateTextFromBackground(canvas) {
+        log('--- MODULIS 4: Fono atskyrimas ---');
+        
+        if (!cvReady) {
+            log('⚠️ OpenCV neparuoštas, praleidžiama');
+            return canvas;
+        }
+        
+        try {
+            const src = cv.imread(canvas);
+            const gray = new cv.Mat();
+            cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+            
+            const binary = new cv.Mat();
+            cv.adaptiveThreshold(gray, binary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                cv.THRESH_BINARY, 15, 10);
+            
+            const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(2, 2));
+            const cleaned = new cv.Mat();
+            cv.morphologyEx(binary, cleaned, cv.MORPH_OPEN, kernel);
+            
+            const kernel2 = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
+            const dilated = new cv.Mat();
+            cv.dilate(cleaned, dilated, kernel2, new cv.Point(-1, -1), 1);
+            
+            if (window.textMaskMat) {
+                window.textMaskMat.delete();
+            }
+            window.textMaskMat = dilated.clone();
+            
+            const displayCanvas = document.createElement('canvas');
+            displayCanvas.width = canvas.width;
+            displayCanvas.height = canvas.height;
+            
+            const inverted = new cv.Mat();
+            cv.bitwise_not(dilated, inverted);
+            cv.imshow(displayCanvas, inverted);
+            
+            src.delete(); 
+            gray.delete(); 
+            binary.delete(); 
+            cleaned.delete(); 
+            kernel.delete(); 
+            kernel2.delete(); 
+            dilated.delete(); 
+            inverted.delete();
+            
+            log('✅ Fonas ir tekstas atskirti');
+            return displayCanvas;
+            
+        } catch (e) {
+            log('⚠️ Fono atskyrimo klaida: ' + e.message);
+            return canvas;
+        }
+    }
+
+    // ============================================================
+    // MODULIS 5: OCR SU TESSERACT.JS TSV
+    // ============================================================
+    async function recognizeTextWithFont(imageSource) {
+        log('--- MODULIS 5: OCR su Tesseract.js ---');
+        setProgress(50, 'OCR: atpažįstamas tekstas...');
+        
+        try {
+            if (!ocrWorker) {
+                setProgress(45, 'OCR: įkeliamas kalbos modelis...');
+                ocrWorker = await Tesseract.createWorker(OCR_LANG);
+            }
+            
+            setProgress(55, 'OCR: skenuojamas tekstas...');
+            
+            const { data } = await ocrWorker.recognize(imageSource, {}, { 
+                tsv: true,
+                blocks: true
+            });
+            
+            const words = parseTSV(data.tsv || '');
+            log(`✅ Nuskaityta ${words.length} žodžių`);
+            
+            if (cvReady && window.textMaskMat && words.length > 0) {
+                analyzeStrokeWidth(words);
+            }
+            
+            setProgress(75, `OCR: nuskaityta ${words.length} žodžių`);
+            
+            return { 
+                words: words, 
+                text: data.text, 
+                tsv: data.tsv 
+            };
+            
+        } catch (e) {
+            log('⚠️ OCR klaida: ' + e.message);
+            throw new Error('OCR klaida: ' + e.message);
+        }
+    }
+    
+    function parseTSV(tsvText) {
+        const lines = tsvText.split('\n');
+        const words = [];
+        
+        for (let i = 1; i < lines.length; i++) {
+            const cols = lines[i].split('\t');
+            if (cols.length < 12) continue;
+            
+            const level = parseInt(cols[0]);
+            if (level !== 5) continue;
+            
+            const word = {
+                text: cols[11],
+                confidence: parseFloat(cols[10]),
+                bbox: {
+                    x: parseInt(cols[6]),
+                    y: parseInt(cols[7]),
+                    width: parseInt(cols[8]),
+                    height: parseInt(cols[9])
+                }
+            };
+            
+            if (word.text.trim() && word.confidence > 30) {
+                words.push(word);
+            }
+        }
+        
+        return words;
+    }
+    
+    function analyzeStrokeWidth(words) {
+        log('Analizuojamas šrifto storis...');
+        
+        const mask = window.textMaskMat;
+        
+        if (!mask) {
+            log('⚠️ Kaukės nėra, bold praleistas');
+            return;
+        }
+        
+        for (const word of words) {
+            const x1 = Math.max(0, Math.min(mask.cols, word.bbox.x));
+            const y1 = Math.max(0, Math.min(mask.rows, word.bbox.y));
+            const x2 = Math.max(0, Math.min(mask.cols, word.bbox.x + word.bbox.width));
+            const y2 = Math.max(0, Math.min(mask.rows, word.bbox.y + word.bbox.height));
+            
+            if (x2 <= x1 || y2 <= y1) {
+                word.isBold = false;
+                continue;
+            }
+            
+            let textPixels = 0;
+            let totalPixels = 0;
+            
+            try {
+                const roi = mask.roi(new cv.Rect(x1, y1, x2 - x1, y2 - y1));
+                
+                for (let y = 0; y < roi.rows; y++) {
+                    for (let x = 0; x < roi.cols; x++) {
+                        totalPixels++;
+                        if (roi.ucharPtr(y, x)[0] > 128) textPixels++;
+                    }
+                }
+                
+                const density = textPixels / totalPixels;
+                word.isBold = density > 0.65;
+                
+                roi.delete();
+            } catch (e) {
+                word.isBold = false;
+            }
+        }
+        
+        const boldCount = words.filter(w => w.isBold).length;
+        log(`Rasta ${boldCount} bold žodžių (iš ${words.length})`);
+    }
+
+    // ============================================================
+    // PAGRINDINIS DOKUMENTO APDOROJIMO SRAUTAS
+    // ============================================================
+    async function processExtractedImage(img) {
+        if (isProcessing) {
+            log('⚠️ Jau apdorojamas dokumentas, ignoruojama');
+            return;
+        }
+        isProcessing = true;
+        
+        documentAiData = null;
+        extractedTextGlobal = '';
+        ocrResult = null;
+        warpedColorCanvas = null;
+        translatedCanvasSnapshot = null;
+        imageDrawInfo = null;
+        
+        if (window.textMaskMat) {
+            try { window.textMaskMat.delete(); } catch (e) {}
+            window.textMaskMat = null;
+        }
+        
+        document.getElementById('mainContainer').style.display = 'none';
+        translationModal.style.display = 'flex';
+        setTimeout(() => { requestFsNow(); }, 100);
+        
+        modalFrame.style.display = 'flex';
+        alignBtn.style.display = 'none';
+        langSelect.style.display = 'none';
+        translateActionBtn.style.display = 'none';
+        printAndDownloadButtons.style.display = 'none';
+        translateOverlay.style.display = 'flex';
+        translateOverlayText.innerText = "Skenuojamas dokumentas...";
+        
+        setProgress(5, 'Įkeliamas paveikslas...');
+
+        try {
+            if(!navigator.onLine) throw new Error("Nėra interneto ryšio!");
+
+            originalImageElement = img;
+            originalUnblurredCanvas = document.createElement('canvas');
+            const wCtx = originalUnblurredCanvas.getContext('2d');
+            let w = img.width; 
+            let h = img.height;
+            
+            if(w > MAX_IMAGE_DIM || h > MAX_IMAGE_DIM) {
+                let ratio = Math.min(MAX_IMAGE_DIM / w, MAX_IMAGE_DIM / h);
+                w = Math.floor(w * ratio); 
+                h = Math.floor(h * ratio);
+            }
+            originalUnblurredCanvas.width = w; 
+            originalUnblurredCanvas.height = h;
+            wCtx.drawImage(img, 0, 0, w, h);
+            
+            setProgress(10, 'Ruošiamas OCR siuntimas...');
+
+            let base64ImageToScan = originalUnblurredCanvas.toDataURL("image/jpeg", 0.75).split(',')[1];
+            
+            let sizeMB = (base64ImageToScan.length / 1024 / 1024);
+            if (sizeMB > 15) {
+                const maxDim2 = 1000;
+                if(w > maxDim2 || h > maxDim2) {
+                    let ratio = Math.min(maxDim2 / w, maxDim2 / h);
+                    w = Math.floor(w * ratio); 
+                    h = Math.floor(h * ratio);
+                }
+                originalUnblurredCanvas.width = w; 
+                originalUnblurredCanvas.height = h;
+                wCtx.drawImage(img, 0, 0, w, h);
+                base64ImageToScan = originalUnblurredCanvas.toDataURL("image/jpeg", 0.65).split(',')[1];
+            }
+            
+            setProgress(15, 'Siunčiama į Document AI...');
+            translateOverlayText.innerText = "Skenuojamas dokumentas su Document AI...";
+            
+            let aiRes = await fetch(WORKER_URL + '/documentai', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    image: { 
+                        content: base64ImageToScan,
+                        mimeType: 'image/jpeg'
+                    }
+                }) 
+            });
+            
+            if(!aiRes.ok) {
+                let errText = await aiRes.text();
+                throw new Error("Document AI klaida: " + aiRes.status + " - " + errText.substring(0, 300));
+            }
+            
+            documentAiData = await aiRes.json();
+            
+            if (documentAiData && documentAiData.document && documentAiData.document.text) {
+                extractedTextGlobal = documentAiData.document.text;
+                log(`Document AI: ${extractedTextGlobal.length} simbolių`);
+            } else {
+                extractedTextGlobal = "";
+                showToast("Document AI nerado teksto");
+            }
+            
+            setProgress(30, 'Aptinkamas dokumento rėmelis...');
+            translateOverlayText.innerText = "Aptinkamas dokumento rėmelis...";
+            
+            currentDocPoly = detectDocumentBounds(originalUnblurredCanvas);
+            
+            setProgress(45, 'Išlyginamas dokumentas...');
+            
+            executeWarpAndFilter(currentDocPoly);
+            
+            setProgress(55, 'Išlyginamas tekstas...');
+            translateOverlayText.innerText = "Išlyginamas tekstas (deskew)...";
+            
+            deskewedCanvas = deskewImage(deskewedCanvas);
+            
+            translateOverlayText.innerText = "Atskiriamas fonas nuo teksto...";
+            setProgress(65, 'Atskiriamas fonas...');
+            
+            separateTextFromBackground(deskewedCanvas);
+            
+            translateOverlayText.innerText = "Atpažįstamas tekstas su koordinatėmis...";
+            setProgress(70, 'OCR: atpažįstamas tekstas...');
+            
+            ocrResult = await recognizeTextWithFont(deskewedCanvas);
+            
+            setProgress(90, `OCR baigtas: ${ocrResult.words.length} žodžių`);
+            
+            const ctx = resultCanvas.getContext('2d');
+            ctx.drawImage(deskewedCanvas, 0, 0);
+            
+            alignBtn.style.display = 'block'; 
+            translateOverlay.style.display = 'none';
+            langSelect.style.display = 'block';
+            hideProgress();
+            
+            log('✅ Apdorojimas baigtas');
+
+        } catch(err) {
+            console.error(err); 
+            showToast(err.message);
+            translationModal.style.display = 'none'; 
+            document.getElementById('mainContainer').style.display = 'flex';
+            modalFileInput.value = '';
+            hideProgress();
+        } finally {
+            isProcessing = false;
+        }
+    }
+
+    // ============================================================
+    // KOREGAVIMO RĖMELIO UI
+    // ============================================================
+    function drawAlignUI() {
+        const ctx = resultCanvas.getContext('2d');
+        let cw = resultCanvas.width;
+        let ch = resultCanvas.height;
+
+        ctx.clearRect(0, 0, cw, ch);
+        ctx.drawImage(originalUnblurredCanvas, 0, 0, cw, ch);
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+        ctx.beginPath();
+        ctx.rect(0, 0, cw, ch);
+        ctx.moveTo(currentDocPoly[0].x, currentDocPoly[0].y);
+        ctx.lineTo(currentDocPoly[1].x, currentDocPoly[1].y);
+        ctx.lineTo(currentDocPoly[2].x, currentDocPoly[2].y);
+        ctx.lineTo(currentDocPoly[3].x, currentDocPoly[3].y);
+        ctx.closePath();
+        ctx.fill('evenodd'); 
+        
+        ctx.strokeStyle = '#FF9800';
+        ctx.lineWidth = Math.max(2, cw * 0.003);
+        ctx.beginPath();
+        ctx.moveTo(currentDocPoly[0].x, currentDocPoly[0].y);
+        for(let i=1; i<4; i++) ctx.lineTo(currentDocPoly[i].x, currentDocPoly[i].y);
+        ctx.closePath();
+        ctx.stroke();
+
+        let radius = Math.max(22, cw * 0.035); 
+        currentDocPoly.forEach(p => {
+            ctx.fillStyle = 'rgba(255, 152, 0, 0.25)';
+            ctx.beginPath(); 
+            ctx.arc(p.x, p.y, radius * 2.2, 0, Math.PI*2); 
+            ctx.fill();
+            
+            ctx.fillStyle = '#FF9800';
+            ctx.beginPath(); 
+            ctx.arc(p.x, p.y, radius, 0, Math.PI*2); 
+            ctx.fill();
+            
+            ctx.fillStyle = 'white';
+            ctx.beginPath(); 
+            ctx.arc(p.x, p.y, radius*0.3, 0, Math.PI*2); 
+            ctx.fill();
+        });
+    }
+
+    function getPointerPos(e) {
+        let rect = resultCanvas.getBoundingClientRect();
+        let cw = resultCanvas.width; 
+        let ch = resultCanvas.height;
+        let scale = Math.min(rect.width / cw, rect.height / ch);
+        let displayW = cw * scale; 
+        let displayH = ch * scale;
+        let offX = (rect.width - displayW) / 2;
+        let offY = (rect.height - displayH) / 2;
+        
+        let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        let x = (clientX - rect.left - offX) / scale;
+        let y = (clientY - rect.top - offY) / scale;
+        return {x, y};
+    }
+
+    function updateMagnifier(x, y) {
+        const mag = document.getElementById('magnifier');
+        const mCtx = mag.getContext('2d');
+        mag.style.display = 'block';
+
+        if (activeDragPoint === 0 || activeDragPoint === 1) { 
+            mag.style.top = 'auto'; 
+            mag.style.bottom = '10px';
+        } else if (activeDragPoint === 2 || activeDragPoint === 3) {
+            mag.style.top = '10px'; 
+            mag.style.bottom = 'auto';
+        }
+
+        const magW = mag.width; 
+        const magH = mag.height;
+        mCtx.fillStyle = '#111';
+        mCtx.fillRect(0, 0, magW, magH);
+        
+        const zoom = 1.10; 
+        const srcW = magW / zoom; 
+        const srcH = magH / zoom;
+        const srcX = x - srcW / 2; 
+        const srcY = y - srcH / 2;
+        mCtx.drawImage(originalUnblurredCanvas, srcX, srcY, srcW, srcH, 0, 0, magW, magH);
+        
+        let cx = magW / 2; 
+        let cy = magH / 2;
+        mCtx.strokeStyle = 'rgba(255, 152, 0, 0.9)';
+        mCtx.lineWidth = 3;
+        mCtx.beginPath();
+        mCtx.moveTo(cx - 35, cy); 
+        mCtx.lineTo(cx - 5, cy);
+        mCtx.moveTo(cx + 5, cy); 
+        mCtx.lineTo(cx + 35, cy);
+        mCtx.moveTo(cx, cy - 35); 
+        mCtx.lineTo(cx, cy - 5);
+        mCtx.moveTo(cx, cy + 5); 
+        mCtx.lineTo(cx, cy + 35);
+        mCtx.stroke();
+    }
+
+    if (resultCanvas) {
+        resultCanvas.addEventListener('mousedown', pointerDown);
+        resultCanvas.addEventListener('touchstart', pointerDown, {passive: false});
+        resultCanvas.addEventListener('mousemove', pointerMove);
+        resultCanvas.addEventListener('touchmove', pointerMove, {passive: false});
+        window.addEventListener('mouseup', pointerUp);
+        window.addEventListener('touchend', pointerUp);
+    }
+
+    function pointerDown(e) {
+        if(!isAlignMode) return;
+        let pos = getPointerPos(e);
+        let touchRadius = Math.min(resultCanvas.width, resultCanvas.height) * 0.08; 
+        for(let i=0; i<4; i++) {
+            let dx = pos.x - currentDocPoly[i].x; 
+            let dy = pos.y - currentDocPoly[i].y;
+            if(Math.sqrt(dx*dx + dy*dy) <= touchRadius) {
+                activeDragPoint = i; 
+                e.preventDefault(); 
+                updateMagnifier(currentDocPoly[i].x, currentDocPoly[i].y);
+                return;
+            }
+        }
+    }
+
+    function pointerMove(e) {
+        if(!isAlignMode || activeDragPoint === -1) return;
+        e.preventDefault();
+        let pos = getPointerPos(e);
+        pos.x = Math.max(0, Math.min(resultCanvas.width, pos.x));
+        pos.y = Math.max(0, Math.min(resultCanvas.height, pos.y));
+        currentDocPoly[activeDragPoint] = pos;
+        drawAlignUI();
+        updateMagnifier(pos.x, pos.y);
+    }
+    
+    function pointerUp(e) { 
+        activeDragPoint = -1; 
+        document.getElementById('magnifier').style.display = 'none';
+    }
+
+    if (alignBtn) {
+        alignBtn.addEventListener('click', () => {
+            if (!isAlignMode) {
+                isAlignMode = true;
+                alignBtn.innerText = "✅ PATVIRTINTI";
+                langSelect.style.display = 'none';
+                translateActionBtn.style.display = 'none';
+                printAndDownloadButtons.style.display = 'none';
+                
+                resultCanvas.width = originalUnblurredCanvas.width;
+                resultCanvas.height = originalUnblurredCanvas.height;
+                modalFrame.style.aspectRatio = "1 / 1.4142";
+                drawAlignUI();
+            } else {
+                isAlignMode = false;
+                alignBtn.innerText = "🎯 KOREGUOTI RĖMELĮ";
+                langSelect.style.display = 'block';
+                if (langSelect.value) translateActionBtn.style.display = 'block';
+                executeWarpAndFilter(currentDocPoly);
+            }
+        });
+    }
+
+    // ============================================================
+    // VERTIMAS IR TEKSTO ATKŪRIMAS
+    // ============================================================
+    async function runTranslation(targetLang, langName) {
+        if(!extractedTextGlobal) { 
+            showToast("Nėra teksto!"); 
+            return; 
+        }
+        
+        langSelect.style.display = 'none'; 
+        translateActionBtn.style.display = 'none'; 
+        alignBtn.style.display = 'none';
+        printAndDownloadButtons.style.display = 'none';
+        translateOverlayText.innerText = `Verčiama į ${langName}...`; 
+        translateOverlay.style.display = 'flex';
+        setProgress(5, 'Pradedamas vertimas...');
+
+        try {
+            if(!navigator.onLine) throw new Error("Nėra interneto ryšio!");
+            
+            let bodyData = `text=${encodeURIComponent(extractedTextGlobal)}&source_lang=LT&target_lang=${targetLang}`;
+
+            setProgress(20, 'Siunčiama į DeepL...');
+            
+            let res = await fetch(WORKER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: bodyData
+            });
+            
+            if(!res.ok) {
+                throw new Error(`Worker klaida: ${res.status}`);
+            }
+            
+            let transData = await res.json();
+            let finalOutputText = transData.translations[0].text;
+            
+            setProgress(40, 'Ruošiamas išverstas lapas...');
+            
+            const ctx = resultCanvas.getContext('2d');
+            const canvasW = imageDrawInfo.canvasW;
+            const canvasH = imageDrawInfo.canvasH;
+            
+            resultCanvas.width = canvasW;
+            resultCanvas.height = canvasH;
+            
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvasW, canvasH);
+            
+            drawColoredRegions(ctx);
+            
+            setProgress(60, 'Atkuriamas tekstas...');
+            
+            let paragraphs = extractParagraphsFromDocumentAI();
+            
+            if (paragraphs.length === 0) {
+                setProgress(80, 'Piešiamas tekstas...');
+                drawFullText(ctx, finalOutputText);
+            } else {
+                await translateAndDrawParagraphs(paragraphs, targetLang, ctx);
+            }
+            
+            setProgress(95, 'Baigiama...');
+            
+            translatedCanvasSnapshot = document.createElement('canvas');
+            translatedCanvasSnapshot.width = canvasW;
+            translatedCanvasSnapshot.height = canvasH;
+            translatedCanvasSnapshot.getContext('2d').drawImage(resultCanvas, 0, 0);
+            
+            printAndDownloadButtons.style.display = 'flex';
+            
+            setProgress(100, '✅ Vertimas baigtas!');
+            setTimeout(hideProgress, 2000);
+
+        } catch (err) { 
+            console.error(err);
+            showToast(err.message); 
+            hideProgress();
+        }
+
+        translateOverlay.style.display = 'none'; 
+    }
+
+    // ============================================================
+    // Saugus pastraipų ištraukimas
+    // ============================================================
+    function extractParagraphsFromDocumentAI() {
+        let paragraphs = [];
+        
+        if (!documentAiData || !documentAiData.document || !documentAiData.document.pages) {
+            return paragraphs;
+        }
+        
+        let fullText = documentAiData.document.text || '';
+        if (!fullText || typeof fullText !== 'string') {
+            log('⚠️ Document AI neturi text lauko, pastraipos praleidžiamos');
+            return paragraphs;
+        }
+        
+        try {
+            for (let page of documentAiData.document.pages) {
+                let blocks = page.blocks || [];
+                
+                for (let block of blocks) {
+                    let blockParagraphs = block.paragraphs || [];
+                    
+                    for (let para of blockParagraphs) {
+                        let paraText = '';
+                        
+                        if (para.layout && para.layout.textAnchor && para.layout.textAnchor.textSegments) {
+                            for (let seg of para.layout.textAnchor.textSegments) {
+                                let start = parseInt(seg.startIndex || 0);
+                                let end = parseInt(seg.endIndex || 0);
+                                if (end > start && end <= fullText.length) {
+                                    paraText += fullText.substring(start, end);
+                                }
+                            }
+                        }
+                        
+                        if (paraText.trim().length > 0 && para.layout && para.layout.boundingPoly) {
+                            let poly = para.layout.boundingPoly;
+                            let vertices = poly.normalizedVertices || poly.vertices || [];
+                            
+                            if (vertices.length >= 4) {
+                                let isNormalized = (vertices[0].x !== undefined && vertices[0].x <= 1);
+                                let scaleW = isNormalized ? originalUnblurredCanvas.width : 1;
+                                let scaleH = isNormalized ? originalUnblurredCanvas.height : 1;
+                                
+                                let xs = vertices.map(v => (v.x || 0) * scaleW);
+                                let ys = vertices.map(v => (v.y || 0) * scaleH);
+                                
+                                paragraphs.push({
+                                    text: paraText.trim(),
+                                    x: Math.min(...xs),
+                                    y: Math.min(...ys),
+                                    x2: Math.max(...xs),
+                                    y2: Math.max(...ys),
+                                    width: Math.max(...xs) - Math.min(...xs),
+                                    height: Math.max(...ys) - Math.min(...ys)
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            log('⚠️ Pastraipų ištraukimo klaida: ' + e.message);
+        }
+        
+        return paragraphs;
+    }
+
+    // ============================================================
+    // PAVEIKSLĖLIŲ ATPAŽINIMAS
+    // ============================================================
+    function drawColoredRegions(ctx) {
+        if (!warpedColorCanvas) return;
+        
+        const textW = imageDrawInfo.textW;
+        const textH = imageDrawInfo.textH;
+        
+        const smallW = 200;
+        const smallH = Math.floor(smallW * (textH / textW));
+        const smallCanvas = document.createElement('canvas');
+        smallCanvas.width = smallW;
+        smallCanvas.height = smallH;
+        const sCtx = smallCanvas.getContext('2d');
+        sCtx.drawImage(warpedColorCanvas, 0, 0, smallW, smallH);
+        
+        const imgData = sCtx.getImageData(0, 0, smallW, smallH);
+        const data = imgData.data;
+        
+        const colorMask = new Uint8Array(smallW * smallH);
+        for (let i = 0; i < data.length; i += 4) {
+            const r = data[i];
+            const g = data[i+1];
+            const b = data[i+2];
+            const maxRGB = Math.max(r, g, b);
+            const minRGB = Math.min(r, g, b);
+            const saturation = maxRGB - minRGB;
+            
+            if (saturation > 60 && maxRGB > 80 && minRGB < 220) {
+                colorMask[i / 4] = 1;
+            }
+        }
+        
+        const visited = new Uint8Array(smallW * smallH);
+        const scaleX = imageDrawInfo.finalW / textW;
+        const scaleY = imageDrawInfo.finalH / textH;
+        
+        let regionsCount = 0;
+        
+        for (let y = 0; y < smallH; y++) {
+            for (let x = 0; x < smallW; x++) {
+                const idx = y * smallW + x;
+                
+                if (colorMask[idx] === 1 && visited[idx] === 0) {
+                    const queue = [{x, y}];
+                    let head = 0;
+                    let minX = x, maxX = x, minY = y, maxY = y;
+                    let pixelCount = 0;
+                    visited[idx] = 1;
+                    
+                    while (head < queue.length) {
+                        const p = queue[head++];
+                        pixelCount++;
+                        
+                        if (p.x < minX) minX = p.x;
+                        if (p.x > maxX) maxX = p.x;
+                        if (p.y < minY) minY = p.y;
+                        if (p.y > maxY) maxY = p.y;
+                        
+                        const neighbors = [
+                            {x: p.x+1, y: p.y}, 
+                            {x: p.x-1, y: p.y},
+                            {x: p.x, y: p.y+1}, 
+                            {x: p.x, y: p.y-1}
+                        ];
+                        
+                        for (const n of neighbors) {
+                            if (n.x >= 0 && n.x < smallW && n.y >= 0 && n.y < smallH) {
+                                const nIdx = n.y * smallW + n.x;
+                                if (colorMask[nIdx] === 1 && visited[nIdx] === 0) {
+                                    visited[nIdx] = 1;
+                                    queue.push(n);
+                                }
+                            }
+                        }
+                    }
+                    
+                    const area = (maxX - minX + 1) * (maxY - minY + 1);
+                    const w = maxX - minX + 1;
+                    const h = maxY - minY + 1;
+                    const aspectRatio = Math.max(w / h, h / w);
+                    const density = pixelCount / area;
+                    
+                    if (pixelCount > 200 && 
+                        area > 500 && 
+                        aspectRatio < 8 &&
+                        density > 0.15) {
+                        
+                        const srcScaleX = textW / smallW;
+                        const srcScaleY = textH / smallH;
+                        
+                        const imgSrcX = minX * srcScaleX;
+                        const imgSrcY = minY * srcScaleY;
+                        const imgSrcW = (maxX - minX + 1) * srcScaleX;
+                        const imgSrcH = (maxY - minY + 1) * srcScaleY;
+                        
+                        const imgDestX = imageDrawInfo.drawX + imgSrcX * scaleX;
+                        const imgDestY = imageDrawInfo.drawY + imgSrcY * scaleY;
+                        const imgDestW = imgSrcW * scaleX;
+                        const imgDestH = imgSrcH * scaleY;
+                        
+                        try {
+                            ctx.drawImage(
+                                warpedColorCanvas,
+                                imgSrcX, imgSrcY, imgSrcW, imgSrcH,
+                                imgDestX, imgDestY, imgDestW, imgDestH
+                            );
+                            regionsCount++;
+                        } catch(e) {}
+                    }
+                }
+            }
+        }
+        
+        log(`Aptikta ${regionsCount} spalvotų regionų`);
+    }
+
+    // ============================================================
+    // VERČIAME IR PIEŠIAME PASTRAIPAS – SU BATCH'INIMU
+    // ============================================================
+    async function translateAndDrawParagraphs(paragraphs, targetLang, ctx) {
+        const translations = new Array(paragraphs.length).fill(null);
+        const total = paragraphs.length;
+        
+        for (let batchStart = 0; batchStart < total; batchStart += DEEPL_BATCH_SIZE) {
+            const batchEnd = Math.min(batchStart + DEEPL_BATCH_SIZE, total);
+            const progress = 60 + Math.floor((batchStart / total) * 30);
+            setProgress(progress, `Verčiama ${batchStart + 1}-${batchEnd}/${total}...`);
+            
+            const params = new URLSearchParams();
+            params.append('source_lang', 'LT');
+            params.append('target_lang', targetLang);
+            for (let i = batchStart; i < batchEnd; i++) {
+                params.append('text', paragraphs[i].text);
+            }
+            
+            try {
+                let res = await fetch(WORKER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params.toString()
+                });
+                
+                if (res.ok) {
+                    let data = await res.json();
+                    if (data.translations && data.translations.length === (batchEnd - batchStart)) {
+                        for (let i = 0; i < data.translations.length; i++) {
+                            translations[batchStart + i] = data.translations[i].text;
+                        }
+                    } else {
+                        for (let i = batchStart; i < batchEnd; i++) {
+                            translations[i] = await translateSingle(paragraphs[i].text, targetLang) || paragraphs[i].text;
+                        }
+                    }
+                } else {
+                    for (let i = batchStart; i < batchEnd; i++) {
+                        translations[i] = await translateSingle(paragraphs[i].text, targetLang) || paragraphs[i].text;
+                    }
+                }
+            } catch(e) {
+                console.error("Vertimo batch klaida:", e);
+                for (let i = batchStart; i < batchEnd; i++) {
+                    if (!translations[i]) translations[i] = paragraphs[i].text;
+                }
+            }
+            
+            if (batchEnd < total) {
+                await new Promise(r => setTimeout(r, DEEPL_DELAY));
+            }
+        }
+        
+        const scaleX = imageDrawInfo.finalW / imageDrawInfo.textW;
+        const scaleY = imageDrawInfo.finalH / imageDrawInfo.textH;
+        
+        for (let i = 0; i < paragraphs.length; i++) {
+            const p = paragraphs[i];
+            const translatedText = translations[i] || p.text;
+            
+            const paraX = imageDrawInfo.drawX + p.x * scaleX;
+            const paraY = imageDrawInfo.drawY + p.y * scaleY;
+            const paraW = p.width * scaleX;
+            const paraH = p.height * scaleY;
+            
+            if (paraW < 20 || paraH < 5) continue;
+            
+            let fontSize = Math.max(8, Math.min(30, paraH * 0.6));
+            let lineHeight = fontSize * 1.3;
+            let lines = [];
+            
+            while (fontSize >= 6) {
+                ctx.font = `${fontSize}px Arial`;
+                lineHeight = fontSize * 1.3;
+                lines = wrapTextToLines(ctx, translatedText, paraW);
+                
+                const totalHeight = lines.length * lineHeight;
+                if (totalHeight <= paraH) break;
+                
+                fontSize -= 0.5;
+            }
+            
+            ctx.font = `${fontSize}px Arial`;
+            ctx.fillStyle = 'black';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            
+            let y = paraY;
+            const lineHeightFinal = fontSize * 1.3;
+            
+            for (const line of lines) {
+                if (y + lineHeightFinal > paraY + paraH + lineHeightFinal * 1.2) break;
+                ctx.fillText(line, paraX, y);
+                y += lineHeightFinal;
+            }
+        }
+    }
+    
+    async function translateSingle(text, targetLang) {
+        try {
+            let bodyData = `text=${encodeURIComponent(text)}&source_lang=LT&target_lang=${targetLang}`;
+            let res = await fetch(WORKER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: bodyData
+            });
+            if (res.ok) {
+                let data = await res.json();
+                return data.translations[0].text;
+            }
+        } catch(e) {}
+        return null;
+    }
+
+    // ============================================================
+    // TEKSTO SKAIDYMAS Į EILUTES
+    // ============================================================
+    function wrapTextToLines(ctx, text, maxWidth) {
+        const words = text.split(/\s+/);
+        const lines = [];
+        let currentLine = '';
+        
+        for (const word of words) {
+            if (!word) continue;
+            
+            const testLine = currentLine ? currentLine + ' ' + word : word;
+            const metrics = ctx.measureText(testLine);
+            
+            if (metrics.width > maxWidth && currentLine) {
+                lines.push(currentLine);
+                currentLine = word;
+            } else {
+                currentLine = testLine;
+            }
+            
+            if (!currentLine && ctx.measureText(word).width > maxWidth) {
+                let chunk = '';
+                for (const ch of word) {
+                    const testChunk = chunk + ch;
+                    if (ctx.measureText(testChunk).width > maxWidth && chunk) {
+                        lines.push(chunk);
+                        chunk = ch;
+                    } else {
+                        chunk = testChunk;
+                    }
+                }
+                currentLine = chunk;
+            }
+        }
+        
+        if (currentLine) lines.push(currentLine);
+        return lines;
+    }
+
+    // ============================================================
+    // FALLBACK - VISAS TEKSTAS VIENAME BLOKE
+    // ============================================================
+    function drawFullText(ctx, finalOutputText) {
+        const textX = imageDrawInfo.drawX + 20;
+        const textY = imageDrawInfo.drawY + 20;
+        const textW = imageDrawInfo.finalW - 40;
+        const textH = imageDrawInfo.finalH - 40;
+        
+        let fontSize = 14;
+        let lines = [];
+        let lineHeight = fontSize * 1.4;
+        
+        while (fontSize >= 8) {
+            ctx.font = `${fontSize}px Arial`;
+            lineHeight = fontSize * 1.4;
+            lines = wrapTextToLines(ctx, finalOutputText, textW);
+            
+            const totalHeight = lines.length * lineHeight;
+            if (totalHeight <= textH) break;
+            
+            fontSize -= 1;
+        }
+        
+        ctx.font = `${fontSize}px Arial`;
+        ctx.fillStyle = 'black';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        
+        let y = textY;
+        for (const line of lines) {
+            if (y + lineHeight > textY + textH + lineHeight) break;
+            ctx.fillText(line, textX, y);
+            y += lineHeight;
+        }
+    }
+
+    // ============================================================
+    // VERTIMO MYGTUKAS
+    // ============================================================
+    if (translateActionBtn) {
+        translateActionBtn.addEventListener('click', () => { 
+            runTranslation(langSelect.value, languagesMap[langSelect.value]); 
+        });
+    }
+
+    if (langSelect) {
+        langSelect.addEventListener('change', () => {
+            const selLang = langSelect.value;
+            if(selLang && !isAlignMode) {
+                translateActionBtn.innerText = "🌐 Versti į " + languagesMap[selLang] + " kalbą";
+                translateActionBtn.style.display = 'block';
+            }
+        });
+    }
+
+    // ============================================================
+    // SPAUSDINIMAS
+    // ============================================================
+    const printBtn = document.getElementById('printBtn');
+    if (printBtn) {
+        printBtn.addEventListener('click', () => {
+            if (!translatedCanvasSnapshot) {
+                showToast("Pirmiausia išverskite dokumentą");
+                return;
+            }
+            if (translatedCanvasSnapshot.width === 0) {
+                showToast("Nėra ką spausdinti");
+                return;
+            }
+
+            let paperSize = localStorage.getItem('printer_paper') || 'A4';
+            let orientation = localStorage.getItem('printer_orientation') || 'portrait';
+
+            const dataUrl = translatedCanvasSnapshot.toDataURL('image/png');
+
+            let iframe = document.getElementById('printIframe');
+            if (!iframe) {
+                iframe = document.createElement('iframe');
+                iframe.id = 'printIframe';
+                iframe.style.position = 'fixed';
+                iframe.style.right = '0';
+                iframe.style.bottom = '0';
+                iframe.style.width = '0';
+                iframe.style.height = '0';
+                iframe.style.border = '0';
+                document.body.appendChild(iframe);
+            }
+
+            const doc = iframe.contentWindow.document;
+            doc.open();
+            doc.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Spausdinimas</title>
+                    <style>
+                        @page {
+                            size: ${paperSize} ${orientation};
+                            margin: 0;
+                        }
+                        html, body {
+                            margin: 0;
+                            padding: 0;
+                            width: 100%;
+                            height: 100%;
+                            overflow: hidden;
+                        }
+                        img {
+                            width: 100%;
+                            height: auto;
+                            display: block;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <img src="${dataUrl}" onload="window.focus(); window.print();">
+                </body>
+                </html>
+            `);
+            doc.close();
+
+            showToast("Atidaromas spausdinimo langas. Pasirinkite spausdintuvą.");
+        });
+    }
+
+    // ============================================================
+    // PDF PARSISIUNTIMAS
+    // ============================================================
+    const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+    if (downloadPdfBtn) {
+        downloadPdfBtn.addEventListener('click', async () => {
+            if (!translatedCanvasSnapshot) {
+                showToast("Nėra išversto lapo");
+                return;
+            }
+            try {
+                if (typeof window.jspdf === 'undefined') {
+                    await new Promise((resolve, reject) => {
+                        let script = document.createElement('script');
+                        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
+                }
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ 
+                    orientation: 'portrait', 
+                    unit: 'mm', 
+                    format: 'a4' 
+                });
+                let imgData = translatedCanvasSnapshot.toDataURL('image/jpeg', 0.95);
+                pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+                let timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+                pdf.save(`vertejas-${timestamp}.pdf`);
+                showToast("✅ PDF failas parsiųstas");
+            } catch (err) {
+                console.error(err);
+                showToast("Klaida generuojant PDF: " + err.message);
+            }
+        });
+    }
+
+    // ============================================================
+    // Service Worker registracija
+    // ============================================================
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => log('✅ Service Worker įregistruotas'))
+                .catch(err => log('⚠️ Service Worker klaida: ' + err.message));
+        });
+    }
+
+    // ============================================================
+    // Loading overlay panaikinimas
+    // ============================================================
+    function hideLoadingOverlay() {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.classList.add('hidden');
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 400);
+        }
+    }
+
+    let loadingDependencies = 0;
+    let loadingComplete = false;
+    
+    function checkLoadingComplete() {
+        if (loadingComplete) return;
+        loadingDependencies++;
+        if (loadingDependencies >= 2) {
+            loadingComplete = true;
+            setTimeout(hideLoadingOverlay, 500);
+        }
+    }
+
+    setTimeout(() => {
+        if (!loadingComplete) {
+            loadingComplete = true;
+            hideLoadingOverlay();
+        }
+    }, 15000);
+
+    // ============================================================
+    // STARTAS
+    // ============================================================
+    log('Puslapis įkeltas');
+    log('Laukiama OpenCV.js...');
+    
+    if (typeof cv !== 'undefined' && cv.Mat) {
+        onOpenCvReady();
+    }
+
+    if (typeof Tesseract !== 'undefined') {
+        checkLoadingComplete();
+    } else {
+        let tessCheck = setInterval(() => {
+            if (typeof Tesseract !== 'undefined') {
+                clearInterval(tessCheck);
+                checkLoadingComplete();
+            }
+        }, 100);
+        setTimeout(() => clearInterval(tessCheck), 10000);
+    }
+
+    let cvCheck = setInterval(() => {
+        if (cvReady || (typeof cv !== 'undefined' && cv.Mat)) {
+            clearInterval(cvCheck);
+            checkLoadingComplete();
+        }
+    }, 100);
+    setTimeout(() => clearInterval(cvCheck), 10000);
+
+    initApp();
+
+  </script>
+</body>
+</html>
